@@ -1,0 +1,418 @@
+---
+title: "Predicted Versus Realized Assemblages"
+author: "Ben Weinstein"
+date: "Tuesday, November 11, 2014"
+output: html_document
+---
+
+Aim:
+
+Insights from comparing phylogenetic and trait community spacing has led to a renewed focus on whether interspecific competition shape species occurrence. Combining theories of niche conservatism and limiting similarity, species should co-occur more with closely related species up to a threshold of niche overlap, followed by a decrease in co-occurrence. To test this prediction, we first simulate assemblages with known assembly rules to validate our predicted pattern of probability of co-occurrence and phylogenetic relatedness. We then develop a hierarchical Bayesian approach to assess probability of co-occurrence as a function of distance to the closest related species in hummingbird assemblages from Northern South America. We then applied a realistic null model of co-occurrence using ensemble niche models and cost distance to create predicted assemblages based on overlapping environmental tolerances and dispersal limitation. We find that probability of co-occurrence increases with increasing relatedness, followed by a decrease in co-occurrence among very closely related species. These data match our predicted pattern based on simulations of niche conservatism and competition in shaping co-occurrence. Further, predicted assemblages based on environment and dispersal show a consistent increase with relatedness, with no decrease among closely related species. Taken together, our results suggest that both niche conservatism and competition act simultaneously to shape hummingbird assemblages. The presence of closely related species may prevent species from occupying potentially suitable habitat. Our approach provides a holistic statistical framework combining simulations, robust Bayesian inference and reasonable null models to infer the role of competition in shaping species assemblage. 
+
+#GitHub repository
+
+This entire analysis can be cloned from ![here](https://github.com/bw4sz/BrazilDimDiv)
+
+Github repos have 100MB file limit, all files larger then that are hosted on dropbox:
+
+![Elev file](https://www.dropbox.com/s/r67vzucsknrtvma/w001001.adf?dl=0)
+
+![Env layers](https://www.dropbox.com/sh/fhywu4l2sx64zf6/AADruumyUX57rii3TwagE1tva?dl=0)
+
+```{r,warning=FALSE,message=FALSE}
+#Load required libraries
+library(reshape2)
+require(ggplot2)
+require(picante)
+require(dismo)
+require(ape)
+require(doSNOW)
+require(gdistance)
+require(stringr)
+require(foreach)
+require(boot)
+require(mapproj)
+require(maptools)
+require(rasterVis)
+library(knitr)
+opts_chunk$set(warning=FALSE,message=FALSE)
+opts_chunk$set(cache=TRUE, cache.path = 'SpeciesOverlap_cache/', fig.path='figure/',fig.width=10,echo=TRUE)
+
+#Set git path
+gitpath<-"C:/Users/Ben/Documents/Pred_Obs/"
+droppath<-"C:/Users/Ben/Dropbox/"
+
+#Load image if desired
+#load(paste(droppath,"Thesis/Pred_Realized/Assemblages/Threshold0.2/Results/Run.RData",sep=""))
+
+```
+
+#Read in data
+
+```{r import data}
+#Bring in Phylogenetic Data
+trx<-read.nexus(paste(gitpath,"InputData\\ColombiaPhylogenyUM.tre",sep=""))
+spnames<-read.table(paste(gitpath,"InputData\\SpNameTree.txt",sep=""), sep = "\t", header = TRUE)
+
+#Replace tip.label with Spnames#
+#replace the tiplabels with periods, which is the biomod default
+trx$tip.label<-gsub("_",".",as.character(spnames$SpName))
+ctrx<-cophenetic(trx)
+
+#Bring in the assemblages, cleaned from JP
+Sites<-read.csv(paste(gitpath,"InputData//Sites.csv",sep=""),row.names=1)
+
+#Bring in Phylogenetic Data
+trx<-read.nexus(paste(gitpath,"InputData\\ColombiaPhylogenyUM.tre",sep=""))
+spnames<-read.table(paste(gitpath,"InputData\\SpNameTree.txt",sep="") , sep = "\t", header = TRUE)
+
+#Replace tip.label with Spnames#
+#replace the tiplabels with periods, which is the biomod default
+trx$tip.label<-gsub("_",".",as.character(spnames$SpName))
+ctrx<-cophenetic(trx)
+
+####bring in Clade data
+clades<-read.csv(paste(gitpath,"InputData//CladeList.txt",sep=""),header=FALSE)[,-1]
+colnames(clades)<-c("Clade","Genus","Species","double","English")
+clades<-clades[,1:5]
+
+#Change the syntax on clades so it matches output, replace . with space
+clades$double.<-sub(" ",".",clades$double)
+
+#Bring in spatial data for the sites
+#Extract env information for each site
+Sites.sp<-SpatialPointsDataFrame(Sites[,c("LongDecDeg","LatDecDeg")],Sites)
+
+
+#site by species lists
+siteXspp<-t(read.csv(paste(gitpath,"InputData//siteXspp.csv",sep=""),row.names=1))
+```
+
+###Source Function Script
+
+These are helper functions to run distribution models and calculated relatedness and cost distance.
+
+```{r source functions,}
+source(paste(gitpath,"SpeciesOverlapSourceFunctions.R",sep=""))
+source(paste(gitpath,"SDMupdated.R",sep=""))
+```
+
+#Niche Models
+
+Run ensemble niche models using biomod2 at a desired cell size.
+To make this run, you need to ![download maxent](http://www.cs.princeton.edu/~schapire/maxent/) and place it in the folder you want to save the niche models: 
+ 
+```{r Niche Models}
+cell_size=.5
+inLocalities<-read.csv("InputData/MASTER_POINTLOCALITYarcmap_review.csv")
+envfolder<-"C:\\Users\\Ben\\Dropbox\\Thesis\\Pred_Realized\\EnvLayers"
+savefolder<-"C:/Users/Ben/Dropbox/Thesis/Pred_Realized/Niche Models/"
+
+SDM_SP(cell_size,inLocalities,envfolder,savefolder)
+```
+
+##Import predicted suitable habitat rasters
+
+```{r niche raster}
+#Bring in niche models from the script SDM.R, get the folder from cell size arguemnt
+
+#Biomod Consensus ensemble niche models
+niche<-list.files(paste(savefolder,cell_size,sep="/"),pattern="ensemble.gri",full.name=T,recursive=T)
+
+#Just from the current env predictions.
+niche<-niche[grep("current",niche,value=FALSE)]
+
+#Name the list of suitability models
+names(niche)<-lapply(niche,function(path){
+  split.1<-strsplit(path,"/")[[1]][4]
+})
+```
+
+##Merge site by species assemblage lists with geographic distribution of niche models
+
+```{r}
+#Get the niche models with more than 0 presence points in the assemblage lists
+
+niche_torun<-niche[names(niche) %in% curr_sp]
+
+#Create Spatial Points object of the rownmaes
+site.raster<-raster(niche[[1]])
+res(site.raster)<-cell_size
+
+#Create PA matrix for the raster
+raster.localities<-rasterize(y=site.raster,SpatialPoints(Sites.sp),fun=function(x,...) length(x))
+
+#Which cell is each site in?
+cellSites<-extract(raster.localities,Sites.sp,cell=T)
+
+#Split cell
+head(cellSites<-data.frame(Sites.sp,cellSites))
+splitCellSites<-split(cellSites,factor(cellSites$cells))
+
+#How many duplicate communities are there, ie. number of assemblages per cell
+
+siteXspp.raster<-sapply(splitCellSites,function(x){
+  if(nrow(x)== 1) out<-siteXspp[,colnames(siteXspp) %in% x$Community]
+  if(nrow(x)>1 ) {
+    (out<-apply(siteXspp[,colnames(siteXspp) %in% x$Community],1,sum) > 0)*1
+  }
+  return(out)
+})
+
+#Get the xy lat long of the cells with sites in it
+cellSitesXY<-xyFromCell(raster.localities,as.numeric(colnames(siteXspp.raster)),spatial=TRUE)
+rownames(cellSitesXY@coords)<-colnames(siteXspp.raster)
+
+##Important to get a grasp on data overlap between the different sources
+congruence<-melt(list(Trait=rownames(trait_pc),Phylo=rownames(ctrx),Assemblage=rownames(siteXspp.raster),Suitability=names(niche),Clades=clades$double.))
+
+write.csv(table(congruence),paste(droppath,"Thesis/Pred_Realized/Assemblages//DataOverlap.csv",sep=""))
+
+kable(colSums(table(congruence)))
+```
+
+#Cost Path Analysis
+
+To provide a reasonable dispersal filter we compute cost distance between assemblages. Computing cost distances among locations requires construction of environmentally weighted cost surface based on change in elevation and calculation of a least-cost path between two locations.  We used the R package gDistance to calculate cost-distance (Etten 2011). Our cost distance is a function of difference in elevation. So high elevation species see low elevation areas as a barrier, and low elevation species see high elevation areas as a barrier.
+
+
+```{r Cost Path, eval=FALSE}
+
+#Import Friction layer, this can be changed later if we want a more fine grained 
+elevr<-raster(paste(droppath,"Thesis/Pred_Realized/etopo2\\w001001.adf",sep=""))
+
+#cut it generally by the extent of the points, less waste
+elev.c<-crop(elevr,extent(raster(niche[[1]]))*1.3)
+
+#only want above sealevel....
+elev.c[elev.c < 0]<-NA
+
+#For now aggregate elev raster to reduce complexity
+elev.ca<-aggregate(elev.c,2)
+
+#Find shortest cost path, for all sites, to dataheavy to bring into raster
+#This is find for assemblage mode, but for range map mode, skip down to after euclidean
+cl<-makeCluster(8,"SOCK")
+registerDoSNOW(cl)
+costPath.list<-foreach(x = 1:length(cellSitesXY)) %dopar% {
+  require(raster)
+  require(gdistance)
+  #pick the original site. 
+  orig<-cellSitesXY[x,]
+  
+  #What elevation is the origin
+  elev_origin<-extract(elev.ca,orig)[[1]]
+  if(is.na(elev_origin)) elev_origin<-0
+  
+  #Get the difference between the origin elevation and every cell in the raster
+  elev_diff<-abs(elev_origin-elev.ca)
+  
+  #create a the transition matrix where permeability is high where elev difference is low
+  trans_diff<-transition(elev_diff,function(x) 1/mean(x),8)
+  
+  #Diagonal Cell Correction, diagonals are father away than adjacent cells. 
+  slope <- geoCorrection(trans_diff)
+  
+  #Remember this cost surface is only valid for this site as the origen, ie. we want to create just this column in the cost distance matrix
+  #Cost Distance
+  cdist<-costDistance(slope,orig,cellSitesXY)
+  #labelling is key here.
+  
+  return(list(cdist))}
+stopCluster(cl)
+
+#Format the cost path matrix
+m.costlist<-melt(costPath.list)
+CostPathMatrix<-log(cast(m.costlist,X2~L1)[,-1])
+rownames(CostPathMatrix)<-colnames(siteXspp.raster)
+colnames(CostPathMatrix)<-colnames(siteXspp.raster)
+```
+
+### Create list of assemblages in observed and predicted assemblages
+
+```{r}
+#Create list of assemblages
+sp.lists<-apply(siteXspp.raster,2,function(x){
+  out<-names(x[which(x==1)])
+})
+```
+
+##Dispersal limits
+
+Assemblages in predicted suitable environments were considered unavailable for species presence if the cost distance to the nearest observed assemblage was larger than the greatest cost distance between any two observed assemblages for that species.
+
+```{r,eval=FALSE}
+
+#Get Costpath distribution for each species
+costThresh<-apply(siteXspp.raster,1,function(y){
+  sites<-names(y[y==1])
+  #get pairwise combination of sites
+  siteCombo<-expand.grid(sites,sites)
+  outH<-apply(siteCombo,1,function(x){
+    CostPathMatrix[x["Var1"],x["Var2"]]
+  })
+  #remove infinite values
+  outH<-outH[is.finite(outH)]
+  #return largest distance for the species, this will be the cost path threshold
+  return(max(outH))})
+```
+
+# Defining species predicted presence and absence
+Ensemble niche models return a probability value of suitability for each cell in a landscape. To define predicted suitable areas, we needed to turn this probability into a statement of predicted presence/absence. Due to differences in species prevalence, taking a fixed probability cutoff across all species will bias presence towards more common species (Liu et al. 2005). We therefore thresholded the models based on the distribution of suitability values from the observed localities (Pearson et al. 2004, Gutiérrez et al. 2014)
+
+# Define function to compute distance to closely related species and predicted presence and absence
+
+```{r}
+predAssemblages<-function(thresh){
+  print(thresh)
+
+fold<-paste(droppath,paste("Thesis/Pred_Realized/Assemblages/Threshold",thresh,sep=""),sep="")
+
+#Create output folders
+#Read in source function to draw predicted and realized assemblages and match relatedness
+
+dir.create(fold)
+dir.create(paste(fold,"Species",sep="/"))
+
+#load models to file, makes it more transferable than keeping them on disk
+
+#Choose the model output, for now i'm getting the mean ensemble model
+modlist<-lapply(niche,raster,values=TRUE)
+
+#or read from file
+#writeRaster(paste(gitpath,"modelStack",sep=""),x=stack(modlist),bylayer=FALSE)
+modlist<-stack(paste(gitpath,"modelStack",sep=""))
+
+#########################################################
+#Perform Predicted v Realized Function on all Niche Models
+#########################################################
+
+cl<-makeCluster(8,"SOCK")
+registerDoSNOW(cl)
+system.time(all_models<-foreach(x=1:nlayers(modlist),.export=c("sp.lists","siteXspp.raster"),.errorhandling="pass",.packages=c("raster","maptools","reshape","dismo","picante","ggplot2","rasterVis","lattice")) %dopar%{  
+  pred_realized(mod=modlist[[x]],thresh.suit=thresh,dispersal=FALSE,plots=FALSE)
+})
+stopCluster(cl)
+
+print("SpeciesRelatednessandPresenceTable_Nodispersal")
+
+#If you want to start here, read in the data from file
+
+#combine all datasets
+#This naming function would need to changed on other systems
+names(all_models)<-names(modlist)
+
+#Remove models that failed. 
+working_models<-all_models[!sapply(sapply(all_models,nrow),is.null)]
+failed_models<-all_models[sapply(sapply(all_models,nrow),is.null)]
+write.csv(names(failed_models),"FailedSpecies.csv")
+
+#melt and name list
+#remove any species that failed. 
+all.species.data<-melt(working_models,id.var=names(all_models[[1]]))
+
+##############Repeat for no dispersal conditions#########
+
+#Please note i've turned off the filter for which species to run based on number of presences in an assemblages, see line 105
+cl<-makeCluster(8,"SOCK")
+registerDoSNOW(cl)
+system.time(all_modelsDD<-foreach(x=1:nlayers(modlist),.errorhandling="pass",.export=c("sp.lists","siteXspp.raster"),.packages=c("raster","maptools","reshape","dismo","picante","ggplot2","rasterVis","lattice")) %dopar%{  
+  pred_realized(mod=modlist[[x]],thresh.suit=thresh,dispersal=TRUE,plots=FALSE)
+})
+stopCluster(cl)
+
+print("SpeciesRelatednessandPresenceTable_dispersal")
+
+#If you want to start here, read in the data from file
+
+#combine all datasets
+#This naming function would need to changed on other systems
+names(all_modelsDD)<-names(modlist)
+
+#Remove models that failed. 
+working_modelsD<-all_modelsDD[!sapply(sapply(all_modelsDD,nrow),is.null)]
+failed_modelsD<-all_modelsDD[sapply(sapply(all_modelsDD,nrow),is.null)]
+write.csv(names(failed_modelsD),"FailedSpeciesD.csv")
+
+#melt and name list
+#remove any species that failed. 
+all.species.dataD<-melt(working_modelsD,id.var=names(all_modelsDD[[1]]))
+
+#Merge together as a list, name and melt
+
+all.species.dataBoth<-list(Env=all.species.data,Env_Dispersal=all.species.dataD)
+all.species.data<-melt(all.species.dataBoth,id.vars=colnames(all.species.data))
+
+colnames(all.species.data)[13]<-"Hyp"
+
+#########################################################
+#Combine Models for each species and create data structure ready for plotting
+#########################################################
+
+#Set working directory to output folder
+dir.create(paste(fold,"Results",sep="/"))
+setwd(paste(fold,"Results",sep="/"))
+
+print(head(all.species.data))
+
+#Visualize model outputs
+ggplot(all.species.data,aes(x=Suitability,fill=P_A)) + geom_density(alpha=.5) + theme_bw() + labs(fill="") + facet_wrap(~Hyp)
+ggsave("AllspeciesBinarySuitability.svg",height=8,width=10) 
+
+#Name metrics column
+colnames(all.species.data)[c(5,6)]<-c("Metric","value")
+all.species.data<-all.species.data[,!colnames(all.species.data) %in% c("L1","P_A")]
+
+#add in which clade each focal species is
+PA_mult2<-merge(all.species.data,clades[,-c(3,4,5)],by.x="Species",by.y="double.")
+
+#contigency table
+contin<-table(PA_mult2$P_Apred,PA_mult2$PA_Binary,PA_mult2$Hyp,PA_mult2$Tree,deparse.level=2)
+
+#melt the presence absence matrix for plotting
+PA_m2<-melt(PA_mult2,measure.vars=c("P_Apred","PA_Binary"))
+
+#Name the columns
+colnames(PA_m2)[c(13,14)]<-c("P_R","P_A")
+
+#distribution of trait distances.
+with(PA_m2,hist(PA_m2[Tree=="Func","value"]))
+PA_m2<-PA_m2[is.finite(PA_m2$value),]
+
+#remove all na's
+PA_m2<-PA_m2[!is.na(PA_m2$value),]
+#Final data format
+
+PA_m2<-PA_m2[!(PA_m2$Hyp=="Env_Dispersal" & PA_m2$P_R=="PA_Binary"),]
+
+#Final data format
+head(PA_m2)
+
+#take out values greater than 95% quartile
+trait_out<-with(PA_m2,quantile(PA_m2[Tree=="Func","value"],.95,na.rm=T))
+phylo_out<-with(PA_m2,quantile(PA_m2[Tree=="Phylo","value"],.95,na.rm=T))
+
+
+PA_m2[PA_m2$Tree=="Phylo" & PA_m2$value > as.numeric(phylo_out),"value"]<-NA 
+
+PA_m2<-PA_m2[!is.na(PA_m2$value),]
+
+```
+
+**Loop through a series of threshold values to compute sensitivity of our analysis**
+
+This analysis will create a folder for each predicted suitable habitat threshold.
+
+```{r}
+ord<-seq(0,.25,.05)
+
+for (thresh in ord){
+predAssemblages(thresh)
+}
+
+```
+
+#Sensitivity Analysis
+
+
+

@@ -1,0 +1,236 @@
+---
+title: "Hummingbird co-occurrence & relatedness"
+author: "Ben Weinstein"
+date: "Monday, November 10, 2014"
+output: html_document
+---
+
+#Aim
+To estimate probability of occurrence as a function of distance to closest related species. I have done this in a normal ML framework (below), but i have aggregate all species together. This is 'unfair' since each species has a different pattern of relatedness in the phylogeny. Comparing relatedness of 0.2 is different between brilliants (many closely related speices) and patagona (few closely related species). I still want to estimate a single model, so species slopes will be drawn in a hiericichal manner. I believe the model should be polynomial
+
+</br>
+
+## Model Formulation
+
+$$ y \sim dbern(p) $$
+
+$$ logit(p) = \alpha_{species} + \beta *x + \gamma *x^2 $$
+
+$$ \text{where} \: \alpha \: \text{for each species} \sim dnorm(\mu,\tau) $$
+
+$$ \text{p is the probability of presence at a site}$$
+$$ \text{x= cophenetic distance to the most closely related species }$$
+
+```{r,echo=FALSE,warning=FALSE,message=FALSE}
+library(knitr)
+library(pez)
+library(ape)
+library(dplyr)
+library(ggplot2)
+library(reshape2)
+library(vegan)
+library(gridExtra)
+library(R2jags)
+library(boot)
+library(stringr)
+opts_chunk$set(warning=FALSE,message=FALSE)
+opts_chunk$set(cache=TRUE, cache.path = 'FullModel_cache/', fig.path='figure/',fig.width=10,echo=TRUE)
+```
+
+#Data
+
+```{r load_data}
+
+#Set dropbox path
+droppath<-"C:/Users/Ben/Dropbox/"
+
+#Set git path
+gitpath<-"C:/Users/Ben/Documents/Pred_Obs/"
+
+#Load image if desired
+load(paste(droppath,"Thesis/Pred_Realized/Assemblages/Threshold0.2/Results/Run.RData",sep=""))
+
+#head(PA_m2)
+
+```
+
+##Define bayes model function
+
+Define a function that takes in species, presence/absence and distance to the closest related species for each type of assemblage, and returns the posterior estimates of X and X^2.
+
+```{r singlemodel,echo=TRUE,eval=TRUE}
+setwd("C:/Users/Ben/Documents/Pred_Obs/Bayesian")
+
+Bayes<-function(presence,distance,species,runs,burn,plots,folder){
+
+dir.create(folder)
+
+#Source model
+source("SingleSlope.R")
+
+#make species a factor
+species<-as.factor(species)
+
+#Input Data
+Dat <- list(
+  y=as.numeric(presence),
+  dist=distance,
+  Species=as.numeric(species),
+  s=nlevels(species))
+
+InitStage <- function() {list(alpha=rep(.1,Dat$s),beta=.1,gamma=.1)}
+
+#Parameters to track
+ParsStage <- c("alpha","beta","gamma")
+
+#MCMC options
+ni <- runs  # number of draws from the posterior
+nt <- 1    #thinning rate
+nb <- 0  # number to discard for burn-in
+nc <- 2  # number of chains
+
+#Jags
+
+m = jags(inits = InitStage,
+         n.chains=nc,
+         model.file="SingleSlope.jags",
+         working.directory=getwd(),
+         data=Dat,
+         parameters.to.save=ParsStage,
+         n.thin=nt,
+         n.iter=ni,
+         n.burnin=nb,
+         DIC=T)
+
+#Remove Burnin
+pars<-melt(m$BUGSoutput$sims.array)
+colnames(pars)<-c("Draw","Chain","parameter","estimate")
+pars<-pars[!pars$Draw %in% 1:burn,]
+
+#remove deviance
+pars<-pars[!pars$parameter %in% "deviance",]
+pars<-pars[!str_detect(string=pars$parameter,pattern=c("alpha")),]
+
+###Posterior Distributions
+ggplot(pars,aes(x=estimate)) + geom_histogram() + ggtitle("Estimate of parameters") + facet_wrap(~parameter,scale="free") + theme_bw() 
+
+if(plots){ggsave(paste(folder,"Posteriors.jpeg",sep="/"),height=5,width=10,dpi=300)}
+
+###Chains
+p<-ggplot(pars,aes(x=Draw,col=as.factor(Chain),y=estimate)) + geom_line() + facet_wrap(~parameter,scale="free") + theme_bw() + labs(col="Chain") + ggtitle(folder)
+p
+if(plots){ggsave(paste(folder,"Chains.jpeg",sep="/"),height=5,width=10,dpi=300)
+saveRDS(p,file=paste(folder,"ChainsModel.RData",sep="/"))          
+}
+
+parG<-group_by(pars,parameter)
+out<-summarise(parG,mean=mean(estimate),lower=quantile(estimate,0.025),upper=quantile(estimate,0.975),sd=sd(estimate))
+
+write.csv(out,paste(folder,"parameterestimates.csv",sep="/"))
+
+return(pars)}
+```
+
+##Read in simulated data
+
+```{r}
+simall<-read.csv("C:/Users/Ben/Documents/Pred_Obs/Bayesian/simdats.csv",row.names=1)
+
+colnames(simall)<-c("Locality","Species","P_A","value","Hyp","Iteration","P_R")
+
+```
+
+```{r}
+datF<-PA_m2[PA_m2$Assemblage %in% "Observed" & PA_m2$Tree %in% "Phylo",c("Species","Locality","P_A","value","P_R","Hyp")]
+
+datF$Locality<-as.numeric(as.character(datF$Locality))
+#bind with simulated data
+
+datF<-rbind_all(list(datF,simall))
+
+#split data into types of assemblages
+#drop Env + Dispersal for observed, its just a data subset
+sdat<-split(datF,list(datF$P_R,datF$Hyp),drop=TRUE)[-4]
+
+#for now grab 10000 random samples and remove inf values
+sdat<-lapply(sdat,function(x){
+  x<-x[is.finite(x$value),]
+  #if(nrow(x) > 5000){
+    #x<-x[sample(1:nrow(x),1000),]
+  #}
+  return(x)
+})
+
+```
+
+
+#Bayes function for each assemblage type
+
+```{r,results='hide'}
+
+parall<-lapply(sdat,FUN=function(x){
+  #create folder name
+  fold<-paste(unique(x$P_R),unique(x$Hyp),sep="_")
+  
+  test<-Bayes(presence = x$P_A,distance = x$value,species=x$Species,runs = 30000,burn=25000,plots = TRUE,folder = fold)
+})
+```
+
+##View Chains
+
+```{r,fig.height=10}
+a<-list.files(pattern="ChainsModel.RData",recursive = T,full.names=TRUE)
+pl<-lapply(a,readRDS)
+do.call(grid.arrange,c(pl,nrow=6))
+```
+
+Combine predicted and observed outputs:
+```{r}
+#name each list
+for(i in 1:length(parall)){
+  parall[[i]]$L1<-names(parall)[i]
+}
+
+parmelt<-rbind_all(parall)
+
+#add in observed predicted and eventually simualted
+
+parmelt[parmelt$L1 %in% "P_Apred.Env","Assemblage"]<-"Predicted"
+
+parmelt[parmelt$L1 %in% "P_Apred.Env_Dispersal","Assemblage"]<-"Predicted"
+
+parmelt[parmelt$L1 %in% "PA_Binary.Env","Assemblage"]<-"Observed"
+
+parmelt[parmelt$L1 %in% c("Simulated.Lottery","Simulated.Niche Conservatism","Simulated.Niche Conservatism and Competition"),"Assemblage"]<-"Simulation"
+
+```
+
+#Format final figure
+
+```{r,fig.height=15}
+
+simulated<-ggplot(parmelt[parmelt$Assemblage %in% "Simulation",],aes(x=estimate,fill=parameter)) + facet_wrap(~L1,scale="free_y") + geom_histogram() + theme_bw() + ggtitle("Simulated") + scale_fill_discrete(guide="none") + labs(x="")
+
+predicted<-ggplot(parmelt[parmelt$Assemblage %in% "Predicted",],aes(x=estimate,fill=parameter)) + facet_wrap(~L1,scale="free_y") + geom_histogram() + theme_bw() + ggtitle("Predicted")+ scale_fill_discrete(guide="none") + labs(x="")
+
+observed<-ggplot(parmelt[parmelt$Assemblage %in% "Observed",],aes(x=estimate,fill=parameter)) + facet_wrap(~L1,scale="free_y") + geom_histogram() + theme_bw() + ggtitle("Observed")
+
+grid.arrange(simulated,predicted,observed,nrow=3)
+```
+
+```{r,echo=FALSE,results='hide'}
+jpeg("PosteriorAll.jpeg",res=300,height=8,width=10,units="in")
+grid.arrange(simulated,predicted,observed,nrow=3)
+dev.off()
+```
+
+##Parameter estimates across all models
+```{r,size=8}
+finaltab<-group_by(parmelt,L1,Assemblage,parameter) %>% summarize(mean=mean(estimate),upper=quantile(estimate,0.975),lower=quantile(estimate,0.025))
+
+kable(as.data.frame(finaltab))
+
+write.csv(finaltab,"ParameterEstimates.csv")
+save.image(paste(droppath,"FullModel.Rdata",sep=""))
+```
+

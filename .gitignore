@@ -1,0 +1,5 @@
+.Rproj.user
+.Rhistory
+*.RData
+/Bayesian/FullModel_cache/
+/SimulationsPez_cache/
