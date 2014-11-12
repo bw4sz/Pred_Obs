@@ -3,3 +3,4 @@
 *.RData
 /Bayesian/FullModel_cache/
 /SimulationsPez_cache/
+/SpeciesOverlap_cache/

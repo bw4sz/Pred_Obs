@@ -30,17 +30,15 @@ library(doSNOW)
 library(gdistance)
 library(foreach)
 library(boot)
-library(mapproj)
 library(maptools)
 library(rasterVis)
 library(knitr)
 library(ape)
-library(dplyr)
-library(ggplot2)
 library(vegan)
 library(gridExtra)
 library(R2jags)
 library(stringr)
+library(dplyr)
 
 opts_chunk$set(warning=FALSE,message=FALSE)
 opts_chunk$set(cache=TRUE, cache.path = 'SpeciesOverlap_cache/', fig.path='figure/',fig.width=10,echo=TRUE)
@@ -97,7 +95,6 @@ clades$double.<-sub(" ",".",clades$double)
 #Extract env information for each site
 Sites.sp<-SpatialPointsDataFrame(Sites[,c("LongDecDeg","LatDecDeg")],Sites)
 
-
 #site by species lists
 siteXspp<-t(read.csv(paste(gitpath,"InputData//siteXspp.csv",sep=""),row.names=1))
 ```
@@ -115,13 +112,17 @@ source(paste(gitpath,"SDMupdated.R",sep=""))
 
 Run ensemble niche models using biomod2 at a desired cell size.
 To make this run, you need to ![download maxent](http://www.cs.princeton.edu/~schapire/maxent/) and place it in the folder you want to save the niche models: 
- 
-```{r Niche Models}
+
+```{r}
 cell_size=.5
 inLocalities<-read.csv("InputData/MASTER_POINTLOCALITYarcmap_review.csv")
 envfolder<-"C:\\Users\\Ben\\Dropbox\\Thesis\\Pred_Realized\\EnvLayers"
 savefolder<-"C:/Users/Ben/Dropbox/Thesis/Pred_Realized/NicheModels/"
+```
 
+Run distribution models (may need to be done offline)
+
+```{r Niche Models,eval=FALSE}
 SDM_SP(cell_size,inLocalities,envfolder,savefolder)
 ```
 
@@ -145,7 +146,6 @@ names(niche)<-lapply(niche,function(path){
 ##Merge site by species assemblage lists with geographic distribution of niche models
 
 ```{r}
-
 #Create Spatial Points object of the rownmaes
 site.raster<-raster(niche[[1]])
 res(site.raster)<-cell_size
@@ -191,7 +191,7 @@ kable(head(completeI))
 To provide a reasonable dispersal filter we compute cost distance between assemblages. Computing cost distances among locations requires construction of environmentally weighted cost surface based on change in elevation and calculation of a least-cost path between two locations.  We used the R package gDistance to calculate cost-distance (Etten 2011). Our cost distance is a function of difference in elevation. So high elevation species see low elevation areas as a barrier, and low elevation species see high elevation areas as a barrier.
 
 
-```{r Cost Path, eval=FALSE}
+```{r Cost Path, eval=TRUE}
 
 #Import Friction layer, this can be changed later if we want a more fine grained 
 elevr<-raster(paste(droppath,"Thesis/Pred_Realized/etopo2\\w001001.adf",sep=""))
@@ -204,9 +204,11 @@ elev.c[elev.c < 0]<-NA
 
 #For now aggregate elev raster to reduce complexity
 elev.ca<-aggregate(elev.c,2)
+```
 
-#Find shortest cost path, for all sites, to dataheavy to bring into raster
-#This is find for assemblage mode, but for range map mode, skip down to after euclidean
+##Find shortest cost path, for all sites
+
+```{r,eval=FALSE}
 cl<-makeCluster(14,"SOCK")
 registerDoSNOW(cl)
 costPath.list<-foreach(x = 1:length(cellSitesXY)) %dopar% {
@@ -461,7 +463,7 @@ Sensitivity analysis shows that suitabilty threshold of 80% is a reasonable valu
 PA_m2<-predAssemblages(.2,plots=TRUE)
 ```
 
-Save image in case we need to start here
+Save image in case we need to start here.
 
 ```{r}
 save.image("PredictedRealized.Rdata")

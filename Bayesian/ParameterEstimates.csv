@@ -1,11 +1,11 @@
 "","L1","Assemblage","parameter","mean","upper","lower"
-"1","PA_Binary.Env","Observed","beta",-1.78267264963657,4.75587878609158,-8.28867091246071
-"2","PA_Binary.Env","Observed","gamma",4.51113787116115,16.7796486037249,-7.45957507706138
-"3","P_Apred.Env","Predicted","beta",5.59917196499087,11.4879060142316,-0.435486838561822
-"4","P_Apred.Env","Predicted","gamma",-9.0435744251721,1.78652382820244,-19.9000881405382
-"5","P_Apred.Env_Dispersal","Predicted","beta",7.01089716728472,13.1911030463753,0.821848313692438
-"6","P_Apred.Env_Dispersal","Predicted","gamma",-11.7801182227006,-0.257200303775737,-23.325342043061
-"7","Simulated.Niche Conservatism","Simulation","beta",-10.8810669748855,-9.16528046055079,-12.7612127914023
-"8","Simulated.Niche Conservatism","Simulation","gamma",2.59186862587082,3.41610634055348,1.82160961517604
-"9","Simulated.Niche Conservatism and Competition","Simulation","beta",18.1598466967931,19.8720208569606,16.4878794398043
-"10","Simulated.Niche Conservatism and Competition","Simulation","gamma",-9.01245602384875,-8.12957824741448,-9.87470358217023
+"1","PA_Binary.Env","Observed","beta",-2.08819909761003,4.37045302374195,-8.63087135400003
+"2","PA_Binary.Env","Observed","gamma",1.95382122729712,14.4561084542452,-10.0277759706087
+"3","P_Apred.Env","Predicted","beta",4.29739594986342,9.83930300489408,-1.02235999326492
+"4","P_Apred.Env","Predicted","gamma",-7.80634993067709,2.73512728859489,-18.6007262668548
+"5","P_Apred.Env_Dispersal","Predicted","beta",4.92397522997777,10.4712153615133,-0.532171173685841
+"6","P_Apred.Env_Dispersal","Predicted","gamma",-9.12977678614375,1.62876645888158,-20.1557990418437
+"7","Simulated.Niche Conservatism","Simulation","beta",-12.7836234864546,-11.0146686682406,-14.6040963612796
+"8","Simulated.Niche Conservatism","Simulation","gamma",3.63401187421535,4.39931692640495,2.88164691668087
+"9","Simulated.Niche Conservatism and Competition","Simulation","beta",18.1193209707187,20.2297656618453,16.4983286638738
+"10","Simulated.Niche Conservatism and Competition","Simulation","gamma",-8.94935379997866,-8.08563714566547,-10.2843907445778
