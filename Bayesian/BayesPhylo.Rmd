@@ -44,7 +44,6 @@ burns=1000
 ###Data
 
 ```{r load_data}
-
 #Set dropbox path
 droppath<-"C:/Users/Ben/Dropbox/"
 

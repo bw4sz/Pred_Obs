@@ -330,8 +330,7 @@ PA_phylo<-co_occur(melt(siteXspp.raster))
 
 ```{r}
 predAssemblages<-function(thresh,plots=TRUE){
-  print(thresh)
-
+  browser()
 fold<-paste(droppath,paste("Thesis/Pred_Realized/Assemblages/Threshold",thresh,sep=""),sep="")
 
 #Create output folders
@@ -356,8 +355,10 @@ if(plots){plot(modlist[[1:6]])}
 #Perform Predicted v Realized Function on all Niche Models
 #########################################################
 
+cl<-makeCluster(12,"SOCK")
+registerDoSNOW(cl)
 
-system.time(all_models<-foreach(x=1:nlayers(modlist),.export=c("sp.lists","siteXspp.raster","pred_realized"),.errorhandling="pass",.packages=c("raster","maptools","reshape","dismo","picante","ggplot2","rasterVis","lattice")) %do%{
+system.time(all_models<-foreach(x=1:nlayers(modlist),.export=c("sp.lists","siteXspp.raster","pred_realized","fold","gitpath","cellSitesXY"),.errorhandling="pass",.packages=c("raster","maptools","reshape","dismo","picante","ggplot2","rasterVis","lattice")) %dopar%{
   
   source(paste(gitpath,"SpeciesOverlapSourceFunctions.R",sep=""))
   
@@ -382,13 +383,16 @@ write.csv(names(failed_models),"FailedSpecies.csv")
 #remove any species that failed. 
 all.species.data<-melt(working_models,id.var=names(all_models[[1]]))
 
-##############Repeat for no dispersal conditions########
-system.time(all_modelsDD<-foreach(x=1:nlayers(modlist),.errorhandling="pass") %do%{ 
+##############Repeat for dispersal filter########
+system.time(all_modelsDD<-foreach(x=1:nlayers(modlist),.errorhandling="pass",.export=c("sp.lists","siteXspp.raster","pred_realized","fold","gitpath","cellSitesXY","costThresh","CostPathMatrix"),.packages=c("raster","maptools","reshape","dismo","picante","ggplot2","rasterVis","lattice")) %dopar%{ 
     
   source(paste(gitpath,"SpeciesOverlapSourceFunctions.R",sep=""))
     
   pred_realized(mod=modlist[[x]],thresh.suit=thresh,dispersal=TRUE,plots=FALSE)
 })
+
+#turn
+stopCluster(cl)
 
 if(plots){print("Species Table including dispersal")}
 
@@ -456,10 +460,9 @@ return(PA_m2)
 
 ```
 
-Sensitivity analysis shows that suitabilty threshold of 80% is a reasonable value, compute predicted and realized distributions.
+Sensitivity analysis shows that suitabilty threshold of 80% is a reasonable value, compute predicted and realized distributions. The function is specified as 1-threshold/100.
 
 ```{r}
-#specified as 1-threshold/100.
 PA_m2<-predAssemblages(.2,plots=TRUE)
 ```
 
@@ -599,7 +602,6 @@ sdat<-lapply(sdat,function(x){
 })
 
 ```
-
 
 ##Bayes function for each assemblage type
 
