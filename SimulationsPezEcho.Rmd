@@ -1,9 +1,5 @@
 ---
-<<<<<<< HEAD
 title: "Relatedness and Co-occurrence Simulation"
-=======
-title: "Pez Simulation"
->>>>>>> 54f2e721ce6c6e3bc9d0644d84b95a021d904851
 author: "Ben Weinstein"
 date: "Friday, October 24, 2014"
 output:

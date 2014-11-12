@@ -12,11 +12,11 @@ To estimate probability of occurrence as a function of distance to closest relat
 
 ## Model Formulation
 
-$$ y \sim dbern(p) $$
+$$ y \sim bern(p_i) $$
 
-$$ logit(p) = \alpha_{species} + \beta *x + \gamma *x^2 $$
+$$ logit(p_i) = \alpha_{species[i]} + \beta *x + \gamma *x^2 $$
 
-$$ \text{where} \: \alpha \: \text{for each species} \sim dnorm(\mu,\tau) $$
+$$ \text{where} \: \alpha \: \text{for each species} \sim dnorm(\mu,\sigma^2) $$
 
 $$ \text{p is the probability of presence at a site}$$
 $$ \text{x= cophenetic distance to the most closely related species }$$

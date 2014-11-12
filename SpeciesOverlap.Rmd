@@ -316,7 +316,7 @@ PA_phylo<-co_occur(melt(siteXspp.raster))
 #Calculate predicted presence and absence based on suitability and cost distance
 
 ```{r}
-predAssemblages<-function(thresh){
+predAssemblages<-function(thresh,plots=TRUE){
   print(thresh)
 
 fold<-paste(droppath,paste("Thesis/Pred_Realized/Assemblages/Threshold",thresh,sep=""),sep="")
@@ -333,7 +333,7 @@ dir.create(paste(fold,"Species",sep="/"))
 modlist<-stack(lapply(niche,raster,values=TRUE))
 
 #plot a few rasters
-plot(modlist[[1:6]])
+if(plots){plot(modlist[[1:6]])}
 
 #or read from file
 #writeRaster(paste(gitpath,"modelStack",sep=""),x=stack(modlist),bylayer=FALSE,overwrite=TRUE)
@@ -343,14 +343,16 @@ plot(modlist[[1:6]])
 #Perform Predicted v Realized Function on all Niche Models
 #########################################################
 
-cl<-makeCluster(12,"SOCK")
-registerDoSNOW(cl)
-system.time(all_models<-foreach(x=1:nlayers(modlist),.export=c("sp.lists","siteXspp.raster"),.errorhandling="pass",.packages=c("raster","maptools","reshape","dismo","picante","ggplot2","rasterVis","lattice")) %dopar%{  
-  pred_realized(mod=modlist[[x]],thresh.suit=thresh,dispersal=FALSE,plots=FALSE)
-})
-stopCluster(cl)
 
-print("Species Relatedness andPresence Table_Nodispersal")
+system.time(all_models<-foreach(x=1:nlayers(modlist),.export=c("sp.lists","siteXspp.raster","pred_realized"),.errorhandling="pass",.packages=c("raster","maptools","reshape","dismo","picante","ggplot2","rasterVis","lattice")) %do%{
+  
+  source(paste(gitpath,"SpeciesOverlapSourceFunctions.R",sep=""))
+  
+  pred_realized(mod=modlist[[x]],thresh.suit=thresh,dispersal=FALSE,plots=FALSE)
+  
+  })
+
+if(plots){print("Species Table_Nodispersal")}
 
 #If you want to start here, read in the data from file
 
@@ -367,19 +369,15 @@ write.csv(names(failed_models),"FailedSpecies.csv")
 #remove any species that failed. 
 all.species.data<-melt(working_models,id.var=names(all_models[[1]]))
 
-##############Repeat for no dispersal conditions#########
-
-#Please note i've turned off the filter for which species to run based on number of presences in an assemblages, see line 105
-cl<-makeCluster(12,"SOCK")
-registerDoSNOW(cl)
-system.time(all_modelsDD<-foreach(x=1:nlayers(modlist),.errorhandling="pass",.export=c("sp.lists","siteXspp.raster"),.packages=c("raster","maptools","reshape","dismo","picante","ggplot2","rasterVis","lattice")) %dopar%{  
+##############Repeat for no dispersal conditions########
+system.time(all_modelsDD<-foreach(x=1:nlayers(modlist),.errorhandling="pass") %do%{ 
+    
+  source(paste(gitpath,"SpeciesOverlapSourceFunctions.R",sep=""))
+    
   pred_realized(mod=modlist[[x]],thresh.suit=thresh,dispersal=TRUE,plots=FALSE)
 })
-stopCluster(cl)
 
-print("SpeciesRelatednessandPresenceTable_dispersal")
-
-#If you want to start here, read in the data from file
+if(plots){print("Species Table including dispersal")}
 
 #combine all datasets
 #This naming function would need to changed on other systems
@@ -395,79 +393,284 @@ write.csv(names(failed_modelsD),"FailedSpeciesD.csv")
 all.species.dataD<-melt(working_modelsD,id.var=names(all_modelsDD[[1]]))
 
 #Merge together as a list, name and melt
-
 all.species.dataBoth<-list(Env=all.species.data,Env_Dispersal=all.species.dataD)
+
 all.species.data<-melt(all.species.dataBoth,id.vars=colnames(all.species.data))
 
-colnames(all.species.data)[13]<-"Hyp"
+#rename the melted column
+colnames(all.species.data)[9]<-"Hyp"
 
-#########################################################
-#Combine Models for each species and create data structure ready for plotting
-#########################################################
 
 #Set working directory to output folder
 dir.create(paste(fold,"Results",sep="/"))
 setwd(paste(fold,"Results",sep="/"))
 
-print(head(all.species.data))
+if(plots){kable(head(all.species.data))}
 
 #Visualize model outputs
-ggplot(all.species.data,aes(x=Suitability,fill=P_A)) + geom_density(alpha=.5) + theme_bw() + labs(fill="") + facet_wrap(~Hyp)
+ggplot(all.species.data,aes(x=Suitability,fill=P_A)) + geom_density(alpha=.5) + theme_bw() + labs(fill="") + facet_wrap(~Hyp) + ggtitle("Habitat Suitability and Presence")
 ggsave("AllspeciesBinarySuitability.svg",height=8,width=10) 
-
-#Name metrics column
-colnames(all.species.data)[c(5,6)]<-c("Metric","value")
-all.species.data<-all.species.data[,!colnames(all.species.data) %in% c("L1","P_A")]
 
 #add in which clade each focal species is
 PA_mult2<-merge(all.species.data,clades[,-c(3,4,5)],by.x="Species",by.y="double.")
 
 #contigency table
-contin<-table(PA_mult2$P_Apred,PA_mult2$PA_Binary,PA_mult2$Hyp,PA_mult2$Tree,deparse.level=2)
+contin<-table(PA_mult2$P_Apred,PA_mult2$PA_Binary,PA_mult2$Hyp,deparse.level=2)
 
 #melt the presence absence matrix for plotting
 PA_m2<-melt(PA_mult2,measure.vars=c("P_Apred","PA_Binary"))
 
+#remove the "Present/Absent column" it needs to be 0,1
+PA_m2<-PA_m2[,-3]
+
 #Name the columns
-colnames(PA_m2)[c(13,14)]<-c("P_R","P_A")
+colnames(PA_m2)[c(9,10)]<-c("P_R","P_A")
 
-#distribution of trait distances.
-with(PA_m2,hist(PA_m2[Tree=="Func","value"]))
-PA_m2<-PA_m2[is.finite(PA_m2$value),]
+#merge with phylogenetic distance
+PA_m2<-merge(PA_m2,PA_phylo[,-3],by=c("Species","Locality"))
 
-#remove all na's
-PA_m2<-PA_m2[!is.na(PA_m2$value),]
 #Final data format
-
 PA_m2<-PA_m2[!(PA_m2$Hyp=="Env_Dispersal" & PA_m2$P_R=="PA_Binary"),]
 
-#Final data format
-head(PA_m2)
-
 #take out values greater than 95% quartile
-phylo_out<-with(PA_m2,quantile(PA_m2[Tree=="Phylo","value"],.95,na.rm=T))
+phylo_out<-with(PA_m2,quantile(PA_m2[,"Phylo.Relatedness"],.95,na.rm=T))
 
+#remove outliers
+PA_m2$Phylo.Relatedness[PA_m2$Phylo.Relatedness > phylo_out]<-NA 
 
-PA_m2[PA_m2$Tree=="Phylo" & PA_m2$value > as.numeric(phylo_out),"value"]<-NA 
-
-PA_m2<-PA_m2[!is.na(PA_m2$value),]
-
-```
-
-**Loop through a series of threshold values to compute sensitivity of our analysis**
-
-This analysis will create a folder for each predicted suitable habitat threshold.
-
-```{r}
-ord<-seq(0,.25,.05)
-
-for (thresh in ord){
-predAssemblages(thresh)
+#return data
+return(PA_m2)
 }
 
 ```
 
-#Sensitivity Analysis
+
+Sensitivity analysis shows that suitabilty threshold of 80% is a reasonable value, compute predicted and realized distributions.
+
+```{r}
+#specified as 1-threshold/100.
+PA_m2<-predAssemblages(.2,plots=TRUE)
+```
+
+Save image in case we need to start here
+
+```{r}
+save.image("PredictedRealized.Rdata")
+#load("PredictedRealized.Rdata")
+
+```
+
+#Bayesian Analysis of Co-occurrence as a function of relatedness.
+
+## Model Formulation
+
+$$ y \sim bern(p_i) $$
+
+$$ logit(p_i) = \alpha_{species[i]} + \beta *x + \gamma *x^2 $$
+
+$$ \text{where} \: \alpha \: \text{for each species} \sim dnorm(\mu,\sigma^2) $$
+
+$$ \text{p is the probability of presence at a site}$$
+$$ \text{x= cophenetic distance to the most closely related species }$$
+
+```{r,echo=FALSE,warning=FALSE,message=FALSE}
+library(ape)
+library(dplyr)
+library(ggplot2)
+library(vegan)
+library(gridExtra)
+library(R2jags)
+library(boot)
+library(stringr)
+opts_chunk$set(warning=FALSE,message=FALSE)
+opts_chunk$set(cache=TRUE, cache.path = 'FullModel_cache/', fig.path='figure/',fig.width=10,echo=TRUE)
+```
+
+##Define bayes model function
+
+Define a function that takes in species, presence/absence and distance to the closest related species for each type of assemblage, and returns the posterior estimates of X and X^2.
+
+```{r singlemodel,echo=TRUE,eval=TRUE}
+
+Bayes<-function(presence,distance,species,runs,burn,plots,folder){
+
+dir.create(folder)
+
+#Source model
+source("SingleSlope.R")
+print.noquote(readLines("SingleSlope.R"))
+
+#make species a factor
+species<-as.factor(species)
+
+#Input Data
+Dat <- list(
+  y=as.numeric(presence),
+  dist=distance,
+  Species=as.numeric(species),
+  s=nlevels(species))
+
+InitStage <- function() {list(alpha=rep(.1,Dat$s),beta=.1,gamma=.1)}
+
+#Parameters to track
+ParsStage <- c("alpha","beta","gamma")
+
+#MCMC options
+ni <- runs  # number of draws from the posterior
+nt <- 1    #thinning rate
+nb <- 0  # number to discard for burn-in
+nc <- 2  # number of chains
+
+#Jags
+
+m = jags(inits = InitStage,
+         n.chains=nc,
+         model.file="SingleSlope.jags",
+         working.directory=getwd(),
+         data=Dat,
+         parameters.to.save=ParsStage,
+         n.thin=nt,
+         n.iter=ni,
+         n.burnin=nb,
+         DIC=T)
+
+#Remove Burnin
+pars<-melt(m$BUGSoutput$sims.array)
+colnames(pars)<-c("Draw","Chain","parameter","estimate")
+pars<-pars[!pars$Draw %in% 1:burn,]
+
+#remove deviance
+pars<-pars[!pars$parameter %in% "deviance",]
+pars<-pars[!str_detect(string=pars$parameter,pattern=c("alpha")),]
+
+###Posterior Distributions
+ggplot(pars,aes(x=estimate)) + geom_histogram() + ggtitle("Estimate of parameters") + facet_wrap(~parameter,scale="free") + theme_bw() 
+
+if(plots){ggsave(paste(folder,"Posteriors.jpeg",sep="/"),height=5,width=10,dpi=300)}
+
+###Chains
+p<-ggplot(pars,aes(x=Draw,col=as.factor(Chain),y=estimate)) + geom_line() + facet_wrap(~parameter,scale="free") + theme_bw() + labs(col="Chain") + ggtitle(folder)
+p
+if(plots){ggsave(paste(folder,"Chains.jpeg",sep="/"),height=5,width=10,dpi=300)
+saveRDS(p,file=paste(folder,"ChainsModel.RData",sep="/"))          
+}
+
+parG<-group_by(pars,parameter)
+out<-summarise(parG,mean=mean(estimate),lower=quantile(estimate,0.025),upper=quantile(estimate,0.975),sd=sd(estimate))
+
+write.csv(out,paste(folder,"parameterestimates.csv",sep="/"))
+
+return(pars)}
+```
+
+##Read in simulated data - see Simulations.Rmd
+
+```{r}
+simall<-read.csv("C:/Users/Ben/Documents/Pred_Obs/Bayesian/simdats.csv",row.names=1)
+
+colnames(simall)<-c("Locality","Species","P_A","Phylo.Relatedness","Hyp","Iteration","P_R")
+
+```
+
+Combine simulation, predicted and observed assemblages.
+
+```{r}
+#legacy name change.
+datF<-PA_m2
+
+#make formats the same
+datF$Locality<-as.numeric(as.character(datF$Locality))
+datF$P_A<-as.integer(datF$P_A)
+d
+#bind with simulated data
+datF<-rbind_all(list(datF,simall))
+
+#split data into types of assemblages
+#drop Env + Dispersal for observed, its just a data subset
+sdat<-split(datF,list(datF$P_R,datF$Hyp),drop=TRUE)[-4]
+
+#for now grab 10000 random samples and remove inf values
+sdat<-lapply(sdat,function(x){
+  x<-x[is.finite(x$Phylo.Relatedness),]
+  if(nrow(x) > 5000){
+    x<-x[sample(1:nrow(x),1000),]
+  }
+  return(x)
+})
+
+```
+
+
+#Bayes function for each assemblage type
+
+```{r,results='hide'}
+
+parall<-lapply(sdat,FUN=function(x){
+  #create folder name
+  fold<-paste(unique(x$P_R),unique(x$Hyp),sep="_")
+  
+  test<-Bayes(presence = x$P_A,distance = x$value,species=x$Species,runs = 30000,burn=25000,plots = TRUE,folder = fold)
+})
+```
+
+##View Chains
+
+```{r,fig.height=10}
+a<-list.files(pattern="ChainsModel.RData",recursive = T,full.names=TRUE)
+pl<-lapply(a,readRDS)
+do.call(grid.arrange,c(pl,nrow=6))
+```
+
+Combine predicted and observed outputs:
+```{r}
+#name each list
+for(i in 1:length(parall)){
+  parall[[i]]$L1<-names(parall)[i]
+}
+
+parmelt<-rbind_all(parall)
+
+#add in observed predicted and eventually simualted
+
+parmelt[parmelt$L1 %in% "P_Apred.Env","Assemblage"]<-"Predicted"
+
+parmelt[parmelt$L1 %in% "P_Apred.Env_Dispersal","Assemblage"]<-"Predicted"
+
+parmelt[parmelt$L1 %in% "PA_Binary.Env","Assemblage"]<-"Observed"
+
+parmelt[parmelt$L1 %in% c("Simulated.Lottery","Simulated.Niche Conservatism","Simulated.Niche Conservatism and Competition"),"Assemblage"]<-"Simulation"
+
+```
+
+#Format final figure
+
+```{r,fig.height=15}
+
+simulated<-ggplot(parmelt[parmelt$Assemblage %in% "Simulation",],aes(x=estimate,fill=parameter)) + facet_wrap(~L1,scale="free_y") + geom_histogram() + theme_bw() + ggtitle("Simulated") + scale_fill_discrete(guide="none") + labs(x="")
+
+predicted<-ggplot(parmelt[parmelt$Assemblage %in% "Predicted",],aes(x=estimate,fill=parameter)) + facet_wrap(~L1,scale="free_y") + geom_histogram() + theme_bw() + ggtitle("Predicted")+ scale_fill_discrete(guide="none") + labs(x="")
+
+observed<-ggplot(parmelt[parmelt$Assemblage %in% "Observed",],aes(x=estimate,fill=parameter)) + facet_wrap(~L1,scale="free_y") + geom_histogram() + theme_bw() + ggtitle("Observed")
+
+grid.arrange(simulated,predicted,observed,nrow=3)
+```
+
+```{r,echo=FALSE,results='hide'}
+jpeg("PosteriorAll.jpeg",res=300,height=8,width=10,units="in")
+grid.arrange(simulated,predicted,observed,nrow=3)
+dev.off()
+```
+
+##Parameter estimates across all models
+```{r,size=8}
+finaltab<-group_by(parmelt,L1,Assemblage,parameter) %>% summarize(mean=mean(estimate),upper=quantile(estimate,0.975),lower=quantile(estimate,0.025))
+
+kable(as.data.frame(finaltab))
+
+write.csv(finaltab,"ParameterEstimates.csv")
+save.image(paste(droppath,"FullModel.Rdata",sep=""))
+```
+
 
 
 
