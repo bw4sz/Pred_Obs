@@ -38,9 +38,12 @@ library(knitr)
 opts_chunk$set(warning=FALSE,message=FALSE)
 opts_chunk$set(cache=TRUE, cache.path = 'SpeciesOverlap_cache/', fig.path='figure/',fig.width=10,echo=TRUE)
 
+
 #Set git path
 gitpath<-"C:/Users/Ben/Documents/Pred_Obs/"
 droppath<-"C:/Users/Ben/Dropbox/"
+
+setwd(gitpath)
 
 #Load image if desired
 #load(paste(droppath,"Thesis/Pred_Realized/Assemblages/Threshold0.2/Results/Run.RData",sep=""))
@@ -106,7 +109,7 @@ To make this run, you need to ![download maxent](http://www.cs.princeton.edu/~sc
 cell_size=.5
 inLocalities<-read.csv("InputData/MASTER_POINTLOCALITYarcmap_review.csv")
 envfolder<-"C:\\Users\\Ben\\Dropbox\\Thesis\\Pred_Realized\\EnvLayers"
-savefolder<-"C:/Users/Ben/Dropbox/Thesis/Pred_Realized/Niche Models/"
+savefolder<-"C:/Users/Ben/Dropbox/Thesis/Pred_Realized/NicheModels/"
 
 SDM_SP(cell_size,inLocalities,envfolder,savefolder)
 ```
@@ -124,16 +127,13 @@ niche<-niche[grep("current",niche,value=FALSE)]
 
 #Name the list of suitability models
 names(niche)<-lapply(niche,function(path){
-  split.1<-strsplit(path,"/")[[1]][4]
+  split.1<-strsplit(path,"/")[[1]][10]
 })
 ```
 
 ##Merge site by species assemblage lists with geographic distribution of niche models
 
 ```{r}
-#Get the niche models with more than 0 presence points in the assemblage lists
-
-niche_torun<-niche[names(niche) %in% curr_sp]
 
 #Create Spatial Points object of the rownmaes
 site.raster<-raster(niche[[1]])
@@ -164,11 +164,15 @@ cellSitesXY<-xyFromCell(raster.localities,as.numeric(colnames(siteXspp.raster)),
 rownames(cellSitesXY@coords)<-colnames(siteXspp.raster)
 
 ##Important to get a grasp on data overlap between the different sources
-congruence<-melt(list(Trait=rownames(trait_pc),Phylo=rownames(ctrx),Assemblage=rownames(siteXspp.raster),Suitability=names(niche),Clades=clades$double.))
+congruence<-melt(list(Phylo=rownames(ctrx),Assemblage=rownames(siteXspp.raster),Suitability=names(niche),Clades=clades$double.))
 
 write.csv(table(congruence),paste(droppath,"Thesis/Pred_Realized/Assemblages//DataOverlap.csv",sep=""))
 
-kable(colSums(table(congruence)))
+cong<-as.data.frame.array(table(congruence))
+
+#how many are complete
+completeI<-cong[names(which(apply(cong,1,sum)==4)),]
+kable(head(completeI))
 ```
 
 #Cost Path Analysis
@@ -192,7 +196,7 @@ elev.ca<-aggregate(elev.c,2)
 
 #Find shortest cost path, for all sites, to dataheavy to bring into raster
 #This is find for assemblage mode, but for range map mode, skip down to after euclidean
-cl<-makeCluster(8,"SOCK")
+cl<-makeCluster(14,"SOCK")
 registerDoSNOW(cl)
 costPath.list<-foreach(x = 1:length(cellSitesXY)) %dopar% {
   require(raster)
@@ -226,6 +230,50 @@ m.costlist<-melt(costPath.list)
 CostPathMatrix<-log(cast(m.costlist,X2~L1)[,-1])
 rownames(CostPathMatrix)<-colnames(siteXspp.raster)
 colnames(CostPathMatrix)<-colnames(siteXspp.raster)
+write.table(CostPathMatrix,paste(gitpath,sep="/","CostMatrix.txt"))
+```
+
+Or read in from file, CostPath take awhile to run.
+
+```{r}
+CostPathMatrix<-read.table(paste(gitpath,sep="/","CostMatrix.txt"),row.names=1)
+colnames(CostPathMatrix)<-rownames(CostPathMatrix)
+```
+
+###Example Cost path distance
+
+Cost paths take into account frictional surfaces. We might imagine that species are more prone to dispersal within their habitat type. So in the example below, the original destination in red is a cloud forest locality and the final destination in blue is a lowland locality. A euclidean distance would have the bird cross the eastern Andean cordillera, where cost path creates a more realistic shortest distance, which is to stay within low friction space (white) and when it accounts higher frictional space (orange->green) to take a more direct path. 
+
+```{r example cost path}
+ #pick the original site. 
+  orig<-cellSitesXY[10,]
+
+#destination
+dest<-cellSitesXY[90,]
+  
+  #What elevation is the origin
+  elev_origin<-extract(elev.ca,orig)[[1]]
+  if(is.na(elev_origin)) elev_origin<-0
+  
+  #Get the difference between the origin elevation and every cell in the raster
+  elev_diff<-abs(elev_origin-elev.ca)
+  
+  #create a the transition matrix where permeability is high where elev difference is low
+  trans_diff<-transition(elev_diff,function(x) 1/mean(x),8)
+  
+  #Diagonal Cell Correction, diagonals are father away than adjacent cells. 
+  slope <- geoCorrection(trans_diff)
+
+
+
+#shortest path
+l<-shortestPath(slope,orig,dest,output="SpatialLines")
+
+
+plot(elev_diff,xaxt="n",yaxt="n",main="Example Least Cost Distance")
+points(orig,col="red",cex=2,pch=20)
+points(dest,col="blue",cex=2,pch=20)
+lines(l)
 ```
 
 ### Create list of assemblages in observed and predicted assemblages
@@ -241,7 +289,7 @@ sp.lists<-apply(siteXspp.raster,2,function(x){
 
 Assemblages in predicted suitable environments were considered unavailable for species presence if the cost distance to the nearest observed assemblage was larger than the greatest cost distance between any two observed assemblages for that species.
 
-```{r,eval=FALSE}
+```{r,eval=TRUE}
 
 #Get Costpath distribution for each species
 costThresh<-apply(siteXspp.raster,1,function(y){
@@ -260,7 +308,12 @@ costThresh<-apply(siteXspp.raster,1,function(y){
 # Defining species predicted presence and absence
 Ensemble niche models return a probability value of suitability for each cell in a landscape. To define predicted suitable areas, we needed to turn this probability into a statement of predicted presence/absence. Due to differences in species prevalence, taking a fixed probability cutoff across all species will bias presence towards more common species (Liu et al. 2005). We therefore thresholded the models based on the distribution of suitability values from the observed localities (Pearson et al. 2004, Gutiérrez et al. 2014)
 
-# Define function to compute distance to closely related species and predicted presence and absence
+# Compute distance to closely related species for every species in every assemblage
+```{r}
+PA_phylo<-co_occur(melt(siteXspp.raster))
+```
+
+#Calculate predicted presence and absence based on suitability and cost distance
 
 ```{r}
 predAssemblages<-function(thresh){
@@ -277,24 +330,27 @@ dir.create(paste(fold,"Species",sep="/"))
 #load models to file, makes it more transferable than keeping them on disk
 
 #Choose the model output, for now i'm getting the mean ensemble model
-modlist<-lapply(niche,raster,values=TRUE)
+modlist<-stack(lapply(niche,raster,values=TRUE))
+
+#plot a few rasters
+plot(modlist[[1:6]])
 
 #or read from file
-#writeRaster(paste(gitpath,"modelStack",sep=""),x=stack(modlist),bylayer=FALSE)
-modlist<-stack(paste(gitpath,"modelStack",sep=""))
+#writeRaster(paste(gitpath,"modelStack",sep=""),x=stack(modlist),bylayer=FALSE,overwrite=TRUE)
+#modlist<-stack(paste(gitpath,"modelStack",sep=""))
 
 #########################################################
 #Perform Predicted v Realized Function on all Niche Models
 #########################################################
 
-cl<-makeCluster(8,"SOCK")
+cl<-makeCluster(12,"SOCK")
 registerDoSNOW(cl)
 system.time(all_models<-foreach(x=1:nlayers(modlist),.export=c("sp.lists","siteXspp.raster"),.errorhandling="pass",.packages=c("raster","maptools","reshape","dismo","picante","ggplot2","rasterVis","lattice")) %dopar%{  
   pred_realized(mod=modlist[[x]],thresh.suit=thresh,dispersal=FALSE,plots=FALSE)
 })
 stopCluster(cl)
 
-print("SpeciesRelatednessandPresenceTable_Nodispersal")
+print("Species Relatedness andPresence Table_Nodispersal")
 
 #If you want to start here, read in the data from file
 
@@ -314,7 +370,7 @@ all.species.data<-melt(working_models,id.var=names(all_models[[1]]))
 ##############Repeat for no dispersal conditions#########
 
 #Please note i've turned off the filter for which species to run based on number of presences in an assemblages, see line 105
-cl<-makeCluster(8,"SOCK")
+cl<-makeCluster(12,"SOCK")
 registerDoSNOW(cl)
 system.time(all_modelsDD<-foreach(x=1:nlayers(modlist),.errorhandling="pass",.export=c("sp.lists","siteXspp.raster"),.packages=c("raster","maptools","reshape","dismo","picante","ggplot2","rasterVis","lattice")) %dopar%{  
   pred_realized(mod=modlist[[x]],thresh.suit=thresh,dispersal=TRUE,plots=FALSE)
@@ -389,7 +445,6 @@ PA_m2<-PA_m2[!(PA_m2$Hyp=="Env_Dispersal" & PA_m2$P_R=="PA_Binary"),]
 head(PA_m2)
 
 #take out values greater than 95% quartile
-trait_out<-with(PA_m2,quantile(PA_m2[Tree=="Func","value"],.95,na.rm=T))
 phylo_out<-with(PA_m2,quantile(PA_m2[Tree=="Phylo","value"],.95,na.rm=T))
 
 

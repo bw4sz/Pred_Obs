@@ -118,7 +118,7 @@ SDM_SP<-function(cell_size,inLocalities,envfolder,savefolder){
   
   cl<-snow::makeCluster(10,"SOCK")
   doSNOW::registerDoSNOW(cl)
-  system.time(niche_loop<-foreach::foreach(x=1:10,.packages=c("reshape2","biomod2","plyr"),.verbose=T,.errorhandling="pass") %do% {
+  system.time(niche_loop<-foreach::foreach(x=1:10,.packages=c("reshape2","biomod2","plyr"),.errorhandling="pass") %dopar% {
     sink(paste("logs/",paste(spec[[x]],".txt",sep=""),sep=""))
     
     #remove sites that have no valid records
@@ -303,7 +303,7 @@ colnames(model_eval)<-c("Model","Species","Stat")
 model_eval<-melt(model_eval,id.var=c("Model","Species","Stat"))
 
 #Plot
-ggplot(model_eval, aes(x=Species,y=Model,fill=Stat)) + geom_tile() + scale_fill_gradient("ROC",limits=c(0,1),low="blue",high="red",na.value="white") + opts(axis.text.x=theme_text(angle=-90))
+ggplot(model_eval, aes(x=Species,y=Model,fill=Stat)) + geom_tile() + scale_fill_gradient("ROC",limits=c(0,1),low="blue",high="red",na.value="white") + theme(axis.text.x=element_text(angle=-90))
 ggsave("ModelROCEvaluations.jpeg",height=5,width=20,dpi=300)
 
 model_thresh<-sapply(seq(.5,.95,.05),function(x){
@@ -314,7 +314,7 @@ colnames(model_thresh)<-seq(.5,.95,.05)
 model_thresh<-melt(model_thresh)
 
 names(model_thresh)<-c("Model","ROC_Threshold","Number_of_Species")
-ggplot(model_thresh,aes(x=ROC_Threshold,y=Number_of_Species,col=Model)) + geom_line() + geom_point() + geom_text(aes(label=Number_of_Species),vjust=4,size=5)
+ggplot(model_thresh,aes(x=ROC_Threshold,y=Number_of_Species,col=Model)) + geom_line(size=1.5) + geom_point() + geom_text(aes(label=Number_of_Species),vjust=4,size=5) + theme_bw()
 ggsave("ModelThresholding.pdf",dpi=300,height=8,width=8)
 
 #Get the all model evaluations from file
@@ -324,31 +324,35 @@ colnames(model_eval)<-c("Metric","Species","GBM","GLM","MAXENT")
 model_eval<-melt(model_eval,id.var=c("Metric","Species"))
 
 #Plot with facets
-p<-ggplot(model_eval, aes(x=Species,y=variable,fill=value)) + geom_tile() + facet_wrap(~Metric) + opts(axis.text.x=theme_text(angle=-90))
-p + scale_fill_gradient("Score",limits=c(0,1),low="blue",high="red",na.value="white") + theme(axis.text.x = element_blank())
+p<-ggplot(model_eval, aes(x=Species,y=variable,fill=value)) + geom_tile() + facet_wrap(~Metric) + theme(axis.text.x=element_text(angle=-90))
+p + scale_fill_gradient("Score",limits=c(0,1),low="blue",high="red",na.value="white")+ theme_bw() + theme(axis.text.x = element_blank()) 
 ggsave("ModelEvaluations.jpeg",height=6,width=11,dpi=300)
 
 #How correlated are model scores
 cast_mods<-cast(model_eval, Species~...)
 
 #GBM correlations
+ggpairs(cast_mods[,c(2,5,8)],lower=list(continuous="smooth",method="lm"))
 
 svg("GBMmetriccor.svg",height=10,width=10)
 ggpairs(cast_mods[,c(2,5,8)],lower=list(continuous="smooth",method="lm"))
 dev.off()
 
 #GLM correcation
-svg("GLMmetriccor.svg",height=10,width=10)
+ggpairs(na.omit(cast_mods[,c(3,6,9)]),na.rm=TRUE,lower=list(continuous="smooth",method="lm"))
 
+svg("GLMmetriccor.svg",height=10,width=10)
 ggpairs(na.omit(cast_mods[,c(3,6,9)]),na.rm=TRUE,lower=list(continuous="smooth",method="lm"))
 dev.off()
 
 #Maxent Correlation
-svg("Maxentmetriccor.svg",height=10,width=10)
+ggpairs(cast_mods[,c(4,7,10)],lower=list(continuous="smooth",method="lm"))
 
+svg("Maxentmetriccor.svg",height=10,width=10)
 ggpairs(cast_mods[,c(4,7,10)],lower=list(continuous="smooth",method="lm"))
 dev.off()
-ggplot(cast_mods,aes(x=TSS,y=ROC)) + facet_wrap(~variable) + geom_point()+ geom_smooth(method="lm")
+
+ggplot(model_eval,aes(x=variable,y=value)) + facet_wrap(~Metric) + geom_boxplot()+ geom_smooth(method="lm") + theme_bw() + labs(y="Score",x="Model")
 
 
 #Get the variable importance from file
@@ -361,7 +365,7 @@ mvar<-melt(varI)
 colnames(mvar)<-c("Bioclim","Species","Model","value")
 
 #Plot variable importance across all models
-ggplot(mvar, aes(x=Species,y=Bioclim,fill=value)) + geom_tile() + scale_fill_gradient(limits=c(0,1),low="blue",high="red",na.value="white") + opts(axis.text.x=theme_text(angle=-90)) + facet_grid(Model ~ .)
+ggplot(mvar, aes(x=Species,y=Bioclim,fill=value)) + geom_tile() + scale_fill_gradient(limits=c(0,1),low="blue",high="red",na.value="white") + theme(axis.text.x=element_text(angle=-90)) + facet_grid(Model ~ .) + ggtitle("Variable Importance")
 
 ggsave("VariableImportance.jpeg",height=5,width=15,dpi=300)
 }

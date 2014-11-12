@@ -1,6 +1,6 @@
 #Apply predicted v realized function to all species
 #Define function
-pred_realized<-function(mod,thresh.suit,dispersal,plots=TRUE){
+pred_realized<-function(mod,thresh.suit,dispersal,PA_phylo,plots=TRUE){
   
   setwd(paste(fold,"Species",sep="/"))
   
@@ -17,6 +17,7 @@ pred_realized<-function(mod,thresh.suit,dispersal,plots=TRUE){
   #Get row in siteXspp.raster for the model species
   rowS<-siteXspp.raster[rownames(siteXspp.raster) %in% names(mod),]
   
+  #get siteXspp matrix just for the cells
   #for each species get the list of sites its present and absent
   PA<-list(names(rowS[which(rowS==1)]),names(rowS[which(rowS==0)]))
   names(PA)<-c("Present","Absent")
@@ -49,43 +50,34 @@ pred_realized<-function(mod,thresh.suit,dispersal,plots=TRUE){
   
   #melt and cast niche value data so that we have every combinition of species/localitiy/presence
   giant<-melt(PA_niche,id.var="Locality")
-  giant.c<-cast(giant)
-  colnames(giant.c)<-c("Locality","P_A","Suitability")
+  species.data<-cast(giant)
+  colnames(species.data)<-c("Locality","P_A","Suitability")
+  
+  #add in species name
+  species.data$Species<-names(mod)
   
   #This isn't worth much, just showing that the niche models work well.
   if(plots==TRUE){
-  giant.p<-ggplot(data=giant.c,aes(x=P_A,y=Suitability)) + geom_boxplot() + xlab("") + theme_bw()+ggtitle(names(mod))
+  giant.p<-ggplot(data=species.data,aes(x=P_A,y=Suitability)) + geom_boxplot() + xlab("") + theme_bw()+ggtitle(names(mod))
 
   filname<-paste(names(mod),"PA_suitability.jpeg",sep="")
   ggsave(plot=giant.p,filname,height=8,width=4)
   }
-  
-  ####################################
-  #Metrics of Phylogenetic Relatedness 
-  ####################################
-  
-  #Seperate out presence and absence, see 
-    PA_phylo<-co_occur(siteXspp.raster)
-    colnames(PA_phylo)<-c("Species","Locality","Min")
-  
-   #Legacy change, rename Phylo
-  data.df<-PA_phylo
-  
-  #Now bind it to the extracted niche model values
-  species.data<-merge(data.df,giant.c,by=c("Locality"))
-  
+   
   #For the threshold column, what is the distribution of presence sites
   
   #Lets go get the presence data on hummingbird distributions
-  Niche_locals<-read.csv(paste(droppath,"Lab paper 1 Predicted vs observed assemblages\\MASTER_POINTLOCALITYarcmap_review.csv",sep=""))
+  Niche_locals<-read.csv(paste(gitpath,"InputData\\MASTER_POINTLOCALITYarcmap_review.csv",sep=""))
   
   #Just take the columns you want. 
   PAdat<-Niche_locals[,colnames (Niche_locals) %in% c("RECORD_ID","SPECIES","COUNTRY","LOCALITY","LATDECDEG","LONGDECDEG","Decision","SpatialCheck","MapDecision")]
   
-  #clean localities
+  #clean localities, we checked them against published range records and visually inspected them
   PAdat<-PAdat[!PAdat$LONGDECDEG==-6,]
   loc_clean<-PAdat[PAdat$Decision=="OK"|PAdat$MapDecision=="OK"|PAdat$MapDecision=="",]
-  loc_clean<-PAdat[PAdat$SpatialCheck=="Y",]
+  loc_clean<-loc_clean[loc_clean$SpatialCheck=="Y",]
+  
+  #match formating for species names
   sp.loc<-loc_clean[loc_clean$SPECIES %in%  gsub("\\."," ",as.character(unique(species.data$Species))),]
   sp.loc<-SpatialPointsDataFrame(sp.loc[,c("LONGDECDEG","LATDECDEG")],sp.loc)
   
@@ -100,7 +92,6 @@ pred_realized<-function(mod,thresh.suit,dispersal,plots=TRUE){
   ggsave("SuitThresholds.jpeg",height=8,width=11,dpi=300)
   }
   
-  paste("suitability threshold:",suit_cut,"")
   #Predicted Presence absence Column
   species.data$P_Apred<-(species.data$Suitability > suit_cut)*1
   
@@ -144,9 +135,7 @@ pred_realized<-function(mod,thresh.suit,dispersal,plots=TRUE){
     
     #Turn any predicted presence and absences that are outside the threshold
     species.data[species.data$Locality %in% names(toRemove),"P_Apred"]<-0
-    print("dispersal filter included")
-    print(paste(length(toRemove),"sites removed due to dispersal"))
-  }
+    }
   
   #################################################
   #Mapping of Predictor v Realized Assemblages
@@ -181,7 +170,7 @@ co_occur<-function(siteXsppm){
   
   #reshape data
 
-  colnames(siteXsppm)<-c("Locality","Species","P_A")
+  colnames(siteXsppm)<-c("Species","Locality","P_A")
   
   f<-split(siteXsppm,siteXsppm$Locality)
   
