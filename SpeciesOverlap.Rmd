@@ -23,21 +23,27 @@ Github repos have 100MB file limit, all files larger then that are hosted on dro
 #Load required libraries
 library(reshape2)
 require(ggplot2)
-require(picante)
-require(dismo)
-require(ape)
-require(doSNOW)
-require(gdistance)
-require(stringr)
-require(foreach)
-require(boot)
-require(mapproj)
-require(maptools)
-require(rasterVis)
+library(picante)
+library(dismo)
+library(ape)
+library(doSNOW)
+library(gdistance)
+library(foreach)
+library(boot)
+library(mapproj)
+library(maptools)
+library(rasterVis)
 library(knitr)
+library(ape)
+library(dplyr)
+library(ggplot2)
+library(vegan)
+library(gridExtra)
+library(R2jags)
+library(stringr)
+
 opts_chunk$set(warning=FALSE,message=FALSE)
 opts_chunk$set(cache=TRUE, cache.path = 'SpeciesOverlap_cache/', fig.path='figure/',fig.width=10,echo=TRUE)
-
 
 #Set git path
 gitpath<-"C:/Users/Ben/Documents/Pred_Obs/"
@@ -50,7 +56,12 @@ setwd(gitpath)
 
 ```
 
-#Read in data
+#Read in hummingbird data
+
+The analysis takes in:
+*Phylogenetic Tree in newick format
+*Sites matrix with long lat
+*Species Assemblages corresponding to the sites matrix
 
 ```{r import data}
 #Bring in Phylogenetic Data
@@ -305,15 +316,15 @@ costThresh<-apply(siteXspp.raster,1,function(y){
   return(max(outH))})
 ```
 
-# Defining species predicted presence and absence
+## Defining species predicted presence and absence
 Ensemble niche models return a probability value of suitability for each cell in a landscape. To define predicted suitable areas, we needed to turn this probability into a statement of predicted presence/absence. Due to differences in species prevalence, taking a fixed probability cutoff across all species will bias presence towards more common species (Liu et al. 2005). We therefore thresholded the models based on the distribution of suitability values from the observed localities (Pearson et al. 2004, Gutiérrez et al. 2014)
 
-# Compute distance to closely related species for every species in every assemblage
+## Compute distance to closely related species for every species in every assemblage
 ```{r}
 PA_phylo<-co_occur(melt(siteXspp.raster))
 ```
 
-#Calculate predicted presence and absence based on suitability and cost distance
+##Calculate predicted presence and absence based on suitability and cost distance
 
 ```{r}
 predAssemblages<-function(thresh,plots=TRUE){
@@ -400,7 +411,6 @@ all.species.data<-melt(all.species.dataBoth,id.vars=colnames(all.species.data))
 #rename the melted column
 colnames(all.species.data)[9]<-"Hyp"
 
-
 #Set working directory to output folder
 dir.create(paste(fold,"Results",sep="/"))
 setwd(paste(fold,"Results",sep="/"))
@@ -444,7 +454,6 @@ return(PA_m2)
 
 ```
 
-
 Sensitivity analysis shows that suitabilty threshold of 80% is a reasonable value, compute predicted and realized distributions.
 
 ```{r}
@@ -457,7 +466,6 @@ Save image in case we need to start here
 ```{r}
 save.image("PredictedRealized.Rdata")
 #load("PredictedRealized.Rdata")
-
 ```
 
 #Bayesian Analysis of Co-occurrence as a function of relatedness.
@@ -473,17 +481,9 @@ $$ \text{where} \: \alpha \: \text{for each species} \sim dnorm(\mu,\sigma^2) $$
 $$ \text{p is the probability of presence at a site}$$
 $$ \text{x= cophenetic distance to the most closely related species }$$
 
-```{r,echo=FALSE,warning=FALSE,message=FALSE}
-library(ape)
-library(dplyr)
-library(ggplot2)
-library(vegan)
-library(gridExtra)
-library(R2jags)
-library(boot)
-library(stringr)
-opts_chunk$set(warning=FALSE,message=FALSE)
-opts_chunk$set(cache=TRUE, cache.path = 'FullModel_cache/', fig.path='figure/',fig.width=10,echo=TRUE)
+This correspondings to the winbugs models:
+```{r}
+print.noquote(readLines(paste(gitpath,"Bayesian/SingleSlope.R",sep="/")))
 ```
 
 ##Define bayes model function
@@ -497,8 +497,7 @@ Bayes<-function(presence,distance,species,runs,burn,plots,folder){
 dir.create(folder)
 
 #Source model
-source("SingleSlope.R")
-print.noquote(readLines("SingleSlope.R"))
+source(paste(gitpath,"Bayesian/SingleSlope.R",sep="/"))
 
 #make species a factor
 species<-as.factor(species)
@@ -569,7 +568,6 @@ return(pars)}
 simall<-read.csv("C:/Users/Ben/Documents/Pred_Obs/Bayesian/simdats.csv",row.names=1)
 
 colnames(simall)<-c("Locality","Species","P_A","Phylo.Relatedness","Hyp","Iteration","P_R")
-
 ```
 
 Combine simulation, predicted and observed assemblages.
@@ -581,7 +579,7 @@ datF<-PA_m2
 #make formats the same
 datF$Locality<-as.numeric(as.character(datF$Locality))
 datF$P_A<-as.integer(datF$P_A)
-d
+
 #bind with simulated data
 datF<-rbind_all(list(datF,simall))
 
@@ -593,7 +591,7 @@ sdat<-split(datF,list(datF$P_R,datF$Hyp),drop=TRUE)[-4]
 sdat<-lapply(sdat,function(x){
   x<-x[is.finite(x$Phylo.Relatedness),]
   if(nrow(x) > 5000){
-    x<-x[sample(1:nrow(x),1000),]
+    x<-x[sample(1:nrow(x),2000),]
   }
   return(x)
 })
@@ -601,7 +599,7 @@ sdat<-lapply(sdat,function(x){
 ```
 
 
-#Bayes function for each assemblage type
+##Bayes function for each assemblage type
 
 ```{r,results='hide'}
 
@@ -609,7 +607,7 @@ parall<-lapply(sdat,FUN=function(x){
   #create folder name
   fold<-paste(unique(x$P_R),unique(x$Hyp),sep="_")
   
-  test<-Bayes(presence = x$P_A,distance = x$value,species=x$Species,runs = 30000,burn=25000,plots = TRUE,folder = fold)
+  test<-Bayes(presence = x$P_A,distance = x$Phylo.Relatedness,species=x$Species,runs = 10000,burn=8000,plots = TRUE,folder = fold)
 })
 ```
 
@@ -622,6 +620,7 @@ do.call(grid.arrange,c(pl,nrow=6))
 ```
 
 Combine predicted and observed outputs:
+
 ```{r}
 #name each list
 for(i in 1:length(parall)){
@@ -642,7 +641,7 @@ parmelt[parmelt$L1 %in% c("Simulated.Lottery","Simulated.Niche Conservatism","Si
 
 ```
 
-#Format final figure
+## Bayesian estimates figure
 
 ```{r,fig.height=15}
 
@@ -655,6 +654,8 @@ observed<-ggplot(parmelt[parmelt$Assemblage %in% "Observed",],aes(x=estimate,fil
 grid.arrange(simulated,predicted,observed,nrow=3)
 ```
 
+Write figure to file
+
 ```{r,echo=FALSE,results='hide'}
 jpeg("PosteriorAll.jpeg",res=300,height=8,width=10,units="in")
 grid.arrange(simulated,predicted,observed,nrow=3)
@@ -662,13 +663,22 @@ dev.off()
 ```
 
 ##Parameter estimates across all models
+
+```{r}
+ggplot(parmelt,aes(x=estimate,fill=L1)) + geom_histogram() + facet_wrap(~parameter,nrow=2,scale="free") + theme_bw()
+```
+
 ```{r,size=8}
 finaltab<-group_by(parmelt,L1,Assemblage,parameter) %>% summarize(mean=mean(estimate),upper=quantile(estimate,0.975),lower=quantile(estimate,0.025))
 
 kable(as.data.frame(finaltab))
 
 write.csv(finaltab,"ParameterEstimates.csv")
-save.image(paste(droppath,"FullModel.Rdata",sep=""))
+
+ggplot(finaltab,aes(x=L1,col=Assemblage,shape=parameter)) + geom_pointrange(aes(y=mean,ymax=upper,ymin=lower)) + theme_bw() + facet_wrap(~parameter)
+
+save.image("PredictedRealized.Rdata")
+
 ```
 
 
