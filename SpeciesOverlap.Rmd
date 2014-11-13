@@ -2,7 +2,9 @@
 title: "Predicted Versus Realized Assemblages"
 author: "Ben Weinstein"
 date: "Tuesday, November 11, 2014"
-output: html_document
+output:
+  html_document:
+    toc: true
 ---
 
 Aim:
@@ -11,13 +13,15 @@ Insights from comparing phylogenetic and trait community spacing has led to a re
 
 #GitHub repository
 
-This entire analysis can be cloned from ![here](https://github.com/bw4sz/BrazilDimDiv)
+This entire analysis can be cloned from [here](https://github.com/bw4sz/BrazilDimDiv)
 
 Github repos have 100MB file limit, all files larger then that are hosted on dropbox:
 
-![Elev file](https://www.dropbox.com/s/r67vzucsknrtvma/w001001.adf?dl=0)
+*[Elev file](https://www.dropbox.com/s/r67vzucsknrtvma/w001001.adf?dl=0)
 
-![Env layers](https://www.dropbox.com/sh/fhywu4l2sx64zf6/AADruumyUX57rii3TwagE1tva?dl=0)
+*[Env layers](https://www.dropbox.com/sh/fhywu4l2sx64zf6/AADruumyUX57rii3TwagE1tva?dl=0)
+
+#Read in libraries and hummingbird data
 
 ```{r,warning=FALSE,message=FALSE}
 #Load required libraries
@@ -54,11 +58,12 @@ setwd(gitpath)
 
 ```
 
-#Read in hummingbird data
-
 The analysis takes in:
+
 *Phylogenetic Tree in newick format
+
 *Sites matrix with long lat
+
 *Species Assemblages corresponding to the sites matrix
 
 ```{r import data}
@@ -111,7 +116,7 @@ source(paste(gitpath,"SDMupdated.R",sep=""))
 #Niche Models
 
 Run ensemble niche models using biomod2 at a desired cell size.
-To make this run, you need to ![download maxent](http://www.cs.princeton.edu/~schapire/maxent/) and place it in the folder you want to save the niche models: 
+To make this run, you need to [download maxent](http://www.cs.princeton.edu/~schapire/maxent/) and place it in the folder you want to save the niche models: 
 
 ```{r}
 cell_size=.5
@@ -143,7 +148,7 @@ names(niche)<-lapply(niche,function(path){
 })
 ```
 
-##Merge site by species assemblage lists with geographic distribution of niche models
+###Merge site by species assemblage lists with geographic distribution of niche models
 
 ```{r}
 #Create Spatial Points object of the rownmaes
@@ -157,7 +162,7 @@ raster.localities<-rasterize(y=site.raster,SpatialPoints(Sites.sp),fun=function(
 cellSites<-extract(raster.localities,Sites.sp,cell=T)
 
 #Split cell
-head(cellSites<-data.frame(Sites.sp,cellSites))
+head(cellSites<-data.frame(Sites.sp,cellSites)[,-c(4,8,9,10,11,12,14)])
 splitCellSites<-split(cellSites,factor(cellSites$cells))
 
 #How many duplicate communities are there, ie. number of assemblages per cell
@@ -318,10 +323,10 @@ costThresh<-apply(siteXspp.raster,1,function(y){
   return(max(outH))})
 ```
 
-## Defining species predicted presence and absence
+# Predicted presence and absence
 Ensemble niche models return a probability value of suitability for each cell in a landscape. To define predicted suitable areas, we needed to turn this probability into a statement of predicted presence/absence. Due to differences in species prevalence, taking a fixed probability cutoff across all species will bias presence towards more common species (Liu et al. 2005). We therefore thresholded the models based on the distribution of suitability values from the observed localities (Pearson et al. 2004, Gutiérrez et al. 2014)
 
-## Compute distance to closely related species for every species in every assemblage
+### Compute distance to closely related species for every species in every assemblage
 ```{r}
 PA_phylo<-co_occur(melt(siteXspp.raster))
 ```
@@ -330,7 +335,6 @@ PA_phylo<-co_occur(melt(siteXspp.raster))
 
 ```{r}
 predAssemblages<-function(thresh,plots=TRUE){
-  browser()
 fold<-paste(droppath,paste("Thesis/Pred_Realized/Assemblages/Threshold",thresh,sep=""),sep="")
 
 #Create output folders
@@ -345,6 +349,7 @@ dir.create(paste(fold,"Species",sep="/"))
 modlist<-stack(lapply(niche,raster,values=TRUE))
 
 #plot a few rasters
+print("Example niche models")
 if(plots){plot(modlist[[1:6]])}
 
 #or read from file
@@ -358,7 +363,7 @@ if(plots){plot(modlist[[1:6]])}
 cl<-makeCluster(12,"SOCK")
 registerDoSNOW(cl)
 
-system.time(all_models<-foreach(x=1:nlayers(modlist),.export=c("sp.lists","siteXspp.raster","pred_realized","fold","gitpath","cellSitesXY"),.errorhandling="pass",.packages=c("raster","maptools","reshape","dismo","picante","ggplot2","rasterVis","lattice")) %dopar%{
+system.time(all_models<-foreach(x=1:nlayers(modlist),.export=c("sp.lists","siteXspp.raster","pred_realized","fold","gitpath","cellSitesXY","costThresh","CostPathMatrix"),.errorhandling="pass",.packages=c("raster","maptools","reshape","dismo","picante","ggplot2","rasterVis","lattice")) %dopar%{
   
   source(paste(gitpath,"SpeciesOverlapSourceFunctions.R",sep=""))
   
@@ -366,7 +371,7 @@ system.time(all_models<-foreach(x=1:nlayers(modlist),.export=c("sp.lists","siteX
   
   })
 
-if(plots){print("Species Table_Nodispersal")}
+if(plots){print("Species assembages: No dispersal filter")}
 
 #If you want to start here, read in the data from file
 
@@ -381,7 +386,7 @@ write.csv(names(failed_models),"FailedSpecies.csv")
 
 #melt and name list
 #remove any species that failed. 
-all.species.data<-melt(working_models,id.var=names(all_models[[1]]))
+all.species.dataND<-melt(working_models,id.vars=c("Locality","P_A","Suitability","Species","LongDecDeg","LatDecDeg"))
 
 ##############Repeat for dispersal filter########
 system.time(all_modelsDD<-foreach(x=1:nlayers(modlist),.errorhandling="pass",.export=c("sp.lists","siteXspp.raster","pred_realized","fold","gitpath","cellSitesXY","costThresh","CostPathMatrix"),.packages=c("raster","maptools","reshape","dismo","picante","ggplot2","rasterVis","lattice")) %dopar%{ 
@@ -394,7 +399,7 @@ system.time(all_modelsDD<-foreach(x=1:nlayers(modlist),.errorhandling="pass",.ex
 #turn
 stopCluster(cl)
 
-if(plots){print("Species Table including dispersal")}
+if(plots){print("Species assemblages including dispersal filter")}
 
 #combine all datasets
 #This naming function would need to changed on other systems
@@ -407,21 +412,20 @@ write.csv(names(failed_modelsD),"FailedSpeciesD.csv")
 
 #melt and name list
 #remove any species that failed. 
-all.species.dataD<-melt(working_modelsD,id.var=names(all_modelsDD[[1]]))
+all.species.dataD<-melt(working_modelsD,c("Locality","P_A","Suitability","Species","LongDecDeg","LatDecDeg"))
 
-#Merge together as a list, name and melt
-all.species.dataBoth<-list(Env=all.species.data,Env_Dispersal=all.species.dataD)
+all.species.dataND$Hyp<-"Env"
+all.species.dataD$Hyp<-"Env_Dispersal"
 
-all.species.data<-melt(all.species.dataBoth,id.vars=colnames(all.species.data))
+#Merge together as a list, name the hyps and melt
+all.species.data<-rbind_all(list(all.species.dataND,all.species.dataD))
 
-#rename the melted column
-colnames(all.species.data)[9]<-"Hyp"
+#drop duplicate name column
+all.species.data<-all.species.data[,!colnames(all.species.data) %in% "L1"]
 
 #Set working directory to output folder
 dir.create(paste(fold,"Results",sep="/"))
 setwd(paste(fold,"Results",sep="/"))
-
-if(plots){kable(head(all.species.data))}
 
 #Visualize model outputs
 ggplot(all.species.data,aes(x=Suitability,fill=P_A)) + geom_density(alpha=.5) + theme_bw() + labs(fill="") + facet_wrap(~Hyp) + ggtitle("Habitat Suitability and Presence")
@@ -430,17 +434,11 @@ ggsave("AllspeciesBinarySuitability.svg",height=8,width=10)
 #add in which clade each focal species is
 PA_mult2<-merge(all.species.data,clades[,-c(3,4,5)],by.x="Species",by.y="double.")
 
-#contigency table
-contin<-table(PA_mult2$P_Apred,PA_mult2$PA_Binary,PA_mult2$Hyp,deparse.level=2)
-
-#melt the presence absence matrix for plotting
-PA_m2<-melt(PA_mult2,measure.vars=c("P_Apred","PA_Binary"))
-
 #remove the "Present/Absent column" it needs to be 0,1
-PA_m2<-PA_m2[,-3]
+PA_m2<-PA_mult2[,-3]
 
 #Name the columns
-colnames(PA_m2)[c(9,10)]<-c("P_R","P_A")
+colnames(PA_m2)[c(6,7)]<-c("P_R","P_A")
 
 #merge with phylogenetic distance
 PA_m2<-merge(PA_m2,PA_phylo[,-3],by=c("Species","Locality"))
@@ -473,18 +471,18 @@ save.image("PredictedRealized.Rdata")
 #load("PredictedRealized.Rdata")
 ```
 
-#Bayesian Analysis of Co-occurrence as a function of relatedness.
+#Bayesian Analysis of Co-occurrence
 
 ## Model Formulation
 
-$$ y \sim bern(p_i) $$
+$$ Y_i \sim Bern(p_i) $$
 
 $$ logit(p_i) = \alpha_{species[i]} + \beta *x + \gamma *x^2 $$
 
 $$ \text{where} \: \alpha \: \text{for each species} \sim dnorm(\mu,\sigma^2) $$
 
 $$ \text{p is the probability of presence at a site}$$
-$$ \text{x= cophenetic distance to the most closely related species }$$
+$$ \text{x= cophenetic distance to the most closely related species in an assemblage }$$
 
 This correspondings to the winbugs models:
 ```{r}
@@ -617,7 +615,7 @@ parall<-lapply(sdat,FUN=function(x){
 
 ##View Chains
 
-```{r,fig.height=10}
+```{r,fig.height=8}
 a<-list.files(pattern="ChainsModel.RData",recursive = T,full.names=TRUE)
 pl<-lapply(a,readRDS)
 do.call(grid.arrange,c(pl,nrow=6))
