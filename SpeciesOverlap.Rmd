@@ -590,6 +590,7 @@ datF<-rbind_all(list(datF,simall))
 #drop Env + Dispersal for observed, its just a data subset
 sdat<-split(datF,list(datF$P_R,datF$Hyp),drop=TRUE)[-4]
 
+names(sdat)<-c("Env","Observed","Env + Dispersal","Lottery","Niche Cons","Niche Cons + comp")
 #for now grab 10000 random samples and remove inf values
 sdat<-lapply(sdat,function(x){
   x<-x[is.finite(x$Phylo.Relatedness),]
