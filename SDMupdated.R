@@ -20,7 +20,6 @@ SDM_SP<-function(cell_size,inLocalities,envfolder,savefolder){
   library(stringr)
   library(foreach)
   library(GGally)
-  library(plyr)
   
   #set a working directory, where do we want to save files
   #save locally for now
@@ -110,15 +109,14 @@ SDM_SP<-function(cell_size,inLocalities,envfolder,savefolder){
   completed<-sapply(strsplit(str_extract(niche,pattern="(\\w+.\\w+)/proj_current"),"/"),function(x){
     x[1]
   })
-  
-    
+      
   #Only run a species if it is NOT run in all models
   spec<-spec[!spec %in% gsub("\\."," ",completed)]
   paste("Species to be modeled",spec,sep=": ")
   
-  cl<-snow::makeCluster(10,"SOCK")
-  doSNOW::registerDoSNOW(cl)
-  system.time(niche_loop<-foreach::foreach(x=1:10,.packages=c("reshape2","biomod2","plyr"),.errorhandling="pass") %dopar% {
+  #cl<-snow::makeCluster(10,"SOCK")
+  #doSNOW::registerDoSNOW(cl)
+    system.time(niche_loop<-foreach::foreach(x=1:length(spec),.packages=c("reshape2","biomod2","plyr"),.errorhandling="pass") %do% {
     sink(paste("logs/",paste(spec[[x]],".txt",sep=""),sep=""))
     
     #remove sites that have no valid records
@@ -289,7 +287,7 @@ SDM_SP<-function(cell_size,inLocalities,envfolder,savefolder){
               sink()
               return(stat)
   })
-stopCluster(cl)
+#stopCluster(cl)
 
 print("ModelsComplete")
 
