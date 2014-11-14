@@ -459,15 +459,15 @@ return(PA_m2)
 
 Sensitivity analysis shows that suitabilty threshold of 80% is a reasonable value, compute predicted and realized distributions. The function is specified as 1-threshold/100.
 
-```{r}
+```{r,eval=FALSE}
 PA_m2<-predAssemblages(.2,plots=TRUE)
 ```
 
 Save image in case we need to start here.
 
 ```{r}
-save.image("PredictedRealized.Rdata")
-#load("PredictedRealized.Rdata")
+#save.image("PredictedRealized.Rdata")
+load("PredictedRealized.Rdata")
 ```
 
 ##Combine simulation, predicted and observed assemblages.
@@ -538,15 +538,12 @@ Define a function that takes in species, presence/absence and distance to the cl
 
 ```{r singlemodel,echo=TRUE,eval=TRUE}
 
-Bayes<-function(presence,distance,species,runs,burn,plots,folder){
-
-dir.create(folder)
+Bayes<-function(presence,distance,species,runs,burn,folder){
 
 #needs libraries specified to run in parallel
 library(ggplot2)
 library(R2jags)
 library(reshape2)
-library(dplyr)
 library(stringr)
 
 #Source model
@@ -595,24 +592,6 @@ pars<-pars[!pars$Draw %in% 1:burn,]
 pars<-pars[!pars$parameter %in% "deviance",]
 pars<-pars[!str_detect(string=pars$parameter,pattern=c("alpha")),]
 
-###Posterior Distributions
-ggplot(pars,aes(x=estimate)) + geom_histogram() + ggtitle("Estimate of parameters") + facet_wrap(~parameter,scale="free") + theme_bw() 
-
-if(plots){ggsave(paste(folder,"Posteriors.jpeg",sep="/"),height=5,width=10,dpi=300)}
-
-###Chains
-p<-ggplot(pars,aes(x=Draw,col=as.factor(Chain),y=estimate)) + geom_line() + facet_wrap(~parameter,scale="free") + theme_bw() + labs(col="Chain") + ggtitle(folder)
-
-if(plots){ggsave(paste(folder,"Chains.jpeg",sep="/"),height=5,width=10,dpi=300)
-          
-saveRDS(p,file=paste(folder,"ChainsModel.RData",sep="/"))          
-}
-
-parG<-group_by(pars,parameter)
-out<-summarise(parG,mean=mean(estimate),lower=quantile(estimate,0.025),upper=quantile(estimate,0.975),sd=sd(estimate))
-
-write.csv(out,paste(folder,"parameterestimates.csv",sep="/"))
-
 return(pars)}
 ```
 
@@ -625,22 +604,16 @@ Run 6 models in parallel.
 
 cl<-snow::makeCluster(7,"SOCK")
 doSNOW::registerDoSNOW(cl)
-parall<-foreach::foreach(x=1:length(sdat),.errorhandling="stop",.export=c("sdat")) %dopar% {
-
-  #create folder name
+parall<-foreach(x=1:length(sdat),.errorhandling="stop",.export=c("gitpath")) %dopar% {
+#create folder name
   fold<-paste(unique(sdat[[x]]$P_R),unique(sdat[[x]]$Hyp),sep="_")
   
-  test<-Bayes(presence = sdat[[x]]$P_A,distance = sdat[[x]]$Phylo.Relatedness,species=sdat[[x]]$Species,runs = 15000,burn=12000,plots = TRUE,folder = fold)
+  test<-Bayes(presence = sdat[[x]]$P_A,distance = sdat[[x]]$Phylo.Relatedness,species=sdat[[x]]$Species,runs = 20000,burn=18000,folder = fold)
 }
 stopCluster(cl)
-```
 
-##View Chains
-
-```{r,fig.height=10}
-a<-list.files(pattern="ChainsModel.RData",recursive = T,full.names=TRUE)
-pl<-lapply(a,readRDS)
-do.call(grid.arrange,c(pl,nrow=6))
+save.image("PredictedRealized.Rdata")
+#load("PredictedRealized.Rdata")
 ```
 
 Combine predicted and observed outputs:
@@ -648,7 +621,7 @@ Combine predicted and observed outputs:
 ```{r}
 #name each list
 for(i in 1:length(parall)){
-  parall[[i]]$L1<-names(parall)[i]
+  parall[[i]]$L1<-names(sdat)[i]
 }
 
 parmelt<-rbind_all(parall)
@@ -663,6 +636,12 @@ parmelt[parmelt$L1 %in% "Observed","Assemblage"]<-"Observed"
 
 parmelt[parmelt$L1 %in% c("Simulated.Lottery","Simulated.Niche Conservatism","Simulated.Niche Conservatism and Competition"),"Assemblage"]<-"Simulation"
 
+```
+
+##View Chains
+
+```{r,fig.height=10}
+ggplot(parmelt,aes(x=Draw,y=estimate,col=as.factor(Chain))) + geom_line() + facet_grid(L1~parameter,scales="free",                            ) + theme_bw() + labs(col="Chain")
 ```
 
 ## Bayesian estimates figure
@@ -686,11 +665,7 @@ grid.arrange(simulated,predicted,observed,nrow=3)
 dev.off()
 ```
 
-##Parameter estimates across all models
-
-```{r}
-ggplot(parmelt,aes(x=estimate,fill=L1)) + geom_histogram() + facet_wrap(~parameter,nrow=2,scale="free") + theme_bw()
-```
+##Compare across assemblages
 
 ```{r,size=8}
 finaltab<-group_by(parmelt,L1,Assemblage,parameter) %>% summarize(mean=mean(estimate),upper=quantile(estimate,0.975),lower=quantile(estimate,0.025))
@@ -699,7 +674,7 @@ kable(as.data.frame(finaltab))
 
 write.csv(finaltab,"ParameterEstimates.csv")
 
-ggplot(finaltab,aes(x=L1,col=Assemblage,shape=parameter)) + geom_pointrange(aes(y=mean,ymax=upper,ymin=lower)) + theme_bw() + facet_wrap(~parameter)
+ggplot(finaltab,aes(x=L1,col=Assemblage,shape=parameter),size=3) + geom_pointrange(aes(y=mean,ymax=upper,ymin=lower),size=2) + theme_bw() + facet_wrap(~parameter)
 
 save.image("PredictedRealized.Rdata")
 
