@@ -13,13 +13,10 @@ SDM_SP<-function(cell_size,inLocalities,envfolder,savefolder){
   #Call the packages we are going to need in this tutorial
   library(biomod2)
   library(maptools)
-  library(ggplot2)
-  library(reshape)
   library(raster)
   library(rgdal)
   library(stringr)
   library(foreach)
-  library(GGally)
   
   #set a working directory, where do we want to save files
   #save locally for now
@@ -114,15 +111,17 @@ SDM_SP<-function(cell_size,inLocalities,envfolder,savefolder){
   spec<-spec[!spec %in% gsub("\\."," ",completed)]
   paste("Species to be modeled",spec,sep=": ")
   
-  #cl<-snow::makeCluster(10,"SOCK")
-  #doSNOW::registerDoSNOW(cl)
-    system.time(niche_loop<-foreach::foreach(x=1:length(spec),.packages=c("reshape2","biomod2","plyr"),.errorhandling="pass") %do% {
-    sink(paste("logs/",paste(spec[[x]],".txt",sep=""),sep=""))
+  cl<-snow::makeCluster(12,"SOCK")
+  doSNOW::registerDoSNOW(cl)
+    niche_loop<-foreach::foreach(x=1:length(spec),.errorhandling="stop",.inorder=FALSE,.export=c("spec","loc_clean","myExpl.crop")) %dopar% {
     
-    #remove sites that have no valid records
-    #For the moment, only get the clean records from Decision, or the cleaned map localities. 
+    library(reshape)
+    library(biomod2)
+    library(plyr)
+    
+    sink(paste("logs/",paste(spec[[x]],".txt",sep=""),sep=""))
+
     #print(paste("Start Time is",Sys.time()))
-    ###############Step 1) Get presence records for species
     ###############Step 1) Get presence records for species
     PA_species<-loc_clean[loc_clean$SPECIES %in% spec[x],]
     
@@ -286,86 +285,8 @@ SDM_SP<-function(cell_size,inLocalities,envfolder,savefolder){
               #print(paste("End Time is",system.time()))
               sink()
               return(stat)
-  })
-#stopCluster(cl)
+  }
+stopCluster(cl)
 
 print("ModelsComplete")
 
-############################Get model evaluation stats
-###########################
-
-#Get the ROC model evaluation from file
-model_eval<-list.files(full.name=TRUE,recursive=T,pattern="ModelRocEval.csv")
-model_eval<-rbind.fill(lapply(model_eval,read.csv))
-colnames(model_eval)<-c("Model","Species","Stat")
-model_eval<-melt(model_eval,id.var=c("Model","Species","Stat"))
-
-#Plot
-ggplot(model_eval, aes(x=Species,y=Model,fill=Stat)) + geom_tile() + scale_fill_gradient("ROC",limits=c(0,1),low="blue",high="red",na.value="white") + theme(axis.text.x=element_text(angle=-90))
-ggsave("ModelROCEvaluations.jpeg",height=5,width=20,dpi=300)
-
-model_thresh<-sapply(seq(.5,.95,.05),function(x){
-  table(model_eval$Stat > x,model_eval$Model)["TRUE",]
-})
-
-colnames(model_thresh)<-seq(.5,.95,.05)
-model_thresh<-melt(model_thresh)
-
-names(model_thresh)<-c("Model","ROC_Threshold","Number_of_Species")
-ggplot(model_thresh,aes(x=ROC_Threshold,y=Number_of_Species,col=Model)) + geom_line(size=1.5) + geom_point() + geom_text(aes(label=Number_of_Species),vjust=4,size=5) + theme_bw()
-ggsave("ModelThresholding.pdf",dpi=300,height=8,width=8)
-
-#Get the all model evaluations from file
-model_eval<-list.files(full.name=TRUE,recursive=T,pattern="ModelEval.csv")
-model_eval<-rbind.fill(lapply(model_eval,read.csv))
-colnames(model_eval)<-c("Metric","Species","GBM","GLM","MAXENT")
-model_eval<-melt(model_eval,id.var=c("Metric","Species"))
-
-#Plot with facets
-p<-ggplot(model_eval, aes(x=Species,y=variable,fill=value)) + geom_tile() + facet_wrap(~Metric) + theme(axis.text.x=element_text(angle=-90))
-p + scale_fill_gradient("Score",limits=c(0,1),low="blue",high="red",na.value="white")+ theme_bw() + theme(axis.text.x = element_blank()) 
-ggsave("ModelEvaluations.jpeg",height=6,width=11,dpi=300)
-
-#How correlated are model scores
-cast_mods<-cast(model_eval, Species~...)
-
-#GBM correlations
-ggpairs(cast_mods[,c(2,5,8)],lower=list(continuous="smooth",method="lm"))
-
-svg("GBMmetriccor.svg",height=10,width=10)
-ggpairs(cast_mods[,c(2,5,8)],lower=list(continuous="smooth",method="lm"))
-dev.off()
-
-#GLM correcation
-ggpairs(na.omit(cast_mods[,c(3,6,9)]),na.rm=TRUE,lower=list(continuous="smooth",method="lm"))
-
-svg("GLMmetriccor.svg",height=10,width=10)
-ggpairs(na.omit(cast_mods[,c(3,6,9)]),na.rm=TRUE,lower=list(continuous="smooth",method="lm"))
-dev.off()
-
-#Maxent Correlation
-ggpairs(cast_mods[,c(4,7,10)],lower=list(continuous="smooth",method="lm"))
-
-svg("Maxentmetriccor.svg",height=10,width=10)
-ggpairs(cast_mods[,c(4,7,10)],lower=list(continuous="smooth",method="lm"))
-dev.off()
-
-ggplot(model_eval,aes(x=variable,y=value)) + facet_wrap(~Metric) + geom_boxplot()+ geom_smooth(method="lm") + theme_bw() + labs(y="Score",x="Model")
-
-
-#Get the variable importance from file
-varI<-list.files(full.name=TRUE,recursive=T,pattern="VarImportance.csv")
-varI<-rbind.fill(lapply(varI,read.csv))
-varI<-varI[,-1]
-
-#Melt variable for plotting
-mvar<-melt(varI)
-colnames(mvar)<-c("Bioclim","Species","Model","value")
-
-#Plot variable importance across all models
-ggplot(mvar, aes(x=Species,y=Bioclim,fill=value)) + geom_tile() + scale_fill_gradient(limits=c(0,1),low="blue",high="red",na.value="white") + theme(axis.text.x=element_text(angle=-90)) + facet_grid(Model ~ .) + ggtitle("Variable Importance")
-
-ggsave("VariableImportance.jpeg",height=5,width=15,dpi=300)
-}
-
-print("SDM Function Defined")
