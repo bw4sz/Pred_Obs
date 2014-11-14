@@ -78,11 +78,11 @@ if (window.hljs && document.readyState && document.readyState === "complete") {
 <li><a href="#predicted-presence-and-absence">Predicted presence and absence</a><ul>
 <li><a href="#compute-distance-to-closely-related-species-for-every-species-in-every-assemblage">Compute distance to closely related species for every species in every assemblage</a></li>
 <li><a href="#calculate-predicted-presence-and-absence-based-on-suitability-and-cost-distance">Calculate predicted presence and absence based on suitability and cost distance</a></li>
+<li><a href="#combine-simulation-predicted-and-observed-assemblages.">Combine simulation, predicted and observed assemblages.</a></li>
 </ul></li>
 <li><a href="#bayesian-analysis-of-co-occurrence">Bayesian Analysis of Co-occurrence</a><ul>
 <li><a href="#model-formulation">Model Formulation</a></li>
 <li><a href="#define-bayes-model-function">Define bayes model function</a></li>
-<li><a href="#read-in-simulated-data---see-simulations.rmd">Read in simulated data - see Simulations.Rmd</a></li>
 <li><a href="#bayes-function-for-each-assemblage-type">Bayes function for each assemblage type</a></li>
 <li><a href="#view-chains">View Chains</a></li>
 <li><a href="#bayesian-estimates-figure">Bayesian estimates figure</a></li>
@@ -115,7 +115,6 @@ library(boot)
 library(maptools)
 library(rasterVis)
 library(knitr)
-library(ape)
 library(vegan)
 library(gridExtra)
 library(R2jags)
@@ -183,7 +182,7 @@ source(paste(gitpath,&quot;SDMupdated.R&quot;,sep=&quot;&quot;))</code></pre>
 <div id="niche-models" class="section level1">
 <h1>Niche Models</h1>
 <p>Run ensemble niche models using biomod2 at a desired cell size. To make this run, you need to <a href="http://www.cs.princeton.edu/~schapire/maxent/">download maxent</a> and place it in the folder you want to save the niche models:</p>
-<pre class="r"><code>cell_size=.5
+<pre class="r"><code>cell_size=.1
 inLocalities&lt;-read.csv(&quot;InputData/MASTER_POINTLOCALITYarcmap_review.csv&quot;)
 envfolder&lt;-&quot;C:\\Users\\Ben\\Dropbox\\Thesis\\Pred_Realized\\EnvLayers&quot;
 savefolder&lt;-&quot;C:/Users/Ben/Dropbox/Thesis/Pred_Realized/NicheModels/&quot;</code></pre>
@@ -516,6 +515,37 @@ return(PA_m2)
 <pre class="r"><code>save.image(&quot;PredictedRealized.Rdata&quot;)
 #load(&quot;PredictedRealized.Rdata&quot;)</code></pre>
 </div>
+<div id="combine-simulation-predicted-and-observed-assemblages." class="section level2">
+<h2>Combine simulation, predicted and observed assemblages.</h2>
+<p>Read in simulated data - see Simulations.Rmd</p>
+<pre class="r"><code>simall&lt;-read.csv(&quot;C:/Users/Ben/Documents/Pred_Obs/Bayesian/simdats.csv&quot;,row.names=1)
+
+colnames(simall)&lt;-c(&quot;Locality&quot;,&quot;Species&quot;,&quot;P_A&quot;,&quot;Phylo.Relatedness&quot;,&quot;Hyp&quot;,&quot;Iteration&quot;)
+
+simall$P_R&lt;-&quot;Simulation&quot;</code></pre>
+<p>Bind data to one dataframe.</p>
+<pre class="r"><code>#legacy name change.
+datF&lt;-PA_m2
+
+#make formats the same
+datF$Locality&lt;-as.numeric(as.character(datF$Locality))
+datF$P_A&lt;-as.integer(datF$P_A)
+
+#bind with simulated data
+datF&lt;-rbind_all(list(datF,simall))
+
+#split data into types of assemblages
+#drop Env + Dispersal for observed, its just a data subset
+sdat&lt;-split(datF,list(datF$P_R,datF$Hyp),drop=TRUE)
+
+names(sdat)&lt;-c(&quot;Niche Cons + comp&quot;,&quot;Env&quot;,&quot;Observed&quot;,&quot;Env + Dispersal&quot;,&quot;Lottery&quot;,&quot;Niche Cons&quot;)
+
+#for now grab 10000 random samples and remove inf values
+sdat&lt;-lapply(sdat,function(x){
+  x&lt;-x[is.finite(x$Phylo.Relatedness),]
+  return(x)
+})</code></pre>
+</div>
 </div>
 <div id="bayesian-analysis-of-co-occurrence" class="section level1">
 <h1>Bayesian Analysis of Co-occurrence</h1>
@@ -558,6 +588,13 @@ return(PA_m2)
 <pre class="r"><code>Bayes&lt;-function(presence,distance,species,runs,burn,plots,folder){
 
 dir.create(folder)
+
+#needs libraries specified to run in parallel
+library(ggplot2)
+library(R2jags)
+library(reshape2)
+library(dplyr)
+library(stringr)
 
 #Source model
 source(paste(gitpath,&quot;Bayesian/SingleSlope.R&quot;,sep=&quot;/&quot;))
@@ -625,47 +662,19 @@ write.csv(out,paste(folder,&quot;parameterestimates.csv&quot;,sep=&quot;/&quot;)
 
 return(pars)}</code></pre>
 </div>
-<div id="read-in-simulated-data---see-simulations.rmd" class="section level2">
-<h2>Read in simulated data - see Simulations.Rmd</h2>
-<pre class="r"><code>simall&lt;-read.csv(&quot;C:/Users/Ben/Documents/Pred_Obs/Bayesian/simdats.csv&quot;,row.names=1)
-
-colnames(simall)&lt;-c(&quot;Locality&quot;,&quot;Species&quot;,&quot;P_A&quot;,&quot;Phylo.Relatedness&quot;,&quot;Hyp&quot;,&quot;Iteration&quot;)
-
-simall$P_R&lt;-&quot;Simulation&quot;</code></pre>
-<p>Combine simulation, predicted and observed assemblages.</p>
-<pre class="r"><code>#legacy name change.
-datF&lt;-PA_m2
-
-#make formats the same
-datF$Locality&lt;-as.numeric(as.character(datF$Locality))
-datF$P_A&lt;-as.integer(datF$P_A)
-
-#bind with simulated data
-datF&lt;-rbind_all(list(datF,simall))
-
-#split data into types of assemblages
-#drop Env + Dispersal for observed, its just a data subset
-sdat&lt;-split(datF,list(datF$P_R,datF$Hyp),drop=TRUE)
-
-names(sdat)&lt;-c(&quot;Niche Cons + comp&quot;,&quot;Env&quot;,&quot;Observed&quot;,&quot;Env + Dispersal&quot;,&quot;Lottery&quot;,&quot;Niche Cons&quot;)
-
-#for now grab 10000 random samples and remove inf values
-sdat&lt;-lapply(sdat,function(x){
-  x&lt;-x[is.finite(x$Phylo.Relatedness),]
-  if(nrow(x) &gt; 5000){
-    x&lt;-x[sample(1:nrow(x),5000),]
-  }
-  return(x)
-})</code></pre>
-</div>
 <div id="bayes-function-for-each-assemblage-type" class="section level2">
 <h2>Bayes function for each assemblage type</h2>
-<pre class="r"><code>parall&lt;-lapply(sdat,FUN=function(x){
+<p>Run 6 models in parallel.</p>
+<pre class="r"><code>cl&lt;-snow::makeCluster(7,&quot;SOCK&quot;)
+doSNOW::registerDoSNOW(cl)
+parall&lt;-foreach::foreach(x=1:length(sdat),.errorhandling=&quot;stop&quot;,.export=c(&quot;sdat&quot;)) %dopar% {
+
   #create folder name
-  fold&lt;-paste(unique(x$P_R),unique(x$Hyp),sep=&quot;_&quot;)
+  fold&lt;-paste(unique(sdat[[x]]$P_R),unique(sdat[[x]]$Hyp),sep=&quot;_&quot;)
   
-  test&lt;-Bayes(presence = x$P_A,distance = x$Phylo.Relatedness,species=x$Species,runs = 15000,burn=12000,plots = TRUE,folder = fold)
-})</code></pre>
+  test&lt;-Bayes(presence = sdat[[x]]$P_A,distance = sdat[[x]]$Phylo.Relatedness,species=sdat[[x]]$Species,runs = 15000,burn=12000,plots = TRUE,folder = fold)
+}
+stopCluster(cl)</code></pre>
 </div>
 <div id="view-chains" class="section level2">
 <h2>View Chains</h2>

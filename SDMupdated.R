@@ -289,4 +289,4 @@ SDM_SP<-function(cell_size,inLocalities,envfolder,savefolder){
 stopCluster(cl)
 
 print("ModelsComplete")
-
+}

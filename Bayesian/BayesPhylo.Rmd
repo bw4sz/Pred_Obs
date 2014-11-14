@@ -51,18 +51,17 @@ droppath<-"C:/Users/Ben/Dropbox/"
 gitpath<-"C:/Users/Ben/Documents/Pred_Obs/"
 
 #Load image if desired
-load(paste(droppath,"Thesis/Pred_Realized/Assemblages/Threshold0.2/Results/Run.RData",sep=""))
+load(paste(droppath,"Thesis/Pred_Realized/Assemblages/Threshold0.2/Results/PredictedRealized.RData",sep=""))
 
 #start with just the present sites
 #head(PA_m2)
 
-dat<-PA_m2[PA_m2$Assemblage %in% "Observed" & PA_m2$Tree %in% "Phylo" & PA_m2$Hyp %in% "Env" & PA_m2$P_R %in% "PA_Binary",c("Species","Locality","P_A","value")]
+dat<-PA_m2[PA_m2$Hyp %in% "Env" & PA_m2$P_R %in% "PA_Binary",c("Species","Locality","P_A","Phylo.Relatedness")]
 
 #remove infinites
-dat<-dat[is.finite(dat$value),]
+dat<-dat[is.finite(dat$Phylo.Relatedness),]
 
 #sample data
-dat<-dat[sample(1:nrow(dat),1000),]
 kable(head(dat),row.names=F)
 ```
 
@@ -87,9 +86,7 @@ print.noquote(readLines("Single.R"))
 #Input Data
 Dat <- list(
   y=as.numeric(dat$P_A),
-  dist=dat$Phylo.Relatedness,
-  Species=as.numeric(dat$Species),
-  s=nlevels(dat$Species))
+  dist=dat$Phylo.Relatedness)
 
 InitStage <- function() {list(alpha=.1,beta=.1,gamma=.1)}
 
@@ -144,8 +141,8 @@ ggplot(pars,aes(x=Draw,col=as.factor(Chain),y=estimate)) + geom_line() + facet_w
 
 ```{r}
 parG<-group_by(pars,parameter)
-out<-summarise(parG,mean=mean(estimate),lower=quantile(estimate,0.025),upper=quantile(estimate,0.975),sd=sd(estimate))
-print(out)
+out_single<-summarise(parG,mean=mean(estimate),lower=quantile(estimate,0.025),upper=quantile(estimate,0.975),sd=sd(estimate))
+print(out_single)
 
 #save.image("BayesPhylo.Rdata")
 ```
@@ -163,8 +160,8 @@ samp<-dpars[sample(1:nrow(dpars),1000),]
 traj<-list()
 for(x in 1:nrow(samp)){
   s<-samp[x,]
-  p<-inv.logit(s$alpha + s$beta* dat$value +s$gamma * dat$value^2)
-  traj[[x]]<-data.frame(x=dat$value,y=p,Iteration=x)
+  p<-inv.logit(s$alpha + s$beta* dat$Phylo.Relatedness +s$gamma * dat$Phylo.Relatedness^2)
+  traj[[x]]<-data.frame(x=dat$Phylo.Relatedness,y=p,Iteration=x)
 }
     traj<-rbind_all(traj)
 
@@ -196,9 +193,11 @@ Run jags.
 
 ```{r jagsmodelsingleslope,eval=TRUE,echo=FALSE,fig.align='center'}
 #Input Data
+dat$Species<-factor(dat$Species)
+
 Dat <- list(
   y=as.numeric(dat$P_A),
-  dist=dat$value,
+  dist=dat$Phylo.Relatedness,
   Species=as.numeric(dat$Species),
   s=nlevels(dat$Species))
 
@@ -218,7 +217,7 @@ nc <- 2  # number of chains
 
 m = jags(inits = InitStage,
          n.chains=nc,
-         model.file="BPhylo.jags",
+         model.file="SingleSlope.jags",
          working.directory=getwd(),
          data=Dat,
          parameters.to.save=ParsStage,
@@ -235,6 +234,8 @@ colnames(pars)<-c("Draw","Chain","parameter","estimate")
 pars<-pars[!pars$Draw %in% 1:burns,]
 
 #seperate alpha,betas,gamma
+allpars<-pars[!pars$Draw %in% 1:burns,]
+
 spec<-pars[str_detect(string=pars$parameter,pattern=c("alpha")),]
 
 #remove deviance and species level characters
@@ -252,7 +253,6 @@ ggplot(pars,aes(x=estimate)) + geom_histogram() + ggtitle("Estimate of parameter
 
 ```{r}
 ###Chains
-
 ggplot(pars,aes(x=Draw,col=as.factor(Chain),y=estimate)) + geom_line() + facet_wrap(~parameter,scale="free") + theme_bw() + labs(col="Chain")
 ```
 
@@ -260,10 +260,63 @@ ggplot(pars,aes(x=Draw,col=as.factor(Chain),y=estimate)) + geom_line() + facet_w
 
 ```{r}
 parG<-group_by(pars,parameter)
-out<-summarise(parG,mean=mean(estimate),lower=quantile(estimate,0.025),upper=quantile(estimate,0.975),sd=sd(estimate))
-print(out)
+out_slope<-summarise(parG,mean=mean(estimate),lower=quantile(estimate,0.025),upper=quantile(estimate,0.975),sd=sd(estimate))
+print(out_single)
 
 save.image("BayesPhylo.Rdata")
+```
+
+##View Species Intercept
+```{r}
+spec$parameter<-droplevels(spec$parameter)
+
+#merge with original table
+di<-data.frame(parameter=levels(spec$parameter),Species=levels(dat$Species))
+
+spec<-merge(spec,di,by="parameter")
+
+ggplot(spec,aes(x=estimate,fill=Species)) + geom_histogram()
+
+ggplot(spec,aes(x=Species,y=estimate)) + geom_violin(fill="dark grey") + coord_flip()  + theme_bw()
+```
+
+##Plot species models
+
+```{r,fig.height=10}
+head(spec)
+
+dpars<-dcast(allpars,...~parameter)
+samp<-dpars[sample(1:nrow(dpars),1000),]
+
+alpha_plot<-function(alpha,sp){
+  
+  #sample 1000 values
+  
+  traj<-list()
+  for(x in 1:nrow(samp)){
+    s<-samp[x,]
+    p<-inv.logit(alpha[x] + s$beta* dat$Phylo.Relatedness +s$gamma * dat$Phylo.Relatedness^2)
+    traj[[x]]<-data.frame(x=dat$Phylo.Relatedness,y=p,Iteration=x)
+    }
+  traj<-rbind_all(traj)
+  
+  #summarise mean and interval
+  mtraj<-group_by(traj,x) %>% summarise(mean=mean(y),upper=quantile(y,0.975),lower=quantile(y,0.025))
+  
+  ggplot(mtraj,aes(x=x,y=mean)) + geom_line(col="red",linetype="dashed") + geom_line(aes(y=upper),col="blue",linetype="dashed") + geom_line(aes(y=lower),col="blue",linetype="dashed")+ theme_bw() + labs(x="",y="") + ggtitle(sp)
+  }
+
+alpha_index<-which(str_detect(string=colnames(samp),pattern=c("alpha")))
+
+pl<-list()
+for(x in 1:length(alpha_index)){
+  i<-alpha_index[x]
+  #Species
+  sp<-di[x,"Species"]
+  pl[[x]]<-alpha_plot(samp[,i],sp)
+}
+
+do.call("grid.arrange", c(pl, ncol=4))
 ```
 
 ##Model Fitting - Varying Intercept and Slope
@@ -277,27 +330,24 @@ $$ \alpha_{Species[i]} \sim N(intercept,sigmaIntercept)$$
 $$ \beta_{Species[i]} \sim N(slope,sigmaSlope)$$
 $$ \gamma_{Species[i]} \sim N(slope2,sigmaSlope2)$$
 
-
 ```{r slopesandinterceptmodel,echo=FALSE,eval=TRUE}
-load("C:/Users/Ben/Documents/Pred_Obs/Bayesian/BayesPhylo.Rdata")
-
-setwd("C:/Users/Ben/Documents/Pred_Obs/Bayesian")
 #Source model
 source("BPhylo.R")
 
 #print model
 print.noquote(readLines("BPhylo.R"))
-
 ```
 
 Run jags
 
 ```{r jagsmodelvarying,eval=TRUE,echo=FALSE,fig.align='center'}
 
+dat$Species<-factor(dat$Species)
+
 #Input Data
 Dat <- list(
   y=as.numeric(dat$P_A),
-  dist=dat$value,
+  dist=dat$Phylo.Relatedness,
   Species=as.numeric(dat$Species),
   s=nlevels(dat$Species))
 
@@ -330,7 +380,6 @@ m = jags(inits = InitStage,
 #Remove Burnin
 pars<-melt(m$BUGSoutput$sims.array)
 colnames(pars)<-c("Draw","Chain","parameter","estimate")
-
 pars<-pars[!pars$Draw %in% 1:burns,]
 
 #seperate alpha,betas,gamma
@@ -344,7 +393,6 @@ pars<-pars[!str_detect(string=pars$parameter,pattern=c("beta|alpha|gamma|devianc
 
 ```{r,cache=FALSE}
 ###Posterior Distributions
-
 ggplot(pars,aes(x=estimate)) + geom_histogram() + ggtitle("Estimate of parameters") + facet_wrap(~parameter,scale="free") + theme_bw() 
 ```
 
@@ -352,7 +400,6 @@ ggplot(pars,aes(x=estimate)) + geom_histogram() + ggtitle("Estimate of parameter
 
 ```{r,cache=FALSE}
 ###Chains
-
 ggplot(pars,aes(x=Draw,col=as.factor(Chain),y=estimate)) + geom_line() + facet_wrap(~parameter,scale="free") + theme_bw() + labs(col="Chain")
 ```
 
@@ -360,8 +407,21 @@ ggplot(pars,aes(x=Draw,col=as.factor(Chain),y=estimate)) + geom_line() + facet_w
 
 ```{r}
 parG<-group_by(pars,parameter)
-out<-summarise(parG,mean=mean(estimate),lower=quantile(estimate,0.025),upper=quantile(estimate,0.975),sd=sd(estimate))
-print(out)
+out_slopeintercept<-summarise(parG,mean=mean(estimate),lower=quantile(estimate,0.025),upper=quantile(estimate,0.975),sd=sd(estimate))
+print(out_slopeintercept)
 
-#save.image("BayesPhylo.Rdata")
+save.image("BayesPhylo.Rdata")
+```
+
+##View Species
+
+#Comparison of Model Estimates 
+
+```{r}
+comp<-list(SlopeIntercept=out_slopeintercept,Intercept=out_single,Constrained=out_slope)
+
+compm<-melt(comp)
+compm<-dcast(compm,...~variable)
+
+ggplot(compm,aes(x=L1,y=mean,ymax=upper,ymin=lower)) + geom_pointrange() + facet_wrap(~parameter,scales="free")
 ```

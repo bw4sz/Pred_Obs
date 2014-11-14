@@ -8,7 +8,6 @@ cat("model{
       logit(p[i]) <- alpha[Species[i]] + beta[Species[i]] * dist[i] + gamma[Species[i]] * pow(dist[i],2)
     }
 
-    
     for (j in 1:s){
     beta[j] ~ dnorm(slope,tauSlope)
     alpha[j] ~ dnorm(intercept,tauIntercept)

@@ -212,7 +212,7 @@ elev.ca<-aggregate(elev.c,2)
 
 ##Find shortest cost path, for all sites
 
-```{r,eval=FALSE}
+```{r compute cost,eval=FALSE}
 cl<-makeCluster(14,"SOCK")
 registerDoSNOW(cl)
 costPath.list<-foreach(x = 1:length(cellSitesXY)) %dopar% {
@@ -252,7 +252,7 @@ write.table(CostPathMatrix,paste(gitpath,sep="/","CostMatrix.txt"))
 
 Or read in from file, CostPath take awhile to run.
 
-```{r}
+```{r read costmat}
 CostPathMatrix<-read.table(paste(gitpath,sep="/","CostMatrix.txt"),row.names=1)
 colnames(CostPathMatrix)<-rownames(CostPathMatrix)
 ```
@@ -509,6 +509,11 @@ sdat<-lapply(sdat,function(x){
 
 ```
 
+How many data points in each assemblage?
+```{r}
+sapply(sdat,nrow)
+```
+
 #Bayesian Analysis of Co-occurrence
 
 ## Model Formulation
@@ -542,6 +547,7 @@ library(ggplot2)
 library(R2jags)
 library(reshape2)
 library(dplyr)
+library(stringr)
 
 #Source model
 source(paste(gitpath,"Bayesian/SingleSlope.R",sep="/"))
@@ -617,7 +623,7 @@ Run 6 models in parallel.
 
 ```{r run jags,results='hide'}
 
-cl<-snow::makeCluster(12,"SOCK")
+cl<-snow::makeCluster(7,"SOCK")
 doSNOW::registerDoSNOW(cl)
 parall<-foreach::foreach(x=1:length(sdat),.errorhandling="stop",.export=c("sdat")) %dopar% {
 
@@ -625,7 +631,7 @@ parall<-foreach::foreach(x=1:length(sdat),.errorhandling="stop",.export=c("sdat"
   fold<-paste(unique(sdat[[x]]$P_R),unique(sdat[[x]]$Hyp),sep="_")
   
   test<-Bayes(presence = sdat[[x]]$P_A,distance = sdat[[x]]$Phylo.Relatedness,species=sdat[[x]]$Species,runs = 15000,burn=12000,plots = TRUE,folder = fold)
-})
+}
 stopCluster(cl)
 ```
 
