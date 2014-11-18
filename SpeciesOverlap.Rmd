@@ -59,11 +59,11 @@ load(paste(droppath,"Thesis/Pred_Realized/Assemblages/Threshold0.2/Results/Predi
 
 The analysis takes in:
 
-*Phylogenetic Tree in newick format
+* Phylogenetic Tree in newick format
 
-*Sites matrix with long lat
+* Sites matrix with long lat
 
-*Species Assemblages corresponding to the sites matrix
+* Species Assemblages corresponding to the sites matrix
 
 ```{r import data}
 #Bring in Phylogenetic Data
@@ -147,7 +147,7 @@ names(niche)<-lapply(niche,function(path){
 })
 ```
 
-###Merge site by species assemblage lists with geographic distribution of niche models
+###Merge assemblage lists with geographic distribution of niche models
 
 ```{r}
 #Create Spatial Points object of the rownmaes
@@ -187,7 +187,11 @@ cong<-as.data.frame.array(table(congruence))
 
 #how many are complete
 completeI<-cong[names(which(apply(cong,1,sum)==4)),]
-kable(head(completeI))
+```
+
+#Final Species List
+```{r}
+kable(completeI)
 ```
 
 #Cost Path Analysis
@@ -210,7 +214,7 @@ elev.c[elev.c < 0]<-NA
 elev.ca<-aggregate(elev.c,2)
 ```
 
-##Find shortest cost path, for all sites
+##Find shortest cost path between all sites
 
 ```{r compute cost,eval=FALSE}
 cl<-makeCluster(14,"SOCK")
@@ -257,7 +261,7 @@ CostPathMatrix<-read.table(paste(gitpath,sep="/","CostMatrix.txt"),row.names=1)
 colnames(CostPathMatrix)<-rownames(CostPathMatrix)
 ```
 
-###Example Cost path distance
+###Example cost path distance
 
 Cost paths take into account frictional surfaces. We might imagine that species are more prone to dispersal within their habitat type. So in the example below, the original destination in red is a cloud forest locality and the final destination in blue is a lowland locality. A euclidean distance would have the bird cross the eastern Andean cordillera, where cost path creates a more realistic shortest distance, which is to stay within low friction space (white) and when it accounts higher frictional space (orange->green) to take a more direct path. 
 
@@ -288,8 +292,8 @@ l<-shortestPath(slope,orig,dest,output="SpatialLines")
 
 
 plot(elev_diff,xaxt="n",yaxt="n",main="Example Least Cost Distance")
-points(orig,col="red",cex=2,pch=20)
-points(dest,col="blue",cex=2,pch=20)
+points(orig,col="red",cex=1.5,pch=20)
+points(dest,col="blue",cex=1.5,pch=20)
 lines(l)
 ```
 
@@ -325,12 +329,14 @@ costThresh<-apply(siteXspp.raster,1,function(y){
 # Predicted presence and absence
 Ensemble niche models return a probability value of suitability for each cell in a landscape. To define predicted suitable areas, we needed to turn this probability into a statement of predicted presence/absence. Due to differences in species prevalence, taking a fixed probability cutoff across all species will bias presence towards more common species (Liu et al. 2005). We therefore thresholded the models based on the distribution of suitability values from the observed localities (Pearson et al. 2004, Gutiérrez et al. 2014)
 
-### Compute distance to closely related species for every species in every assemblage
+### Distance to closest-related species for every species in every assemblage
 ```{r}
 PA_phylo<-co_occur(melt(siteXspp.raster))
 ```
 
-##Calculate predicted presence and absence based on suitability and cost distance
+##Create predicted assemblages
+
+The *environment* assemblages are based on the results of the niche models, where species whose suitability is above a threshold are present. The same assemblages are used for the *environment + dispersal* assemblages, but a dispersal filter is added using the cost distance.
 
 ```{r}
 predAssemblages<-function(thresh,plots=TRUE){
@@ -466,7 +472,8 @@ PA_m2<-predAssemblages(thresh=.2,plots=TRUE)
 Save image in case we need to start here.
 
 ```{r}
-save.image("PredictedRealized.Rdata")
+load("PredictedRealized.Rdata")
+#save.image("PredictedRealized.Rdata")
 ```
 
 ##Combine simulation, predicted and observed assemblages.

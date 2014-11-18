@@ -231,7 +231,7 @@ m = jags(inits = InitStage,
          DIC=T)
 ```
 
-```{r}
+```{r remove burnin}
 #Remove Burnin
 pars<-melt(m$BUGSoutput$sims.array)
 colnames(pars)<-c("Draw","Chain","parameter","estimate")
@@ -326,7 +326,7 @@ do.call("grid.arrange", c(pl, ncol=4))
 
 Species are unconstrained in both slopes and intercepts. Species each repond differently and having different occupancies, but are drawn from a hyperprior 
 
-$$ y \sim bern(p_i) $$
+$$ Y_i \sim Bern(p_i) $$
 
 $$ logit(p_i) = \alpha_{Species[i]} + \beta_{Species[i]} *x + \gamma_{Species[i]} *x^2 $$
 $$ \alpha_{Species[i]} \sim N(intercept,sigmaIntercept)$$
