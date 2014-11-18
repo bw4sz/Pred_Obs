@@ -53,7 +53,7 @@ droppath<-"C:/Users/Ben/Dropbox/"
 setwd(gitpath)
 
 #Load image if desired
-#load(paste(droppath,"Thesis/Pred_Realized/Assemblages/Threshold0.2/Results/Run.RData",sep=""))
+load(paste(droppath,"Thesis/Pred_Realized/Assemblages/Threshold0.2/Results/PredictedRealized.RData",sep=""))
 
 ```
 
@@ -244,7 +244,7 @@ stopCluster(cl)
 
 #Format the cost path matrix
 m.costlist<-melt(costPath.list)
-CostPathMatrix<-log(cast(m.costlist,X2~L1)[,-1])
+CostPathMatrix<-log(dcast(m.costlist,Var1~Var2,value.var="value")[,-1])
 rownames(CostPathMatrix)<-colnames(siteXspp.raster)
 colnames(CostPathMatrix)<-colnames(siteXspp.raster)
 write.table(CostPathMatrix,paste(gitpath,sep="/","CostMatrix.txt"))
@@ -460,14 +460,13 @@ return(PA_m2)
 Sensitivity analysis shows that suitabilty threshold of 80% is a reasonable value, compute predicted and realized distributions. The function is specified as 1-threshold/100.
 
 ```{r,eval=FALSE}
-PA_m2<-predAssemblages(.2,plots=TRUE)
+PA_m2<-predAssemblages(thresh=.2,plots=TRUE)
 ```
 
 Save image in case we need to start here.
 
 ```{r}
-#save.image("PredictedRealized.Rdata")
-load("PredictedRealized.Rdata")
+save.image("PredictedRealized.Rdata")
 ```
 
 ##Combine simulation, predicted and observed assemblages.
@@ -512,6 +511,24 @@ sdat<-lapply(sdat,function(x){
 How many data points in each assemblage?
 ```{r}
 sapply(sdat,nrow)
+```
+
+#Compare to generalized linear models
+
+While these are constrained to have the same intercept and slope for each species, they provide a reasonable check on whether the bayesian estimates are giving logical values.
+
+```{r,fig.height=10}
+plotlist<-lapply(sdat,function(x){
+p<-ggplot(x,aes(x=Phylo.Relatedness,y=P_A)) + geom_smooth(method="glm",family="binomial",formula=y~poly(x,2)) + theme_bw() + labs("x=Distance to closest related species in an assemblage",y="Probability of presence") + ggtitle("")
+return(p)
+})
+
+#title plots
+for (x in 1:length(plotlist)){
+  plotlist[[x]]<-plotlist[[x]]+ggtitle(names(plotlist)[x])
+}
+
+do.call(grid.arrange,plotlist)
 ```
 
 #Bayesian Analysis of Co-occurrence
@@ -615,6 +632,7 @@ stopCluster(cl)
 save.image("PredictedRealized.Rdata")
 #load("PredictedRealized.Rdata")
 ```
+
 
 Combine predicted and observed outputs:
 

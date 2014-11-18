@@ -37,8 +37,8 @@ library(stringr)
 opts_chunk$set(warning=FALSE,message=FALSE)
 opts_chunk$set(cache=TRUE, cache.path = 'BayesPhylo_cache/', fig.path='figure/',fig.width=10,echo=FALSE)
 
-runs=10000
-burns=1000
+runs=15000
+burns=13000
 ```
 
 ###Data
@@ -267,7 +267,7 @@ save.image("BayesPhylo.Rdata")
 ```
 
 ##View Species Intercept
-```{r}
+```{r,fig.height=15}
 spec$parameter<-droplevels(spec$parameter)
 
 #merge with original table
@@ -275,14 +275,12 @@ di<-data.frame(parameter=levels(spec$parameter),Species=levels(dat$Species))
 
 spec<-merge(spec,di,by="parameter")
 
-ggplot(spec,aes(x=estimate,fill=Species)) + geom_histogram()
-
 ggplot(spec,aes(x=Species,y=estimate)) + geom_violin(fill="dark grey") + coord_flip()  + theme_bw()
 ```
 
 ##Plot species models
 
-```{r,fig.height=10}
+```{r,fig.height=40}
 head(spec)
 
 dpars<-dcast(allpars,...~parameter)
@@ -391,14 +389,14 @@ pars<-pars[!str_detect(string=pars$parameter,pattern=c("beta|alpha|gamma|devianc
 
 ###Visualize chains
 
-```{r,cache=FALSE}
+```{r,cache=TRUE}
 ###Posterior Distributions
 ggplot(pars,aes(x=estimate)) + geom_histogram() + ggtitle("Estimate of parameters") + facet_wrap(~parameter,scale="free") + theme_bw() 
 ```
 
 ###Visualize posteriors
 
-```{r,cache=FALSE}
+```{r,cache=TRUE}
 ###Chains
 ggplot(pars,aes(x=Draw,col=as.factor(Chain),y=estimate)) + geom_line() + facet_wrap(~parameter,scale="free") + theme_bw() + labs(col="Chain")
 ```
@@ -410,18 +408,24 @@ parG<-group_by(pars,parameter)
 out_slopeintercept<-summarise(parG,mean=mean(estimate),lower=quantile(estimate,0.025),upper=quantile(estimate,0.975),sd=sd(estimate))
 print(out_slopeintercept)
 
-save.image("BayesPhylo.Rdata")
 ```
 
 ##View Species
 
 #Comparison of Model Estimates 
 
-```{r}
-comp<-list(SlopeIntercept=out_slopeintercept,Intercept=out_single,Constrained=out_slope)
+Group by the parameters they are trying to predict
+```{r,fig.width=11,fig.height=7}
+comp<-list(Unconstrained_slope=out_slopeintercept,Uncontrained_Intercept=out_single,Constrained=out_slope)
 
 compm<-melt(comp)
 compm<-dcast(compm,...~variable)
 
-ggplot(compm,aes(x=L1,y=mean,ymax=upper,ymin=lower)) + geom_pointrange() + facet_wrap(~parameter,scales="free")
+compm[compm$parameter %in% c("intercept","alpha"),"Parm"]<-c("Intercept")
+compm[compm$parameter %in% c("slope","beta"),"Parm"]<-c("beta")
+compm[compm$parameter %in% c("slope2","gamma"),"Parm"]<-c("gamma")
+
+ggplot(compm[!is.na(compm$Parm),],aes(x=L1,y=mean,ymax=upper,ymin=lower)) + geom_pointrange() + facet_wrap(~Parm,scales="free")
+
+save.image("BayesPhylo.Rdata")
 ```

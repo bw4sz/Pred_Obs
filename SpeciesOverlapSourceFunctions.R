@@ -50,7 +50,7 @@ pred_realized<-function(mod,thresh.suit,dispersal,PA_phylo,plots=TRUE){
   
   #melt and cast niche value data so that we have every combinition of species/localitiy/presence
   giant<-melt(PA_niche,id.var="Locality")
-  species.data<-cast(giant)
+  species.data<-dcast(giant,...~variable)
   colnames(species.data)<-c("Locality","P_A","Suitability")
   
   #add in species name
