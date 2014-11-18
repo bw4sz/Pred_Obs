@@ -8,7 +8,8 @@ output:
 ---
 
 #Aim
-I will test increasing model complexity, and a variety of priors to show model robustness.
+
+Insights from comparing phylogenetic and trait community spacing has led to a renewed focus on whether interspecific competition shape species occurrence. Combining theories of niche conservatism and limiting similarity, species should co-occur more with closely related species up to a threshold of niche overlap, followed by a decrease in co-occurrence. I will test increasing model complexity, and a variety of priors to show model robustness.
 
 </br>
 
@@ -37,8 +38,8 @@ library(stringr)
 opts_chunk$set(warning=FALSE,message=FALSE)
 opts_chunk$set(cache=TRUE, cache.path = 'BayesPhylo_cache/', fig.path='figure/',fig.width=10,echo=FALSE)
 
-runs=15000
-burns=13000
+runs=25000
+burns=22000
 ```
 
 ###Data
@@ -62,7 +63,6 @@ dat<-PA_m2[PA_m2$Hyp %in% "Env" & PA_m2$P_R %in% "PA_Binary",c("Species","Locali
 dat<-dat[is.finite(dat$Phylo.Relatedness),]
 
 #sample data
-kable(head(dat),row.names=F)
 ```
 
 #Model 1 - Single Slope and Intercept
@@ -73,7 +73,9 @@ $$ Y_i \sim Bern(p_i) $$
 
 $$ logit(p_i) = \alpha + \beta *x + \gamma *x^2 $$
 
-```{r singlemodel,echo=FALSE,eval=FALSE}
+WinBugs code:
+
+```{r singlemodel,echo=FALSE,eval=TRUE}
 setwd("C:/Users/Ben/Documents/Pred_Obs/Bayesian")
 #Source model
 source("Single.R")
@@ -82,7 +84,7 @@ source("Single.R")
 print.noquote(readLines("Single.R"))
 ```
 
-```{r jagsmodelsingle,eval=TRUE,echo=FALSE,fig.align='center'}
+```{r jagsmodelsingle,eval=TRUE,echo=FALSE,fig.align='center',results='hide'}
 #Input Data
 Dat <- list(
   y=as.numeric(dat$P_A),
@@ -125,14 +127,14 @@ pars<-pars[!pars$parameter %in% "deviance",]
 
 ###Visualize posteriors
 
-```{r}
+```{r,fig.height=3}
 ###Posterior Distributions
 ggplot(pars,aes(x=estimate)) + geom_histogram() + ggtitle("Estimate of parameters") + facet_wrap(~parameter,scale="free") + theme_bw() 
 ```
 
 ###Visualize chains
 
-```{r}
+```{r,fig.height=3}
 ###Chains
 ggplot(pars,aes(x=Draw,col=as.factor(Chain),y=estimate)) + geom_line() + facet_wrap(~parameter,scale="free") + theme_bw() + labs(col="Chain")
 ```
@@ -180,7 +182,9 @@ $$ Y_i \sim Bern(p_i) $$
 $$ logit(p_i) = \alpha_{Species[i]} + \beta *x + \gamma *x^2 $$
 $$ \alpha_{Species[i]} \sim N(intercept,sigmaIntercept)$$
 
-```{r printmodel,echo=FALSE,eval=FALSE}
+WinBugs code:
+
+```{r printmodel,echo=FALSE,eval=TRUE}
 setwd("C:/Users/Ben/Documents/Pred_Obs/Bayesian")
 #Source model
 source("SingleSlope.R")
@@ -191,7 +195,7 @@ print.noquote(readLines("SingleSlope.R"))
 
 Run jags. 
 
-```{r jagsmodelsingleslope,eval=TRUE,echo=FALSE,fig.align='center'}
+```{r jagsmodelsingleslope,eval=TRUE,echo=FALSE,fig.align='center',results='hide'}
 #Input Data
 dat$Species<-factor(dat$Species)
 
@@ -244,14 +248,14 @@ pars<-pars[!str_detect(string=pars$parameter,pattern=c("alpha")),]
 
 ###Visualize posteriors
 
-```{r}
+```{r,fig.height=3}
 ###Posterior Distributions
 ggplot(pars,aes(x=estimate)) + geom_histogram() + ggtitle("Estimate of parameters") + facet_wrap(~parameter,scale="free") + theme_bw() 
 ```
 
 ###Visualize chains
 
-```{r}
+```{r,fig.height=3}
 ###Chains
 ggplot(pars,aes(x=Draw,col=as.factor(Chain),y=estimate)) + geom_line() + facet_wrap(~parameter,scale="free") + theme_bw() + labs(col="Chain")
 ```
@@ -267,6 +271,7 @@ save.image("BayesPhylo.Rdata")
 ```
 
 ##View Species Intercept
+
 ```{r,fig.height=15}
 spec$parameter<-droplevels(spec$parameter)
 
@@ -328,6 +333,8 @@ $$ \alpha_{Species[i]} \sim N(intercept,sigmaIntercept)$$
 $$ \beta_{Species[i]} \sim N(slope,sigmaSlope)$$
 $$ \gamma_{Species[i]} \sim N(slope2,sigmaSlope2)$$
 
+WinBugs code:
+
 ```{r slopesandinterceptmodel,echo=FALSE,eval=TRUE}
 #Source model
 source("BPhylo.R")
@@ -338,7 +345,7 @@ print.noquote(readLines("BPhylo.R"))
 
 Run jags
 
-```{r jagsmodelvarying,eval=TRUE,echo=FALSE,fig.align='center'}
+```{r jagsmodelvarying,eval=TRUE,echo=FALSE,fig.align='center',results='hide'}
 
 dat$Species<-factor(dat$Species)
 
@@ -389,14 +396,14 @@ pars<-pars[!str_detect(string=pars$parameter,pattern=c("beta|alpha|gamma|devianc
 
 ###Visualize chains
 
-```{r,cache=TRUE}
+```{r,cache=TRUE,fig.height=3}
 ###Posterior Distributions
 ggplot(pars,aes(x=estimate)) + geom_histogram() + ggtitle("Estimate of parameters") + facet_wrap(~parameter,scale="free") + theme_bw() 
 ```
 
 ###Visualize posteriors
 
-```{r,cache=TRUE}
+```{r,cache=TRUE,fig.height=3}
 ###Chains
 ggplot(pars,aes(x=Draw,col=as.factor(Chain),y=estimate)) + geom_line() + facet_wrap(~parameter,scale="free") + theme_bw() + labs(col="Chain")
 ```
@@ -415,7 +422,7 @@ print(out_slopeintercept)
 #Comparison of Model Estimates 
 
 Group by the parameters they are trying to predict
-```{r,fig.width=11,fig.height=7}
+```{r,fig.width=12,fig.height=4}
 comp<-list(Unconstrained_slope=out_slopeintercept,Uncontrained_Intercept=out_single,Constrained=out_slope)
 
 compm<-melt(comp)
@@ -425,7 +432,7 @@ compm[compm$parameter %in% c("intercept","alpha"),"Parm"]<-c("Intercept")
 compm[compm$parameter %in% c("slope","beta"),"Parm"]<-c("beta")
 compm[compm$parameter %in% c("slope2","gamma"),"Parm"]<-c("gamma")
 
-ggplot(compm[!is.na(compm$Parm),],aes(x=L1,y=mean,ymax=upper,ymin=lower)) + geom_pointrange() + facet_wrap(~Parm,scales="free")
+ggplot(compm[!is.na(compm$Parm),],aes(x=L1,y=mean,ymax=upper,ymin=lower)) + geom_pointrange() + facet_wrap(~Parm,scales="free") + labs(y="Model",x="Posterior Estimate")
 
 save.image("BayesPhylo.Rdata")
 ```
