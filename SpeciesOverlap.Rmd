@@ -472,8 +472,8 @@ PA_m2<-predAssemblages(thresh=.2,plots=TRUE)
 Save image in case we need to start here.
 
 ```{r}
-load("PredictedRealized.Rdata")
-#save.image("PredictedRealized.Rdata")
+#load("PredictedRealized.Rdata")
+save.image("PredictedRealized.Rdata")
 ```
 
 ##Combine simulation, predicted and observed assemblages.
