@@ -640,7 +640,6 @@ save.image("PredictedRealized.Rdata")
 #load("PredictedRealized.Rdata")
 ```
 
-
 Combine predicted and observed outputs:
 
 ```{r}
@@ -673,11 +672,11 @@ ggplot(parmelt,aes(x=Draw,y=estimate,col=as.factor(Chain))) + geom_line() + face
 
 ```{r,fig.height=15}
 
-simulated<-ggplot(parmelt[parmelt$Assemblage %in% "Simulation",],aes(x=estimate,fill=parameter)) + facet_wrap(~L1,scale="free_y") + geom_histogram() + theme_bw() + ggtitle("Simulated") + scale_fill_discrete(guide="none") + labs(x="") + scale_x_continuous(limits=c(-20,20))
+simulated<-ggplot(parmelt[parmelt$Assemblage %in% "Simulation",],aes(x=estimate,fill=parameter)) + facet_wrap(~L1,scale="free_y") + geom_histogram() + theme_bw() + ggtitle("Simulated") + scale_fill_discrete(guide="none") + labs(x="") + scale_x_continuous(limits=c(-20,20)) + scale_fill_manual(values=c("grey60","grey10"))
 
-predicted<-ggplot(parmelt[parmelt$Assemblage %in% "Predicted",],aes(x=estimate,fill=parameter)) + facet_wrap(~L1,scale="free_y") + geom_histogram() + theme_bw() + ggtitle("Predicted")+ scale_fill_discrete(guide="none") + labs(x="")+ scale_x_continuous(limits=c(-20,20))
+predicted<-ggplot(parmelt[parmelt$Assemblage %in% "Predicted",],aes(x=estimate,fill=parameter)) + facet_wrap(~L1,scale="free_y") + geom_histogram() + theme_bw() + ggtitle("Predicted")+ scale_fill_discrete(guide="none") + labs(x="")+ scale_x_continuous(limits=c(-20,20))+ scale_fill_manual(values=c("grey60","grey10"))
 
-observed<-ggplot(parmelt[parmelt$Assemblage %in% "Observed",],aes(x=estimate,fill=parameter)) + facet_wrap(~L1,scale="free_y") + geom_histogram() + theme_bw() + ggtitle("Observed")+ scale_x_continuous(limits=c(-20,20))
+observed<-ggplot(parmelt[parmelt$Assemblage %in% "Observed",],aes(x=estimate,fill=parameter)) + facet_wrap(~L1,scale="free_y") + geom_histogram() + theme_bw() + ggtitle("Observed")+ scale_x_continuous(limits=c(-20,20))+ scale_fill_manual(values=c("grey60","grey10"))
 
 grid.arrange(simulated,predicted,observed,nrow=3)
 ```
@@ -690,6 +689,7 @@ grid.arrange(simulated,predicted,observed,nrow=3)
 dev.off()
 ```
 
+#Add a 
 ##Compare across assemblages
 
 ```{r,size=8}

@@ -13,10 +13,10 @@ Insights from comparing phylogenetic and trait community spacing has led to a re
 
 </br>
 
-#Bayesian Analysis of Co-occurrence as a function of relatedness.
+#Bayesian Analysis of co-occurrence and relatedness.
 
 ## General Model Formula
-$$ y \sim bern(p_i) $$
+$$ Y_i \sim Bern(p_i) $$
 
 $$ logit(p_i) = \alpha + \beta *x + \gamma *x^2 $$
 
@@ -36,7 +36,7 @@ library(R2jags)
 library(boot)
 library(stringr)
 opts_chunk$set(warning=FALSE,message=FALSE)
-opts_chunk$set(cache=TRUE, cache.path = 'BayesPhylo_cache/', fig.path='figure/',fig.width=10,echo=FALSE)
+opts_chunk$set(cache=TRUE, cache.path = 'BayesPhylo_cache/', fig.path='figure/',fig.width=14,echo=FALSE)
 
 runs=25000
 burns=22000
@@ -272,7 +272,7 @@ save.image("BayesPhylo.Rdata")
 
 ##View Species Intercept
 
-```{r,fig.height=15}
+```{r,fig.height=15,fig.width=7}
 spec$parameter<-droplevels(spec$parameter)
 
 #merge with original table
@@ -388,7 +388,7 @@ colnames(pars)<-c("Draw","Chain","parameter","estimate")
 pars<-pars[!pars$Draw %in% 1:burns,]
 
 #seperate alpha,betas,gamma
-spec<-pars[str_detect(string=pars$parameter,pattern=c("beta|alpha|gamma|deviance")),]
+spec<-pars[str_detect(string=pars$parameter,pattern=c("beta|alpha|gamma")),]
 
 #remove deviance and species level characters
 pars<-pars[!str_detect(string=pars$parameter,pattern=c("beta|alpha|gamma|deviance")),]
@@ -418,6 +418,57 @@ print(out_slopeintercept)
 ```
 
 ##View Species
+
+```{r view slope species,fig.height=40}
+
+spec$ind<-str_extract(spec$parameter,pattern="\\d+")
+
+#split into species
+specS<-split(spec,spec$ind)
+
+#match index with species names
+for (x in 1:length(specS)){
+  specS[[x]]$Species<-levels(dat$Species)[x]
+}
+
+#merge with data on relatedness
+datS<-split(dat,dat$Species)
+
+specCast<-lapply(specS,function(y){
+  dpars<-dcast(y,...~parameter,value.var="estimate")
+  samp<-dpars[sample(1:nrow(dpars),1000),]  
+  colnames(samp)<-c("Draw","Chain","ind","Species","alpha","beta","gamma")
+  
+  #species trajectories
+  traj<-list()
+  #Get species relatedness subset
+  R<-datS[[unique(samp$Species)]]$Phylo.Relatedness
+  
+  for(x in 1:nrow(samp)){
+    s<-samp[x,]
+    p<-inv.logit(s$alpha + s$beta*R  +s$gamma * R^2)
+    traj[[x]]<-data.frame(x=R,y=p,Iteration=x)
+    }
+  traj<-rbind_all(traj)
+  
+  #summarise mean and interval
+  mtraj<-group_by(traj,x) %>% summarise(mean=mean(y),upper=quantile(y,0.975),lower=quantile(y,0.025))
+})
+
+
+alpha_plot<-function(alpha,sp){
+  ggplot(mtraj,aes(x=x,y=mean)) + geom_line(col="red",linetype="dashed") + geom_line(aes(y=upper),col="blue",linetype="dashed") + geom_line(aes(y=lower),col="blue",linetype="dashed")+ theme_bw() + labs(x="",y="") + ggtitle(sp)
+  }
+
+pl<-list()
+for(x in 1:length(specCast)){
+  #Species
+  sp<-di[x,"Species"]
+  pl[[x]]<-alpha_plot(specCast[[x]],sp)
+}
+
+do.call("grid.arrange", c(pl, ncol=4))
+```
 
 #Comparison of Model Estimates 
 
