@@ -1,6 +1,6 @@
 #Apply predicted v realized function to all species
 #Define function
-pred_realized<-function(mod,thresh.suit,dispersal,PA_phylo,plots=TRUE){
+pred_realized<-function(mod,thresh.suit,dispersal,PA_phylo,plots=TRUE,loc_clean=loc_clean){
   
   setwd(paste(fold,"Species",sep="/"))
   
@@ -65,18 +65,6 @@ pred_realized<-function(mod,thresh.suit,dispersal,PA_phylo,plots=TRUE){
   }
    
   #For the threshold column, what is the distribution of presence sites
-  
-  #Lets go get the presence data on hummingbird distributions
-  Niche_locals<-read.csv(paste(gitpath,"InputData\\MASTER_POINTLOCALITYarcmap_review.csv",sep=""))
-  
-  #Just take the columns you want. 
-  PAdat<-Niche_locals[,colnames (Niche_locals) %in% c("RECORD_ID","SPECIES","COUNTRY","LOCALITY","LATDECDEG","LONGDECDEG","Decision","SpatialCheck","MapDecision")]
-  
-  #clean localities, we checked them against published range records and visually inspected them
-  PAdat<-PAdat[!PAdat$LONGDECDEG==-6,]
-  loc_clean<-PAdat[PAdat$Decision=="OK"|PAdat$MapDecision=="OK"|PAdat$MapDecision=="",]
-  loc_clean<-loc_clean[loc_clean$SpatialCheck=="Y",]
-  
   #match formating for species names
   sp.loc<-loc_clean[loc_clean$SPECIES %in%  gsub("\\."," ",as.character(unique(species.data$Species))),]
   sp.loc<-SpatialPointsDataFrame(sp.loc[,c("LONGDECDEG","LATDECDEG")],sp.loc)
@@ -87,7 +75,6 @@ pred_realized<-function(mod,thresh.suit,dispersal,PA_phylo,plots=TRUE){
   
   #plot to file
   if(plots==TRUE){
-    
   qplot(site_suit) + geom_vline(aes(xintercept=suit_cut),linetype="dashed",col="Red")
   ggsave("SuitThresholds.jpeg",height=8,width=11,dpi=300)
   }

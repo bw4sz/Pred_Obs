@@ -111,7 +111,7 @@ SDM_SP<-function(cell_size,inLocalities,envfolder,savefolder){
   spec<-spec[!spec %in% gsub("\\."," ",completed)]
   paste("Species to be modeled",spec,sep=": ")
   
-  cl<-snow::makeCluster(12,"SOCK")
+  cl<-snow::makeCluster(11,"SOCK")
   doSNOW::registerDoSNOW(cl)
     niche_loop<-foreach::foreach(x=1:length(spec),.errorhandling="stop",.inorder=FALSE,.export=c("spec","loc_clean","myExpl.crop")) %dopar% {
     
