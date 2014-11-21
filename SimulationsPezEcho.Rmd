@@ -161,50 +161,11 @@ probPlot(sim.dat,col="Gradient",facet="~Species")
 ```
 
 
-```{r interaction matrix}
-intMatrix<-function(d,tree){
-colnames(d$Y)<-trx$tip.label
-siteXsppm<-melt(d$Y)
-colnames(siteXsppm)<-c("Locality","Species","P_A")
-
-#get species lists
-pres<-siteXsppm[!siteXsppm$P_A==0,]
-
-f<-split(pres,pres$Locality)
-
-#Get interactions of all species
-comb<-lapply(f,function(g){
-ns<-length(g$Species)
-m<-matrix(nrow=ns,ncol=ns,1)
-colnames(m)<-g$Species
-rownames(m)<-g$Species
-diag(m)<-NA
-m
-})
-
-comb<-melt(comb)
-#remove NA's
-comb$Var1<-droplevels(comb$Var1)
-comb$Var2<-droplevels(comb$Var2)
-
-sp<-melt(table(comb$Var1,comb$Var2))
-colnames(sp)<-c("Species1","Species2","int")
-sp<-sp[!sp$int==0,]
-
-sp$Species1<-factor(sp$Species1,levels=tree$tip.label)
-sp$Species2<-factor(sp$Species2,levels=tree$tip.label)
-
-ggplot(sp,aes(x=Species1,y=Species2,fill=int)) + geom_tile() + scale_fill_continuous(low="blue",high="red")
-}
-```
-
-
 ```{r}
 
 ###Species Ranges
 
 #Function to plot species ranges on to the simulated grid. Needs to specify the same threshold as the scape th function (see questions). Optional argument to color species 
-
 
 #color ramp function
 gs.pal <- colorRampPalette(c("red","blue"),space="rgb")
@@ -269,11 +230,13 @@ f<-split(siteXsppm,siteXsppm$Locality)
 #remove the localities with only 1 species
 f<-f[sapply(f,function(x) sum(x$P_A)) > 1]
 
+if(length(f)==0){return(NA)}
+
 #Get closest related species in each site
 closest<-lapply(f,function(x){
   #species present
   pres<-x$Species[x$P_A ==1]
-    dis<-ctrx[trx$tip.label,pres]
+    dis<-ctrx[rownames(ctrx) %in% trx$tip.label,colnames(ctrx) %in% pres]
     apply(dis,1,function(y){
       as.matrix(min(y[!y==0]))
       })
@@ -361,16 +324,6 @@ sim.list<-replicate(20,sim.func(),simplify=FALSE)
 gridlist<-lapply(sim.list[1:6],function(x){
   gridplot(x,tree=trx,threshold=-log10(th),opt.color=TRUE,guide=FALSE)})
 multiplot(plotlist=gridlist,cols=3)
-
-#gridlist<-lapply(sim.list[1:5],function(x){
-#probPlot(x,col="Species",facet="~Gradient")})
-
-#multiplot(plotlist=gridlist,cols=1)
-
-# gridlist<-lapply(sim.list[1:5],function(x){
-# intMatrix(x,tree=trx)})
-# 
-# multiplot(plotlist=gridlist,cols=1)
 ```
 
 ###Co-occurrence as a function of relatedness
@@ -483,9 +436,10 @@ write.csv(psdat,"C:/Users/Ben/Documents/Pred_Obs/Bayesian/simdats.csv")
 
 Run a series of tree sizes, 4-32 species. For this analysis, i'm using generalized linear models with binomial fits, since each species has the same occurrence probability, this would be extremely similiar to the hiericichal bayes model, and saves alot of time for sensitivity analysis.
 
-```{r}
+```{r,eval=FALSE}
 #create Phylogeny
 treeS<-function(size){
+  browser()
 trx<-compute.brlen(stree(n=size,type="balanced"))
 plot(trx)
 
@@ -494,22 +448,29 @@ ctrx<-cophenetic(trx)
 
 th=.6
 
-
 sim.func<-function(){scape(trx, scape.size=10, g.center=10, g.range=1, g.repulse=10, wd.all=20, signal.center=TRUE, signal.range=FALSE, same.range=TRUE, repulse=TRUE,center.scale = 1, range.scale = 1, repulse.scale = 1, site.stoch.scale = 0, sd.center=1, sd.range=1,rho=NULL, th=th)}
 
-sim.list<-replicate(10,sim.func(),simplify=FALSE)
+sim.list<-replicate(20,sim.func(),simplify=FALSE)
 
 ### Compute co-occurrence
 sim.occur<-lapply(sim.list,function(x){
   phy<-co_occur(x)})
 
-phy_comp<-rbind_all(sim.occur)
+#remove NA'
+sim.occur2<-sim.occur[!sapply(sim.occur,function(x) length(x))==1]
+if(length(sim.occur2)==0){return(NA)}
+
+phy_comp<-rbind_all(sim.occur2)
 
 p<-ggplot(phy_comp,aes(x=Phylo.Relatedness,y=P_A)) + geom_point() + geom_smooth(method="glm",family="binomial",formula=(y~(poly(x,2)))) + labs(y="Probability of Presence",x="Phylogenetic Distance to Nearest Species in the Assemblage") + ggtitle(paste("Species",size,sep="="))
-return(p)}
+return(p)
+}
 
 sizes<-c(4,8,16,32)
+treeS(8)
+treeS(16)
 treeS(4)
-
 pl<-lapply(sizes,treeS)
 multiplot(plotlist=pl,cols=2)
+```
+

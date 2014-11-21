@@ -53,7 +53,7 @@ droppath<-"C:/Users/Ben/Dropbox/"
 setwd(gitpath)
 
 #Load image if desired
-load(paste(droppath,"Thesis/Pred_Realized/Assemblages/Threshold0.2/Results/PredictedRealized.RData",sep=""))
+#load(paste(droppath,"Thesis/Pred_Realized/Assemblages/Threshold0.2/Results/PredictedRealized.RData",sep=""))
 
 ```
 
@@ -107,7 +107,7 @@ siteXspp<-t(read.csv(paste(gitpath,"InputData//siteXspp.csv",sep=""),row.names=1
 
 These are helper functions to run distribution models and calculated relatedness and cost distance.
 
-```{r source functions,}
+```{r source functions}
 source(paste(gitpath,"SpeciesOverlapSourceFunctions.R",sep=""))
 source(paste(gitpath,"SDMupdated.R",sep=""))
 ```
@@ -285,8 +285,6 @@ dest<-cellSitesXY[90,]
   #Diagonal Cell Correction, diagonals are father away than adjacent cells. 
   slope <- geoCorrection(trans_diff)
 
-
-
 #shortest path
 l<-shortestPath(slope,orig,dest,output="SpatialLines")
 
@@ -368,7 +366,7 @@ if(plots){plot(modlist[[1:6]])}
 cl<-makeCluster(12,"SOCK")
 registerDoSNOW(cl)
 
-system.time(all_models<-foreach(x=1:nlayers(modlist),.export=c("sp.lists","siteXspp.raster","pred_realized","fold","gitpath","cellSitesXY","costThresh","CostPathMatrix"),.errorhandling="pass",.packages=c("raster","maptools","reshape","dismo","picante","ggplot2","rasterVis","lattice")) %dopar%{
+system.time(all_models<-foreach(x=1:nlayers(modlist),.export=c("sp.lists","siteXspp.raster","pred_realized","fold","gitpath","cellSitesXY","costThresh","CostPathMatrix"),.errorhandling="stop",.packages=c("raster","maptools","reshape2","dismo","picante","ggplot2","rasterVis","lattice")) %dopar%{
   
   source(paste(gitpath,"SpeciesOverlapSourceFunctions.R",sep=""))
   
@@ -394,7 +392,7 @@ write.csv(names(failed_models),"FailedSpecies.csv")
 all.species.dataND<-melt(working_models,id.vars=c("Locality","P_A","Suitability","Species","LongDecDeg","LatDecDeg"))
 
 ##############Repeat for dispersal filter########
-system.time(all_modelsDD<-foreach(x=1:nlayers(modlist),.errorhandling="pass",.export=c("sp.lists","siteXspp.raster","pred_realized","fold","gitpath","cellSitesXY","costThresh","CostPathMatrix"),.packages=c("raster","maptools","reshape","dismo","picante","ggplot2","rasterVis","lattice")) %dopar%{ 
+system.time(all_modelsDD<-foreach(x=1:nlayers(modlist),.errorhandling="stop",.export=c("sp.lists","siteXspp.raster","pred_realized","fold","gitpath","cellSitesXY","costThresh","CostPathMatrix"),.packages=c("raster","maptools","reshape2","dismo","picante","ggplot2","rasterVis","lattice")) %dopar%{ 
     
   source(paste(gitpath,"SpeciesOverlapSourceFunctions.R",sep=""))
     
@@ -465,7 +463,8 @@ return(PA_m2)
 
 Sensitivity analysis shows that suitabilty threshold of 80% is a reasonable value, compute predicted and realized distributions. The function is specified as 1-threshold/100.
 
-```{r,eval=FALSE}
+```{r,eval=TRUE}
+#Plotting gives summary graphs
 PA_m2<-predAssemblages(thresh=.2,plots=TRUE)
 ```
 
@@ -689,20 +688,18 @@ grid.arrange(simulated,predicted,observed,nrow=3)
 dev.off()
 ```
 
-#Add a 
 ##Compare across assemblages
 
-```{r,size=8}
+```{r,size=8,fig.width=13}
 finaltab<-group_by(parmelt,L1,Assemblage,parameter) %>% summarize(mean=mean(estimate),upper=quantile(estimate,0.975),lower=quantile(estimate,0.025))
 
 kable(as.data.frame(finaltab))
 
 write.csv(finaltab,"ParameterEstimates.csv")
 
-ggplot(finaltab,aes(x=L1,col=Assemblage,shape=parameter),size=3) + geom_pointrange(aes(y=mean,ymax=upper,ymin=lower),size=2) + theme_bw() + facet_wrap(~parameter)
+ggplot(finaltab,aes(x=L1,col=Assemblage,shape=parameter),size=3) + geom_pointrange(aes(y=mean,ymax=upper,ymin=lower),size=1.5) + theme_bw() + facet_wrap(~parameter)
 
 save.image("PredictedRealized.Rdata")
-
 ```
 
 

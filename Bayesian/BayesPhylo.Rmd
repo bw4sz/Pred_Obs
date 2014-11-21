@@ -38,11 +38,10 @@ library(stringr)
 opts_chunk$set(warning=FALSE,message=FALSE)
 opts_chunk$set(cache=TRUE, cache.path = 'BayesPhylo_cache/', fig.path='figure/',fig.width=14,echo=FALSE)
 
-runs=25000
-burns=22000
+runs=45000
+burns=40000
 ```
 
-###Data
 
 ```{r load_data}
 #Set dropbox path
@@ -65,7 +64,7 @@ dat<-dat[is.finite(dat$Phylo.Relatedness),]
 #sample data
 ```
 
-#Model 1 - Single Slope and Intercept
+#Model I - Constrained - Single Slope and Intercept
 
 Species are constrained to have the same slope and intercept.
 
@@ -173,7 +172,7 @@ mtraj<-group_by(traj,x) %>% summarise(mean=mean(y),upper=quantile(y,0.975),lower
 ggplot(mtraj,aes(x=x,y=mean)) + geom_line(col="red",linetype="dashed") + geom_line(aes(y=upper),col="blue",linetype="dashed") + geom_line(aes(y=lower),col="blue",linetype="dashed")+ theme_bw() + labs(x="Phylogenetic distance to closest related species in an assemblage",y="Probability of occurrence")
 ```
 
-#Model 2 - Varying Intercept
+#Model II - Unconstrained - Varying Intercept
 
 Species have differing intercepts but constrained to have the same slope. This equates to a single mechanism shaping relatedness, but accounting for differences in occupancy between species. 
 
@@ -319,10 +318,10 @@ for(x in 1:length(alpha_index)){
   pl[[x]]<-alpha_plot(samp[,i],sp)
 }
 
-do.call("grid.arrange", c(pl, ncol=4))
+do.call("grid.arrange", c(pl, ncol=5))
 ```
 
-##Model Fitting - Varying Intercept and Slope
+##Model III - Unconstrained - Varying Intercept and Slope
 
 Species are unconstrained in both slopes and intercepts. Species each repond differently and having different occupancies, but are drawn from a hyperprior 
 
@@ -457,7 +456,7 @@ specCast<-lapply(specS,function(y){
 
 
 alpha_plot<-function(alpha,sp){
-  ggplot(mtraj,aes(x=x,y=mean)) + geom_line(col="red",linetype="dashed") + geom_line(aes(y=upper),col="blue",linetype="dashed") + geom_line(aes(y=lower),col="blue",linetype="dashed")+ theme_bw() + labs(x="",y="") + ggtitle(sp)
+  ggplot(alpha,aes(x=x,y=mean)) + geom_line(col="red",linetype="dashed") + geom_line(aes(y=upper),col="blue",linetype="dashed") + geom_line(aes(y=lower),col="blue",linetype="dashed")+ theme_bw() + labs(x="",y="") + ggtitle(sp)
   }
 
 pl<-list()
@@ -467,13 +466,13 @@ for(x in 1:length(specCast)){
   pl[[x]]<-alpha_plot(specCast[[x]],sp)
 }
 
-do.call("grid.arrange", c(pl, ncol=4))
+do.call("grid.arrange", c(pl, ncol=5))
 ```
 
 #Comparison of Model Estimates 
 
 Group by the parameters they are trying to predict
-```{r,fig.width=12,fig.height=4}
+```{r,fig.width=15,fig.height=4}
 comp<-list(Unconstrained_slope=out_slopeintercept,Uncontrained_Intercept=out_single,Constrained=out_slope)
 
 compm<-melt(comp)

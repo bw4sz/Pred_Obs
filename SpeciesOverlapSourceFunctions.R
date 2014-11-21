@@ -169,7 +169,6 @@ pred_realized<-function(mod,thresh.suit,dispersal,PA_phylo,plots=TRUE){
 co_occur<-function(siteXsppm){
   
   #reshape data
-
   colnames(siteXsppm)<-c("Species","Locality","P_A")
   
   f<-split(siteXsppm,siteXsppm$Locality)
@@ -181,7 +180,7 @@ co_occur<-function(siteXsppm){
   closest<-lapply(f,function(x){
     #species present
     pres<-x$Species[x$P_A ==1]
-    dis<-ctrx[trx$tip.label,pres]
+    dis<-ctrx[rownames(ctrx) %in% trx$tip.label,colnames(ctrx) %in% pres]
     apply(dis,1,function(y){
       as.matrix(min(y[!y==0]))
     })
