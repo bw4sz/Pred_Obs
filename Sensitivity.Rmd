@@ -7,7 +7,7 @@ output:
     toc: true
 ---
 
-```{r,warning=FALSE,message=FALSE}
+```{r,warning=FALSE,message=FALSE,echo=FALSE}
 #Load required libraries
 library(reshape2)
 require(ggplot2)
@@ -28,7 +28,7 @@ library(stringr)
 library(dplyr)
 
 opts_chunk$set(warning=FALSE,message=FALSE)
-opts_chunk$set(cache=TRUE, cache.path = 'Sensitivity_cache/', fig.path='figure/',fig.width=10,echo=FALSE)
+opts_chunk$set(cache=TRUE, cache.path = 'Sensitivity_cache/', fig.path='figure/',fig.width=10,echo=TRUE)
 
 #Set git path
 gitpath<-"C:/Users/Ben/Documents/Pred_Obs/"
@@ -55,6 +55,7 @@ predAssemblages<-function(thresh,plots=TRUE){
   #Create output folders
 
   fold<-paste(droppath,paste("Thesis/Pred_Realized/Assemblages/Threshold",thresh,sep=""),sep="")
+  print(fold)
 
 #Read in source function to draw predicted and realized assemblages and match relatedness
 
@@ -62,17 +63,15 @@ dir.create(fold)
 dir.create(paste(fold,"Species",sep="/"))
 
 #load models to file, makes it more transferable than keeping them on disk
+modr<-lapply(niche,raster,values=TRUE)
 
-#Choose the model output, for now i'm getting the mean ensemble model
-modlist<-stack(lapply(niche,raster,values=TRUE))
+#Get the number of records per site, atleast 10 presences. 
+records_site<-names(which(apply(siteXspp.raster,1,sum,na.rm=TRUE) > 10))
+modlist<-modr[names(modr) %in% records_site]
 
 #plot a few rasters
 print("Example niche models")
-if(plots){plot(modlist[[1:6]])}
-
-#or read from file
-#writeRaster(paste(gitpath,"modelStack",sep=""),x=stack(modlist),bylayer=FALSE,overwrite=TRUE)
-#modlist<-stack(paste(gitpath,"modelStack",sep=""))
+if(plots){plot(stack(modlist)[[1:9]])}
 
   #Lets go get the presence data on hummingbird distributions
   Niche_locals<-read.csv(paste(gitpath,"InputData\\MASTER_POINTLOCALITYarcmap_review.csv",sep=""))
@@ -82,28 +81,17 @@ if(plots){plot(modlist[[1:6]])}
   
   #clean localities, we checked them against published range records and visually inspected them
   PAdat<-PAdat[!PAdat$LONGDECDEG==-6,]
-  loc_clean<-PAdat[PAdat$Decision=="OK"|PAdat$MapDecision=="OK"|PAdat$MapDecision=="",]
-  loc_clean<-loc_clean[loc_clean$SpatialCheck=="Y",]
-  
-  
+  loc_clean<-PAdat[!PAdat$MapDecision=="REJECT",]
+
 #########################################################
 #Perform Predicted v Realized Function on all Niche Models
 #########################################################
 
-cl<-makeCluster(12,"SOCK")
-registerDoSNOW(cl)
-
-system.time(all_models<-foreach(x=1:nlayers(modlist),.export=c("sp.lists","siteXspp.raster","pred_realized","fold","gitpath","cellSitesXY","costThresh","CostPathMatrix","loc_clean"),.errorhandling="stop",.packages=c("raster","maptools","reshape2","dismo","picante","ggplot2","rasterVis","lattice")) %dopar%{
-  
-  source(paste(gitpath,"SpeciesOverlapSourceFunctions.R",sep=""))
-  
-  pred_realized(mod=modlist[[x]],thresh.suit=thresh,dispersal=FALSE,plots=FALSE,loc_clean=loc_clean)
-  
-  })
+all_models<-lapply(modlist,function(x){
+    pred_realized(mod=x,thresh.suit=thresh,dispersal=FALSE,plots=FALSE,loc_clean=loc_clean,fold=fold)
+})
 
 if(plots){print("Species assembages: No dispersal filter")}
-
-#If you want to start here, read in the data from file
 
 #combine all datasets
 #This naming function would need to changed on other systems
@@ -112,22 +100,14 @@ names(all_models)<-names(modlist)
 #Remove models that failed. 
 working_models<-all_models[!sapply(sapply(all_models,nrow),is.null)]
 failed_models<-all_models[sapply(sapply(all_models,nrow),is.null)]
-write.csv(names(failed_models),"FailedSpecies.csv")
 
 #melt and name list
 #remove any species that failed. 
 all.species.dataND<-melt(working_models,id.vars=c("Locality","P_A","Suitability","Species","LongDecDeg","LatDecDeg"))
 
-##############Repeat for dispersal filter########
-system.time(all_modelsDD<-foreach(x=1:nlayers(modlist),.errorhandling="stop",.export=c("sp.lists","siteXspp.raster","pred_realized","fold","gitpath","cellSitesXY","costThresh","CostPathMatrix","loc_clean"),.packages=c("raster","maptools","reshape2","dismo","picante","ggplot2","rasterVis","lattice")) %dopar%{ 
-    
-  source(paste(gitpath,"SpeciesOverlapSourceFunctions.R",sep=""))
-    
-  pred_realized(mod=modlist[[x]],thresh.suit=thresh,dispersal=TRUE,plots=FALSE,loc_clean=loc_clean)
+all_modelsDD<-lapply(modlist,function(x){
+    pred_realized(mod=x,thresh.suit=thresh,dispersal=TRUE,plots=FALSE,loc_clean=loc_clean,fold=fold)
 })
-
-#turn
-stopCluster(cl)
 
 if(plots){print("Species assemblages including dispersal filter")}
 
@@ -138,7 +118,6 @@ names(all_modelsDD)<-names(modlist)
 #Remove models that failed. 
 working_modelsD<-all_modelsDD[!sapply(sapply(all_modelsDD,nrow),is.null)]
 failed_modelsD<-all_modelsDD[sapply(sapply(all_modelsDD,nrow),is.null)]
-write.csv(names(failed_modelsD),"FailedSpeciesD.csv")
 
 #melt and name list
 #remove any species that failed. 
@@ -156,10 +135,6 @@ all.species.data<-all.species.data[,!colnames(all.species.data) %in% "L1"]
 #Set working directory to output folder
 dir.create(paste(fold,"Results",sep="/"))
 setwd(paste(fold,"Results",sep="/"))
-
-#Visualize model outputs
-ggplot(all.species.data,aes(x=Suitability,fill=P_A)) + geom_density(alpha=.5) + theme_bw() + labs(fill="") + facet_wrap(~Hyp) + ggtitle("Habitat Suitability and Presence")
-ggsave("AllspeciesBinarySuitability.svg",height=8,width=10) 
 
 #add in which clade each focal species is
 PA_mult2<-merge(all.species.data,clades[,-c(3,4,5)],by.x="Species",by.y="double.")
@@ -185,16 +160,19 @@ PA_m2$Phylo.Relatedness[PA_m2$Phylo.Relatedness > phylo_out]<-NA
 #return data
 return(PA_m2)
 }
-
 ```
 
 #Loop through suitability thresholds
 
 ```{r}
 #list of thresholds
-thr<-seq(.1,.9,.1)
-thr_loop<-lapply(thr,function(x){
-  predAssemblages(thresh=x,plots=FALSE)})
+thr<-seq(.01,.3,.1)
+thr_loop<-foreach(x=1:length(thr)) %do% {
+  print(x)
+  source(paste(gitpath,"SpeciesOverlapSourceFunctions.R",sep=""))
+  predAssemblages(thresh=thr[x],plots=FALSE)
+  }
+
 ```
 
 #Plot glm estimates of polynomial
@@ -234,7 +212,7 @@ sdat<-lapply(sdat,function(x){
 ```
 
 #View plots
-```{r}
+```{r,fig.width=6,fig.align='center'}
 plotlist<-lapply(sdat,function(x){
 p<-ggplot(x,aes(x=Phylo.Relatedness,y=P_A,col=factor(Thresh))) + geom_smooth(method="glm",family="binomial",formula=y~poly(x,2)) + theme_bw() + labs("x=Distance to closest related species in an assemblage",y="Probability of presence") + ggtitle("") + scale_color_brewer(palette="Reds") + labs(col="Habitat Suitability Threshold")
 return(p)
@@ -245,5 +223,15 @@ for (x in 1:length(plotlist)){
   plotlist[[x]]<-plotlist[[x]]+ggtitle(names(plotlist)[x])
 }
 
-do.call(grid.arrange,plotlist,nrow=2)
+do.call(grid.arrange,plotlist)
+```
+
+```{r}
+save.image("Sensitivity.Rdata")
+#load("Sensitivity.Rdata")
+```
+
+#Sensitivity and specificity
+```{r}
+thr_loop[1]
 ```

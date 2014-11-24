@@ -1,6 +1,6 @@
 #Apply predicted v realized function to all species
 #Define function
-pred_realized<-function(mod,thresh.suit,dispersal,PA_phylo,plots=TRUE,loc_clean=loc_clean){
+pred_realized<-function(mod,thresh.suit,dispersal,PA_phylo,plots=TRUE,loc_clean=loc_clean,fold){
   
   setwd(paste(fold,"Species",sep="/"))
   
@@ -10,9 +10,6 @@ pred_realized<-function(mod,thresh.suit,dispersal,PA_phylo,plots=TRUE,loc_clean=
   dir.create(names(mod))
   
   setwd(names(mod))
-  
-  #Get the number of records per site
-  records_site<-apply(siteXspp.raster,1,sum,na.rm=TRUE)
   
   #Get row in siteXspp.raster for the model species
   rowS<-siteXspp.raster[rownames(siteXspp.raster) %in% names(mod),]
@@ -67,8 +64,9 @@ pred_realized<-function(mod,thresh.suit,dispersal,PA_phylo,plots=TRUE,loc_clean=
   #For the threshold column, what is the distribution of presence sites
   #match formating for species names
   sp.loc<-loc_clean[loc_clean$SPECIES %in%  gsub("\\."," ",as.character(unique(species.data$Species))),]
+  sp.loc<-sp.loc[!duplicated(sp.loc[,-1]),]
   sp.loc<-SpatialPointsDataFrame(sp.loc[,c("LONGDECDEG","LATDECDEG")],sp.loc)
-  
+
   #draw suitability for occurence points
   site_suit<-extract(mod,sp.loc)
   suit_cut<-quantile(na.omit(site_suit),thresh.suit)

@@ -209,7 +209,7 @@ SDM_SP<-function(cell_size,inLocalities,envfolder,savefolder){
                                                  Yweights=NULL, 
                                                  VarImport=3, 
                                                  #models.eval.meth = c('ROC'),
-                                                 models.eval.meth = c('ROC',"TSS","KAPPA"),
+                                                 models.eval.meth = c('ROC',"TSS"),
                                                  SaveObj = TRUE )
               
               # get all models evaluation                                     

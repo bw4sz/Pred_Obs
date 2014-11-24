@@ -16,13 +16,15 @@ old<-old[,!colnames(old) %in% c("Assemblage","Metric","Tree")]
 colnames(old)[3]<-"Phylo.Relatedness"
 
 #test species
-ctor.old<-old[old$Species %in% "Coeligena.torquata",]
-ctor.new<-new[new$Species %in% "Coeligena.torquata",]
+ctor.old<-old[old$Species %in% "Phaethornis.yaruqui",]
+ctor.new<-new[new$Species %in% "Phaethornis.yaruqui",]
 
 ctor.old$A<-"Old"
 ctor.new$A<-"New"
 
 d<-rbind_all(list(ctor.old,ctor.new))
+
+ggplot(d,aes(y=Suitability,x=factor(P_A),col=A)) + geom_boxplot() + facet_wrap(~Hyp)
 
 ggplot(d,aes(x=Locality,y=Phylo.Relatedness,col=A,shape=factor(P_A))) + geom_point(size=5) + geom_line(aes(group=Locality)) + theme_bw() + facet_wrap(~Hyp)
 
@@ -63,6 +65,16 @@ do.call(grid.arrange,plotlist)
 pold<-old[old$P_R=="P_Apred" & old$Hyp %in% "Env",]
 pnew<-new[new$P_R=="P_Apred" & new$Hyp %in% "Env",]
 
+pold$Type<-"old"
+pnew$Type<-"new"
+
+k<-rbind_all(list(pold,pnew))
+
+k$Species<-as.character(k$Species)
+ <- lapply(vars, as.symbol)
+rich<-group_by(k[k$P_A==1,],Locality,Type) %>% summarise(Richness=length(Species))
+ggplot(rich,aes(x=Locality,y=Richness,col=Type)) + geom_point(size=2) + geom_line(aes(group=Locality))
+
 dim(pold)
 dim(pnew)
 
@@ -87,3 +99,7 @@ newl
 a<-oldl[oldl$P_A==1,]$Species 
 b<-newl[newl$P_A==1,]$Species
 a[!a%in% b]
+
+#richness in the two 
+
+group_by(d)
