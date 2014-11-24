@@ -399,7 +399,6 @@ names(all_models)<-names(modlist)
 #Remove models that failed. 
 working_models<-all_models[!sapply(sapply(all_models,nrow),is.null)]
 failed_models<-all_models[sapply(sapply(all_models,nrow),is.null)]
-write.csv(names(failed_models),"FailedSpecies.csv")
 
 #melt and name list
 #remove any species that failed. 
@@ -425,7 +424,6 @@ names(all_modelsDD)<-names(modlist)
 #Remove models that failed. 
 working_modelsD<-all_modelsDD[!sapply(sapply(all_modelsDD,nrow),is.null)]
 failed_modelsD<-all_modelsDD[sapply(sapply(all_modelsDD,nrow),is.null)]
-write.csv(names(failed_modelsD),"FailedSpeciesD.csv")
 
 #melt and name list
 #remove any species that failed. 
@@ -479,7 +477,7 @@ Sensitivity analysis shows that suitabilty threshold of 80% is a reasonable valu
 
 ```{r pred assemb,eval=TRUE}
 #Plotting gives summary graphs
-PA_m2<-predAssemblages(thresh=.7,plots=TRUE)
+PA_m2<-predAssemblages(thresh=.15,plots=TRUE)
 ```
 
 Save image in case we need to start here.
