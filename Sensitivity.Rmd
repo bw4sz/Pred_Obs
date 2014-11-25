@@ -38,7 +38,7 @@ setwd(gitpath)
 source(paste(gitpath,"SpeciesOverlapSourceFunctions.R",sep=""))
 
 #Load image if desired
-load(paste(droppath,"Thesis/Pred_Realized/Assemblages/Threshold0.2/Results/PredictedRealized.RData",sep=""))
+load(paste(droppath,"Thesis/Pred_Realized/Assemblages/Threshold0.1/Results/PredictedRealized.RData",sep=""))
 
 rm(predAssemblages)
 rm(pred_realized)
@@ -233,5 +233,4 @@ save.image("Sensitivity.Rdata")
 
 #Sensitivity and specificity
 ```{r}
-thr_loop[1]
 ```

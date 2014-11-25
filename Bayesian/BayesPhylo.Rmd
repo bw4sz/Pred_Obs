@@ -38,8 +38,8 @@ library(stringr)
 opts_chunk$set(warning=FALSE,message=FALSE)
 opts_chunk$set(cache=TRUE, cache.path = 'BayesPhylo_cache/', fig.path='figure/',fig.width=14,echo=FALSE)
 
-runs=45000
-burns=40000
+runs=20000
+burns=18000
 ```
 
 
@@ -51,7 +51,7 @@ droppath<-"C:/Users/Ben/Dropbox/"
 gitpath<-"C:/Users/Ben/Documents/Pred_Obs/"
 
 #Load image if desired
-load(paste(droppath,"Thesis/Pred_Realized/Assemblages/Threshold0.2/Results/PredictedRealized.RData",sep=""))
+load(paste(droppath,"Thesis/Pred_Realized/Assemblages/Threshold0.1/Results/PredictedRealized.RData",sep=""))
 
 #start with just the present sites
 #head(PA_m2)
@@ -361,7 +361,7 @@ InitStage <- function() {list(alpha=rep(0.1,Dat$s),beta=rep(0.1,Dat$s),gamma=rep
 ParsStage <- c("intercept","slope","sigmaSlope","sigmaIntercept","slope2","sigmaSlope2","alpha","beta","gamma")
 
 #MCMC options
-ni <- runs  # number of draws from the 
+ni <- 30000  # number of draws from the 
 nt <- 1    #thinning rate
 nb <- 0  # number to discard for burn-in
 nc <- 2  # number of chains
@@ -384,7 +384,7 @@ m = jags(inits = InitStage,
 #Remove Burnin
 pars<-melt(m$BUGSoutput$sims.array)
 colnames(pars)<-c("Draw","Chain","parameter","estimate")
-pars<-pars[!pars$Draw %in% 1:burns,]
+pars<-pars[!pars$Draw %in% 1:25000,]
 
 #seperate alpha,betas,gamma
 spec<-pars[str_detect(string=pars$parameter,pattern=c("beta|alpha|gamma")),]
