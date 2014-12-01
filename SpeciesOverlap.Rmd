@@ -53,7 +53,7 @@ droppath<-"C:/Users/Ben/Dropbox/"
 setwd(gitpath)
 
 #Load image if desired
-load(paste(droppath,"Thesis/Pred_Realized/Assemblages/Threshold0.1/Results/PredictedRealized.RData",sep=""))
+#load(paste(droppath,"Thesis/Pred_Realized/Assemblages/Threshold0.1/Results/PredictedRealized.RData",sep=""))
 
 ```
 
@@ -656,11 +656,24 @@ ggplot(parmelt,aes(x=Draw,y=estimate,col=as.factor(Chain))) + geom_line() + face
 
 ```{r,fig.height=15}
 
+#calculate CI interval
+finaltab<-group_by(parmelt,L1,Assemblage,parameter) %>% summarize(mean=round(mean(estimate),2),upper=round(quantile(estimate,0.975),2),lower=round(quantile(estimate,0.025),2)) 
+
+#plot simulated
 simulated<-ggplot(parmelt[parmelt$Assemblage %in% "Simulation",],aes(x=estimate,fill=parameter)) + facet_wrap(~L1,scale="free_y") + geom_histogram() + theme_bw() + ggtitle("Simulated") + scale_fill_discrete(guide="none") + labs(x="") + scale_x_continuous(limits=c(-20,20)) + scale_fill_manual(values=c("grey60","grey10"))
+
+#CI intervals
+simulated<-simulated + geom_vline(data=finaltab[finaltab$Assemblage %in% "Simulation",],aes(xintercept=mean,group=parameter),linetype="dashed",col="black",size=1) + geom_vline(data=finaltab[finaltab$Assemblage %in% "Simulation",],aes(xintercept=upper,group=parameter),linetype="dashed",col="grey20",size=.5) + geom_vline(data=finaltab[finaltab$Assemblage %in% "Simulation",],aes(xintercept=lower,group=parameter),linetype="dashed",col="grey20",size=.5)
 
 predicted<-ggplot(parmelt[parmelt$Assemblage %in% "Predicted",],aes(x=estimate,fill=parameter)) + facet_wrap(~L1,scale="free_y") + geom_histogram() + theme_bw() + ggtitle("Predicted")+ scale_fill_discrete(guide="none") + labs(x="")+ scale_x_continuous(limits=c(-20,20))+ scale_fill_manual(values=c("grey60","grey10"))
 
+#CI intervals
+predicted<-predicted + geom_vline(data=finaltab[finaltab$Assemblage %in% "Predicted",],aes(xintercept=mean,group=parameter),linetype="dashed",col="black",size=1) + geom_vline(data=finaltab[finaltab$Assemblage %in% "Predicted",],aes(xintercept=upper,group=parameter),linetype="dashed",col="grey20",size=.5) + geom_vline(data=finaltab[finaltab$Assemblage %in% "Predicted",],aes(xintercept=lower,group=parameter),linetype="dashed",col="grey20",size=.5)
+
 observed<-ggplot(parmelt[parmelt$Assemblage %in% "Observed",],aes(x=estimate,fill=parameter)) + facet_wrap(~L1,scale="free_y") + geom_histogram() + theme_bw() + ggtitle("Observed")+ scale_x_continuous(limits=c(-20,20))+ scale_fill_manual(values=c("grey60","grey10"))
+
+#CI intervals
+observed<-observed + geom_vline(data=finaltab[finaltab$Assemblage %in% "Observed",],aes(xintercept=mean,group=parameter),linetype="dashed",col="black",size=1) + geom_vline(data=finaltab[finaltab$Assemblage %in% "Observed",],aes(xintercept=lower,group=parameter),linetype="dashed",col="grey20",size=.5) + geom_vline(data=finaltab[finaltab$Assemblage %in% "Observed",],aes(xintercept=upper,group=parameter),linetype="dashed",col="grey20",size=.5)
 
 grid.arrange(simulated,predicted,observed,nrow=3)
 ```
@@ -676,7 +689,6 @@ dev.off()
 ##Compare across assemblages
 
 ```{r,size=8,fig.width=13}
-finaltab<-group_by(parmelt,L1,Assemblage,parameter) %>% summarize(mean=mean(estimate),upper=quantile(estimate,0.975),lower=quantile(estimate,0.025))
 
 kable(as.data.frame(finaltab))
 

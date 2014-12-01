@@ -102,7 +102,7 @@ nc <- 2  # number of chains
 
 #Jags
 
-m = jags(inits = InitStage,
+mSingle = jags(inits = InitStage,
          n.chains=nc,
          model.file="Single.jags",
          working.directory=getwd(),
@@ -116,33 +116,33 @@ m = jags(inits = InitStage,
 
 ```{r}
 #Remove Burnin
-pars<-melt(m$BUGSoutput$sims.array)
-colnames(pars)<-c("Draw","Chain","parameter","estimate")
-pars<-pars[!pars$Draw %in% 1:burns,]
+parsSingle<-melt(mSingle$BUGSoutput$sims.array)
+colnames(parsSingle)<-c("Draw","Chain","parameter","estimate")
+parsSingle<-parsSingle[!parsSingle$Draw %in% 1:burns,]
 
 #remove deviance
-pars<-pars[!pars$parameter %in% "deviance",]
+parsSingle<-parsSingle[!parsSingle$parameter %in% "deviance",]
 ```
 
 ###Visualize posteriors
 
 ```{r,fig.height=3}
 ###Posterior Distributions
-ggplot(pars,aes(x=estimate)) + geom_histogram() + ggtitle("Estimate of parameters") + facet_wrap(~parameter,scale="free") + theme_bw() 
+ggplot(parsSingle,aes(x=estimate)) + geom_histogram() + ggtitle("Estimate of parameters") + facet_wrap(~parameter,scale="free") + theme_bw() 
 ```
 
 ###Visualize chains
 
 ```{r,fig.height=3}
 ###Chains
-ggplot(pars,aes(x=Draw,col=as.factor(Chain),y=estimate)) + geom_line() + facet_wrap(~parameter,scale="free") + theme_bw() + labs(col="Chain")
+ggplot(parsSingle,aes(x=Draw,col=as.factor(Chain),y=estimate)) + geom_line() + facet_wrap(~parameter,scale="free") + theme_bw() + labs(col="Chain")
 ```
 
 ###Output table
 
 ```{r}
-parG<-group_by(pars,parameter)
-out_single<-summarise(parG,mean=mean(estimate),lower=quantile(estimate,0.025),upper=quantile(estimate,0.975),sd=sd(estimate))
+parGSingle<-group_by(parsSingle,parameter)
+out_single<-summarise(parGSingle,mean=mean(estimate),lower=quantile(estimate,0.025),upper=quantile(estimate,0.975),sd=sd(estimate))
 print(out_single)
 
 #save.image("BayesPhylo.Rdata")
@@ -153,10 +153,10 @@ print(out_single)
 ```{r,echo=TRUE,eval=TRUE,fig.width=6,fig.align='center'}
 #Load if needed
 
-dpars<-dcast(pars,...~parameter)
+dpars<-dcast(parsSingle,...~parameter)
 
 #sample 1000 values
-samp<-dpars[sample(1:nrow(dpars),1000),]
+samp<-dpars[sample(1:nrow(dpars),500),]
 
 traj<-list()
 for(x in 1:nrow(samp)){
@@ -211,14 +211,14 @@ InitStage <- function() {list(alpha=rep(0.1,Dat$s),beta=.1,gamma=.1)}
 ParsStage <- c("alpha","beta","gamma","intercept","sigmaIntercept")
 
 #MCMC options
-ni <- 5000  # number of draws from the posterior
+ni <- 40000  # number of draws from the posterior
 nt <- 1    #thinning rate
 nb <- 0  # number to discard for burn-in
 nc <- 2  # number of chains
 
 #Jags
 
-m = jags(inits = InitStage,
+mSingleS <- jags(inits = InitStage,
          n.chains=nc,
          model.file="SingleSlope.jags",
          working.directory=getwd(),
@@ -232,38 +232,38 @@ m = jags(inits = InitStage,
 
 ```{r remove burnin}
 #Remove Burnin
-pars<-melt(m$BUGSoutput$sims.array)
-colnames(pars)<-c("Draw","Chain","parameter","estimate")
-pars<-pars[!pars$Draw %in% 1:burns,]
+parsSingleS<-melt(mSingleS$BUGSoutput$sims.array)
+colnames(parsSingleS)<-c("Draw","Chain","parameter","estimate")
+parsSingleS<-parsSingleS[!parsSingleS$Draw %in% 1:35000,]
 
 #seperate alpha,betas,gamma
-allpars<-pars[!pars$Draw %in% 1:burns,]
+allparsSingleS<-parsSingleS
 
-spec<-pars[str_detect(string=pars$parameter,pattern=c("alpha")),]
+specSingleS<-parsSingleS[str_detect(string=parsSingleS$parameter,pattern=c("alpha")),]
 
 #remove deviance and species level characters
-pars<-pars[!str_detect(string=pars$parameter,pattern=c("alpha")),]
+parsSingleS<-parsSingleS[!str_detect(string=parsSingleS$parameter,pattern=c("alpha")) & !parsSingleS$parameter %in% "deviance" ,]
 ```
 
 ###Visualize posteriors
 
 ```{r,fig.height=3}
 ###Posterior Distributions
-ggplot(pars,aes(x=estimate)) + geom_histogram() + ggtitle("Estimate of parameters") + facet_wrap(~parameter,scale="free") + theme_bw() 
+ggplot(parsSingleS,aes(x=estimate)) + geom_histogram() + ggtitle("Estimate of parameters") + facet_wrap(~parameter,scale="free") + theme_bw() 
 ```
 
 ###Visualize chains
 
 ```{r,fig.height=3}
 ###Chains
-ggplot(pars,aes(x=Draw,col=as.factor(Chain),y=estimate)) + geom_line() + facet_wrap(~parameter,scale="free") + theme_bw() + labs(col="Chain")
+ggplot(parsSingleS,aes(x=Draw,col=as.factor(Chain),y=estimate)) + geom_line() + facet_wrap(~parameter,scale="free") + theme_bw() + labs(col="Chain")
 ```
 
 ###Output table
 
 ```{r}
-parG<-group_by(pars,parameter)
-out_slope<-summarise(parG,mean=mean(estimate),lower=quantile(estimate,0.025),upper=quantile(estimate,0.975),sd=sd(estimate))
+parGSingleS<-group_by(parsSingleS,parameter)
+out_slope<-summarise(parGSingleS,mean=mean(estimate),lower=quantile(estimate,0.025),upper=quantile(estimate,0.975),sd=sd(estimate))
 print(out_single)
 
 save.image("BayesPhylo.Rdata")
@@ -276,14 +276,14 @@ save.image("BayesPhylo.Rdata")
 ```
 
 ```{r,fig.height=15,fig.width=7}
-spec$parameter<-droplevels(spec$parameter)
+specSingleS$parameter<-droplevels(specSingleS$parameter)
 
 #merge with original table
-di<-data.frame(parameter=levels(spec$parameter),Species=levels(dat$Species))
+di<-data.frame(parameter=levels(specSingleS$parameter),Species=levels(dat$Species))
 
-spec<-merge(spec,di,by="parameter")
+specSingleS<-merge(specSingleS,di,by="parameter")
 
-ggplot(spec,aes(x=Species,y=estimate)) + geom_violin(fill="dark grey") + coord_flip()  + theme_bw()
+ggplot(specSingleS,aes(x=Species,y=estimate)) + geom_violin(fill="dark grey") + coord_flip()  + theme_bw()
 ```
 
 ##Plot species models
@@ -365,7 +365,7 @@ InitStage <- function() {list(alpha=rep(0.1,Dat$s),beta=rep(0.1,Dat$s),gamma=rep
 ParsStage <- c("intercept","slope","sigmaSlope","sigmaIntercept","slope2","sigmaSlope2","alpha","beta","gamma")
 
 #MCMC options
-ni <- 100000  # number of draws from the 
+ni <- 30000  # number of draws from the 
 nt <- 5    #thinning rate
 nb <- 0  # number to discard for burn-in
 nc <- 2  # number of chains
@@ -388,7 +388,7 @@ m = jags(inits = InitStage,
 #Remove Burnin
 parsUS<-melt(m$BUGSoutput$sims.array)
 colnames(parsUS)<-c("Draw","Chain","parameter","estimate")
-parsUS<-parsUS[!parsUS$Draw %in% 1:18000,]
+parsUS<-parsUS[!parsUS$Draw %in% 1:5000,]
 
 #seperate alpha,betas,gamma
 spec<-parsUS[str_detect(string=parsUS$parameter,pattern=c("beta|alpha|gamma")),]
