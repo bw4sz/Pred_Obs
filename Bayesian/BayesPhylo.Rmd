@@ -211,7 +211,7 @@ InitStage <- function() {list(alpha=rep(0.1,Dat$s),beta=.1,gamma=.1)}
 ParsStage <- c("alpha","beta","gamma","intercept","sigmaIntercept")
 
 #MCMC options
-ni <- runs  # number of draws from the posterior
+ni <- 5000  # number of draws from the posterior
 nt <- 1    #thinning rate
 nb <- 0  # number to discard for burn-in
 nc <- 2  # number of chains
@@ -270,6 +270,10 @@ save.image("BayesPhylo.Rdata")
 ```
 
 ##View Species Intercept
+
+```{r}
+
+```
 
 ```{r,fig.height=15,fig.width=7}
 spec$parameter<-droplevels(spec$parameter)
@@ -382,15 +386,15 @@ m = jags(inits = InitStage,
 
 ```{r}
 #Remove Burnin
-pars<-melt(m$BUGSoutput$sims.array)
-colnames(pars)<-c("Draw","Chain","parameter","estimate")
-pars<-pars[!pars$Draw %in% 1:18000,]
+parsUS<-melt(m$BUGSoutput$sims.array)
+colnames(parsUS)<-c("Draw","Chain","parameter","estimate")
+parsUS<-parsUS[!parsUS$Draw %in% 1:18000,]
 
 #seperate alpha,betas,gamma
-spec<-pars[str_detect(string=pars$parameter,pattern=c("beta|alpha|gamma")),]
+spec<-parsUS[str_detect(string=parsUS$parameter,pattern=c("beta|alpha|gamma")),]
 
 #remove deviance and species level characters
-pars<-pars[!str_detect(string=pars$parameter,pattern=c("beta|alpha|gamma|deviance")),]
+pars<-parsUS[!str_detect(string=parsUS$parameter,pattern=c("beta|alpha|gamma|deviance")),]
 ```
 
 ###Visualize chains
@@ -416,9 +420,24 @@ print(out_slopeintercept)
 
 ```
 
+##View species posteriors
+
+```{r}
+#Get index
+spec$ind<-str_extract(spec$parameter,pattern="\\d+")
+
+#Get parameter
+spec$par<-str_extract(spec$parameter,pattern="\\w+")
+
+ggplot(spec[spec$par %in% c("alpha","beta","gamma"),],aes(x=estimate)) + geom_density(alpha=.4,aes(group=factor(ind)),fill="grey80",col="grey30") + facet_wrap(~par,scale="free") + scale_color_discrete(guide="none") + theme_bw() + labs(y="Posterior Density")
+
+```
+
 ##View Species
 
 ```{r view slope species,fig.height=40}
+
+spec$ind<-str_extract(spec$parameter,pattern="\\d+")
 
 spec$ind<-str_extract(spec$parameter,pattern="\\d+")
 

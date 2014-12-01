@@ -53,7 +53,7 @@ droppath<-"C:/Users/Ben/Dropbox/"
 setwd(gitpath)
 
 #Load image if desired
-#load(paste(droppath,"Thesis/Pred_Realized/Assemblages/Threshold0.2/Results/PredictedRealized.RData",sep=""))
+load(paste(droppath,"Thesis/Pred_Realized/Assemblages/Threshold0.1/Results/PredictedRealized.RData",sep=""))
 
 ```
 
@@ -622,8 +622,6 @@ parall<-foreach(x=1:length(sdat),.errorhandling="stop",.export=c("gitpath")) %do
 }
 stopCluster(cl)
 
-save.image("PredictedRealized.Rdata")
-#load("PredictedRealized.Rdata")
 ```
 
 Combine predicted and observed outputs:
@@ -651,7 +649,7 @@ parmelt[parmelt$L1 %in% c("Simulated.Lottery","Simulated.Niche Conservatism","Si
 ##View Chains
 
 ```{r,fig.height=10}
-ggplot(parmelt,aes(x=Draw,y=estimate,col=as.factor(Chain))) + geom_line() + facet_grid(L1~parameter,scales="free",                            ) + theme_bw() + labs(col="Chain")
+ggplot(parmelt,aes(x=Draw,y=estimate,col=as.factor(Chain))) + geom_line() + facet_grid(L1~parameter,scales="free") + theme_bw() + labs(col="Chain")
 ```
 
 ## Bayesian estimates figure
