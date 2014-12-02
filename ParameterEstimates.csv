@@ -1,13 +1,13 @@
 "","L1","Assemblage","parameter","mean","upper","lower"
-"1","Env","Predicted","beta",-2.05531637156119,-0.498534731577418,-3.6040627825217
-"2","Env","Predicted","gamma",-4.80212764387392,-2.37766336152651,-7.25396369423095
-"3","Env + Dispersal","Predicted","beta",-2.06634033863233,-0.497792362268931,-3.67456990337587
-"4","Env + Dispersal","Predicted","gamma",-4.78014088377569,-2.28329197295777,-7.23671898766608
-"5","Lottery","Simulation","beta",0.0988673454428528,0.287345124986285,-0.0973860157702597
-"6","Lottery","Simulation","gamma",0.141311333886694,0.22568615325858,0.0606467322489966
-"7","Niche Cons","Simulation","beta",-9.14548605014777,-8.86064498705811,-9.42249114476116
-"8","Niche Cons","Simulation","gamma",3.02637870701581,3.15678651096871,2.89217229182804
-"9","Niche Cons + comp","Simulation","beta",5.86929405968654,6.39651356794302,5.33437976337876
-"10","Niche Cons + comp","Simulation","gamma",-3.25190983202747,-2.99676746292066,-3.52702778489553
-"11","Observed","Observed","beta",2.21274527999089,4.31057096629453,0.238501969424799
-"12","Observed","Observed","gamma",-12.1530373802258,-8.97838407838557,-15.5678098315718
+"1","Env","Predicted","beta",-2.07,-0.5,-3.66
+"2","Env","Predicted","gamma",-4.76,-2.29,-7.2
+"3","Env + Dispersal","Predicted","beta",-2.13,-0.54,-3.68
+"4","Env + Dispersal","Predicted","gamma",-4.69,-2.23,-7.12
+"5","Lottery","Simulation","beta",0.1,0.29,-0.09
+"6","Lottery","Simulation","gamma",0.14,0.23,0.06
+"7","Niche Cons","Simulation","beta",-9.15,-8.85,-9.44
+"8","Niche Cons","Simulation","gamma",3.03,3.17,2.89
+"9","Niche Cons + comp","Simulation","beta",5.83,6.34,5.32
+"10","Niche Cons + comp","Simulation","gamma",-3.22,-2.97,-3.47
+"11","Observed","Observed","beta",2.27,4.37,0.3
+"12","Observed","Observed","gamma",-12.26,-9.02,-15.71

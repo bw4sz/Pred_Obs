@@ -1,5 +1,5 @@
 ---
-title: "Predicted Versus Realized Assemblages"
+title: "Appendix A: Source code"
 author: "Ben Weinstein"
 date: "Tuesday, November 11, 2014"
 output:
@@ -189,9 +189,18 @@ cong<-as.data.frame.array(table(congruence))
 completeI<-cong[names(which(apply(cong,1,sum)==4)),]
 ```
 
-#Final Species List
-```{r}
-kable(completeI)
+##View Niche models
+
+```{r,fig.height=26}
+#load models to file, makes it more transferable than keeping them on disk
+modr<-lapply(niche,raster,values=TRUE)
+
+#Get the number of records per site, atleast 10 presences. 
+records_site<-names(which(apply(siteXspp.raster,1,sum,na.rm=TRUE) > 10))
+modlist<-modr[names(modr) %in% records_site]
+
+#plot a few rasters
+plot(stack(modlist),nc=5,maxnl=70)
 ```
 
 #Cost Path Analysis
@@ -347,16 +356,7 @@ predAssemblages<-function(thresh,plots=TRUE){
 dir.create(fold)
 dir.create(paste(fold,"Species",sep="/"))
 
-#load models to file, makes it more transferable than keeping them on disk
-modr<-lapply(niche,raster,values=TRUE)
 
-#Get the number of records per site, atleast 10 presences. 
-records_site<-names(which(apply(siteXspp.raster,1,sum,na.rm=TRUE) > 10))
-modlist<-modr[names(modr) %in% records_site]
-
-#plot a few rasters
-print("Example niche models")
-if(plots){plot(stack(modlist)[[1:9]])}
 
   #Lets go get the presence data on hummingbird distributions
   Niche_locals<-read.csv(paste(gitpath,"InputData\\MASTER_POINTLOCALITYarcmap_review.csv",sep=""))
@@ -452,7 +452,7 @@ Sensitivity analysis shows that suitabilty threshold of 80% is a reasonable valu
 
 ```{r pred assemb,eval=TRUE}
 #Plotting gives summary graphs
-PA_m2<-predAssemblages(thresh=.1,plots=TRUE)
+PA_m2<-predAssemblages(thresh=.1,plots=TRUE)   
 ```
 
 Save image in case we need to start here.

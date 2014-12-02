@@ -9,7 +9,7 @@ output:
 
 #Aim
 
-Insights from comparing phylogenetic and trait community spacing has led to a renewed focus on whether interspecific competition shape species occurrence. Combining theories of niche conservatism and limiting similarity, species should co-occur more with closely related species up to a threshold of niche overlap, followed by a decrease in co-occurrence. I will test increasing model complexity, and a variety of priors to show model robustness.
+Insights from comparing phylogenetic and trait community spacing has led to a renewed focus on whether interspecific competition shape species occurrence. Combining theories of niche conservatism and limiting similarity, species should co-occur more with closely related species up to a threshold of niche overlap, followed by a decrease in co-occurrence. I developed a hierarchical Bayesian approach to assess probability of co-occurrence as a function of distance to the closest related species in hummingbird assemblages from Northern South America. I tested a fully constrained, varying intercepting and varying slope and intercept model.
 
 </br>
 
@@ -269,12 +269,6 @@ print(out_single)
 save.image("BayesPhylo.Rdata")
 ```
 
-##View Species Intercept
-
-```{r}
-
-```
-
 ```{r,fig.height=15,fig.width=7}
 specSingleS$parameter<-droplevels(specSingleS$parameter)
 
@@ -289,9 +283,8 @@ ggplot(specSingleS,aes(x=Species,y=estimate)) + geom_violin(fill="dark grey") + 
 ##Plot species models
 
 ```{r,fig.height=40}
-head(spec)
 
-dpars<-dcast(allpars,...~parameter)
+dpars<-dcast(allparsSingleS,...~parameter)
 samp<-dpars[sample(1:nrow(dpars),1000),]
 
 alpha_plot<-function(alpha,sp){
@@ -439,8 +432,6 @@ ggplot(spec[spec$par %in% c("alpha","beta","gamma"),],aes(x=estimate)) + geom_de
 
 spec$ind<-str_extract(spec$parameter,pattern="\\d+")
 
-spec$ind<-str_extract(spec$parameter,pattern="\\d+")
-
 #split into species
 specS<-split(spec,spec$ind)
 
@@ -505,3 +496,9 @@ ggplot(compm[!is.na(compm$Parm),],aes(x=L1,y=mean,ymax=upper,ymin=lower)) + geom
 
 save.image("BayesPhylo.Rdata")
 ```
+
+#Inference
+
+The observed assemblages showed an initial increase in the probability of co-occurrence with increasing relatedness, followed by decreased co-occurrence among closely related species. The posterior distributions were negative for the linear term and positive for the polynomial. Explorations of species specific responses showed that narrower confidence intervals for species with more data and our results of our observed data were evaluated against a fully constrained model and a full hierarchical model that allowed species level slopes to vary. All models had negative posteriors for the linear term and positive posteriors for the polynomial term. 
+
+These data support the non-linear relationship betwen phylogenetic relatedness and occurrence in hummingbirds. The decrease among closely related species could be evidence of limiting similarity due to niche overlap, which will be tested against null models of assemblage structure. 
