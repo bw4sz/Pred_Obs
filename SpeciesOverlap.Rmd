@@ -681,7 +681,7 @@ grid.arrange(simulated,predicted,observed,nrow=3)
 Write figure to file
 
 ```{r,echo=FALSE,results='hide'}
-jpeg("PosteriorAll.jpeg",res=300,height=8,width=10,units="in")
+jpeg("PosteriorAll.jpeg",res=1000,height=9,width=10,units="in")
 grid.arrange(simulated,predicted,observed,nrow=3)
 dev.off()
 ```
