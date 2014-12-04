@@ -317,7 +317,7 @@ We expect that as there are a more closely related species, there should be grea
 #Threshold for presence
 th=.6
 
-sim.func<-function(){scape(trx, scape.size=10, g.center=5, g.range=1, g.repulse=1, wd.all=20, signal.center=TRUE, signal.range=TRUE, same.range=TRUE, repulse=FALSE,center.scale = 1, range.scale = 1, repulse.scale = 1, site.stoch.scale = 0, sd.center=1, sd.range=1,rho=NULL, th=th)}
+sim.func<-function(){scape(trx, scape.size=10, g.center=3, g.range=1, g.repulse=1, wd.all=20, signal.center=TRUE, signal.range=TRUE, same.range=TRUE, repulse=FALSE,center.scale = 1, range.scale = 1, repulse.scale = 1, site.stoch.scale = 0, sd.center=1, sd.range=1,rho=NULL, th=th)}
 
 sim.list<-replicate(20,sim.func(),simplify=FALSE)
 
@@ -349,7 +349,7 @@ ggplot(phy_nichec,aes(x=Phylo.Relatedness,y=P_A))+ geom_point() + geom_smooth(ae
 We would expect red and blue clades to seperate, but then fragment to create the checkerboard pattern of distribution (see papers by Simberloff and Gotelli)
 
 ```{r,fig.height=10}
-sim.func<-function(){scape(trx, scape.size=10, g.center=10, g.range=1, g.repulse=10, wd.all=20, signal.center=TRUE, signal.range=FALSE, same.range=TRUE, repulse=TRUE,center.scale = 1, range.scale = 1, repulse.scale = 1, site.stoch.scale = 0, sd.center=1, sd.range=1,rho=NULL, th=th)}
+sim.func<-function(){scape(trx, scape.size=10, g.center=5, g.range=1, g.repulse=5, wd.all=20, signal.center=TRUE, signal.range=FALSE, same.range=TRUE, repulse=TRUE,center.scale = 1, range.scale = 1, repulse.scale = 1, site.stoch.scale = 0, sd.center=1, sd.range=1,rho=NULL, th=th)}
 
 sim.list<-replicate(20,sim.func(),simplify=FALSE)
 

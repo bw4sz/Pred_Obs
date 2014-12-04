@@ -1,15 +1,15 @@
 #Apply predicted v realized function to all species
 #Define function
-pred_realized<-function(mod,thresh.suit,dispersal,PA_phylo,plots=TRUE,loc_clean=loc_clean,fold){
-  
-  setwd(paste(fold,"Species",sep="/"))
+pred_realized<-function(mod,thresh.suit,dispersal,PA_phylo,plots,loc_clean=loc_clean,fold){
   
   names(mod)<-strsplit(names(mod[[1]]),"_")[[1]][1]
+  
+  if(plots){setwd(paste(fold,"Species",sep="/"))
   
   #Create a directory to store outputs
   dir.create(names(mod))
   
-  setwd(names(mod))
+  setwd(names(mod))}
   
   #Get row in siteXspp.raster for the model species
   rowS<-siteXspp.raster[rownames(siteXspp.raster) %in% names(mod),]
@@ -121,29 +121,25 @@ pred_realized<-function(mod,thresh.suit,dispersal,PA_phylo,plots=TRUE,loc_clean=
     #Turn any predicted presence and absences that are outside the threshold
     species.data[species.data$Locality %in% names(toRemove),"P_Apred"]<-0
     }
-  
-  #################################################
-  #Mapping of Predictor v Realized Assemblages
-  #################################################
-  
-  #   #Get the XY coordinates of all the cells that have assemblage information
-  xy<-data.frame(cellSitesXY@coords)
-  colnames(xy)<-c("LongDecDeg","LatDecDeg")
+
   
   #Merge with species information
+  #   #Get the XY coordinates of all the cells that have assemblage information
+    xy<-data.frame(cellSitesXY@coords)
+  colnames(xy)<-c("LongDecDeg","LatDecDeg")
   species.data<-merge(species.data,xy,by.x="Locality",by.y="row.names")
-  spat.species<-SpatialPointsDataFrame(species.data[,c("LongDecDeg","LatDecDeg")],species.data)
-  
+ 
   if(plots==TRUE){
+    
+    #################################################
+    #Mapping of Predictor v Realized Assemblages
+    #################################################
+    spat.species<-SpatialPointsDataFrame(species.data[,c("LongDecDeg","LatDecDeg")],species.data)
     
   writeSpatialShape("SpatialSpecies",x=spat.species)
   
   #Write threshold to file
   write.csv(suit_cut,"SuitThreshold.csv")
-  }
-  
-  #write model to file
-  if(plots==TRUE){
     
   writeRaster(mod,"Suitability.tif",overwrite=TRUE)
   write.csv(species.data,"SpeciesData.csv")}

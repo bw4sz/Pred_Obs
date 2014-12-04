@@ -426,7 +426,10 @@ ggplot(spec[spec$par %in% c("alpha","beta","gamma"),],aes(x=estimate)) + geom_de
 
 ```
 
+
 ##View Species
+
+###Compare estimates of gamma
 
 ```{r view slope species,fig.height=40}
 
@@ -439,6 +442,17 @@ specS<-split(spec,spec$ind)
 for (x in 1:length(specS)){
   specS[[x]]$Species<-levels(dat$Species)[x]
 }
+
+#plot gamma slopes
+
+specSdf<-rbind_all(specS)
+
+gdf<-group_by(specSdf,Species) %>% sample_n(1000) %>% filter(str_detect(parameter,"beta")) 
+ord<-gdf %>% summarize(meanE=mean(estimate)) %>% arrange(meanE)
+
+gdf$Species<-factor(gdf$Species,levels=ord$Species)
+
+ggplot(gdf,aes(x=Species,y=estimate)) + geom_violin(fill="grey30") + theme_bw() + coord_flip()
 
 #merge with data on relatedness
 datS<-split(dat,dat$Species)

@@ -47,132 +47,22 @@ source(paste(gitpath,"SpeciesOverlapSourceFunctions.R",sep=""))
 
 ```
 
-Define predicted assemblage function.
-
-```{r,eval=TRUE}
-predAssemblages<-function(thresh,plots=TRUE){
-
-  #Create output folders
-
-  fold<-paste(droppath,paste("Thesis/Pred_Realized/Assemblages/Threshold",thresh,sep=""),sep="")
-  print(fold)
-
-#Read in source function to draw predicted and realized assemblages and match relatedness
-
-dir.create(fold)
-dir.create(paste(fold,"Species",sep="/"))
-
-#load models to file, makes it more transferable than keeping them on disk
-modr<-lapply(niche,raster,values=TRUE)
-
-#Get the number of records per site, atleast 10 presences. 
-records_site<-names(which(apply(siteXspp.raster,1,sum,na.rm=TRUE) > 10))
-modlist<-modr[names(modr) %in% records_site]
-
-#plot a few rasters
-print("Example niche models")
-if(plots){plot(stack(modlist)[[1:9]])}
-
-  #Lets go get the presence data on hummingbird distributions
-  Niche_locals<-read.csv(paste(gitpath,"InputData\\MASTER_POINTLOCALITYarcmap_review.csv",sep=""))
-  
-  #Just take the columns you want. 
-  PAdat<-Niche_locals[,colnames (Niche_locals) %in% c("RECORD_ID","SPECIES","COUNTRY","LOCALITY","LATDECDEG","LONGDECDEG","Decision","SpatialCheck","MapDecision")]
-  
-  #clean localities, we checked them against published range records and visually inspected them
-  PAdat<-PAdat[!PAdat$LONGDECDEG==-6,]
-  loc_clean<-PAdat[!PAdat$MapDecision=="REJECT",]
-
-#########################################################
-#Perform Predicted v Realized Function on all Niche Models
-#########################################################
-
-all_models<-lapply(modlist,function(x){
-    pred_realized(mod=x,thresh.suit=thresh,dispersal=FALSE,plots=FALSE,loc_clean=loc_clean,fold=fold)
-})
-
-if(plots){print("Species assembages: No dispersal filter")}
-
-#combine all datasets
-#This naming function would need to changed on other systems
-names(all_models)<-names(modlist)
-
-#Remove models that failed. 
-working_models<-all_models[!sapply(sapply(all_models,nrow),is.null)]
-failed_models<-all_models[sapply(sapply(all_models,nrow),is.null)]
-
-#melt and name list
-#remove any species that failed. 
-all.species.dataND<-melt(working_models,id.vars=c("Locality","P_A","Suitability","Species","LongDecDeg","LatDecDeg"))
-
-all_modelsDD<-lapply(modlist,function(x){
-    pred_realized(mod=x,thresh.suit=thresh,dispersal=TRUE,plots=FALSE,loc_clean=loc_clean,fold=fold)
-})
-
-if(plots){print("Species assemblages including dispersal filter")}
-
-#combine all datasets
-#This naming function would need to changed on other systems
-names(all_modelsDD)<-names(modlist)
-
-#Remove models that failed. 
-working_modelsD<-all_modelsDD[!sapply(sapply(all_modelsDD,nrow),is.null)]
-failed_modelsD<-all_modelsDD[sapply(sapply(all_modelsDD,nrow),is.null)]
-
-#melt and name list
-#remove any species that failed. 
-all.species.dataD<-melt(working_modelsD,c("Locality","P_A","Suitability","Species","LongDecDeg","LatDecDeg"))
-
-all.species.dataND$Hyp<-"Env"
-all.species.dataD$Hyp<-"Env_Dispersal"
-
-#Merge together as a list, name the hyps and melt
-all.species.data<-rbind_all(list(all.species.dataND,all.species.dataD))
-
-#drop duplicate name column
-all.species.data<-all.species.data[,!colnames(all.species.data) %in% "L1"]
-
-#Set working directory to output folder
-dir.create(paste(fold,"Results",sep="/"))
-setwd(paste(fold,"Results",sep="/"))
-
-#add in which clade each focal species is
-PA_mult2<-merge(all.species.data,clades[,-c(3,4,5)],by.x="Species",by.y="double.")
-
-#remove the "Present/Absent column" it needs to be 0,1
-PA_m2<-PA_mult2[,-3]
-
-#Name the columns
-colnames(PA_m2)[c(6,7)]<-c("P_R","P_A")
-
-#merge with phylogenetic distance
-PA_m2<-merge(PA_m2,PA_phylo[,-3],by=c("Species","Locality"))
-
-#Final data format
-PA_m2<-PA_m2[!(PA_m2$Hyp=="Env_Dispersal" & PA_m2$P_R=="PA_Binary"),]
-
-#take out values greater than 95% quartile
-phylo_out<-with(PA_m2,quantile(PA_m2[,"Phylo.Relatedness"],.95,na.rm=T))
-
-#remove outliers
-PA_m2$Phylo.Relatedness[PA_m2$Phylo.Relatedness > phylo_out]<-NA 
-
-#return data
-return(PA_m2)
-}
-```
-
 #Loop through suitability thresholds
 
 ```{r}
 #list of thresholds
-thr<-seq(.01,.3,.1)
-thr_loop<-foreach(x=1:length(thr)) %do% {
-  print(x)
-  source(paste(gitpath,"SpeciesOverlapSourceFunctions.R",sep=""))
-  predAssemblages(thresh=thr[x],plots=FALSE)
-  }
+thresholds<-seq(.05,.55,.1)
 
+th<-lapply(thresholds,function(y){
+all_models<-rbind_all(lapply(modlist,function(x){
+    pred_realized(mod=x,thresh.suit=y,dispersal=TRUE,plots=FALSE,loc_clean=loc_clean,fold=tempdir())
+}))})
+
+for(x in 1:length(thresholds)){
+ th[[x]]$Threshold<-thresholds[x] 
+}
+
+thdf<-rbind_all(th)
 ```
 
 #Plot glm estimates of polynomial
@@ -229,8 +119,4 @@ do.call(grid.arrange,plotlist)
 ```{r}
 save.image("Sensitivity.Rdata")
 #load("Sensitivity.Rdata")
-```
-
-#Sensitivity and specificity
-```{r}
 ```
