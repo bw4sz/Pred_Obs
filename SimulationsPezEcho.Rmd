@@ -33,7 +33,7 @@ opts_chunk$set(warning=FALSE,message=FALSE,echo=TRUE)
 opts_chunk$set(cache=TRUE, cache.path = 'SimulationsPez_cache/', fig.path='figure/',fig.width=10)
 
 #create Phylogeny
-trx<-compute.brlen(stree(n=16,type="balanced"))
+trx<-compute.brlen(stree(n=16,type="left"))
 plot(trx)
 
 #cophenetic distance
@@ -283,7 +283,7 @@ th=.6
 
 sim.func<-function(){scape(trx, scape.size=10, g.center=1, g.range=1, g.repulse=1, wd.all=20, signal.center=FALSE, signal.range=FALSE, same.range=FALSE, repulse=FALSE,center.scale = 1, range.scale = 1, repulse.scale = 1, site.stoch.scale = 0, sd.center=1, sd.range=1,rho=NULL, th=th)}
 
-sim.list<-replicate(20,sim.func(),simplify=FALSE)
+sim.list<-replicate(25,sim.func(),simplify=FALSE)
 
 gridlist<-lapply(sim.list[1:6],function(x){
   gridplot(x,tree=trx,threshold=-log10(th),opt.color=TRUE,guide=FALSE)})
@@ -317,9 +317,9 @@ We expect that as there are a more closely related species, there should be grea
 #Threshold for presence
 th=.6
 
-sim.func<-function(){scape(trx, scape.size=10, g.center=3, g.range=1, g.repulse=1, wd.all=20, signal.center=TRUE, signal.range=TRUE, same.range=TRUE, repulse=FALSE,center.scale = 1, range.scale = 1, repulse.scale = 1, site.stoch.scale = 0, sd.center=1, sd.range=1,rho=NULL, th=th)}
+sim.func<-function(){scape(trx, scape.size=10, g.center=5, g.range=1, g.repulse=1, wd.all=20, signal.center=TRUE, signal.range=TRUE, same.range=TRUE, repulse=FALSE,center.scale = 1, range.scale = 1, repulse.scale = 1, site.stoch.scale = 0, sd.center=1, sd.range=1,rho=NULL, th=th)}
 
-sim.list<-replicate(20,sim.func(),simplify=FALSE)
+sim.list<-replicate(25,sim.func(),simplify=FALSE)
 
 gridlist<-lapply(sim.list[1:6],function(x){
   gridplot(x,tree=trx,threshold=-log10(th),opt.color=TRUE,guide=FALSE)})
@@ -351,7 +351,7 @@ We would expect red and blue clades to seperate, but then fragment to create the
 ```{r,fig.height=10}
 sim.func<-function(){scape(trx, scape.size=10, g.center=5, g.range=1, g.repulse=5, wd.all=20, signal.center=TRUE, signal.range=FALSE, same.range=TRUE, repulse=TRUE,center.scale = 1, range.scale = 1, repulse.scale = 1, site.stoch.scale = 0, sd.center=1, sd.range=1,rho=NULL, th=th)}
 
-sim.list<-replicate(20,sim.func(),simplify=FALSE)
+sim.list<-replicate(25,sim.func(),simplify=FALSE)
 
 gridlist<-lapply(sim.list[1:6],function(x){
   p<-gridplot(x,tree=trx,threshold=-log10(th),opt.color=TRUE,guide=F)})

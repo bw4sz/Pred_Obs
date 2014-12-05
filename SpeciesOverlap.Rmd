@@ -613,7 +613,7 @@ parall<-foreach(x=1:length(sdat),.errorhandling="stop",.export=c("gitpath")) %do
 #create folder name
   fold<-paste(unique(sdat[[x]]$P_R),unique(sdat[[x]]$Hyp),sep="_")
   
-  test<-Bayes(presence = sdat[[x]]$P_A,distance = sdat[[x]]$Phylo.Relatedness,species=sdat[[x]]$Species,runs = 30000,burn=28000,folder = fold)
+  test<-Bayes(presence = sdat[[x]]$P_A,distance = sdat[[x]]$Phylo.Relatedness,species=sdat[[x]]$Species,runs = 50000,burn=48000,folder = fold)
 }
 stopCluster(cl)
 
@@ -704,9 +704,9 @@ ggplot(finaltab,aes(x=L1,col=Assemblage,shape=parameter),size=3) + geom_pointran
 
 ##Plot trajectories.
 
-```{r view slope species,fig.height=40}
+```{r view slope species,fig.height=6}
 
-gdf<-parmelts[parmelts$L1 %in% c("Env","Env + Dispersal","Observed"),]
+gdf<-parmelts
 
 gdcast<-dcast(gdf,...~parameter,value.var="estimate")
 
@@ -754,12 +754,18 @@ specdf[specdf$Assemblage %in% c("Lottery","Niche Cons","Niche Cons + comp"),"Typ
 specdf[specdf$Assemblage %in% c("Env","Env + Dispersal","Observed"),"Type"]<-"Observed and Predicted"
 
 
-ggplot(specdf,aes(x=Relatedness,y=mean)) + geom_line(col="red",linetype="dashed") + geom_line(aes(y=upper),col="blue",linetype="dashed") + geom_line(aes(y=lower),col="blue",linetype="dashed")+ theme_bw() + labs(x="",y="") + facet_wrap(~Assemblage)
-
 #overlay together
-ggplot(specdf,aes(x=Relatedness,y=mean,ymin=lower,ymax=upper,fill=Assemblage)) + geom_ribbon(alpha=.5) + geom_line() + theme_bw()+ labs(x="Distance to closest related species",y="Probability of Occurrence") + scale_fill_manual(values=c("grey80","grey60","black"))
+ggplot(data=specdf[specdf$Assemblage %in% c("Env","Env + Dispersal","Observed"),],aes(x=Relatedness,y=mean,ymin=lower,ymax=upper,fill=Assemblage)) + geom_ribbon(alpha=.5) + geom_line() + theme_bw()+ labs(x="Distance to closest related species",y="Probability of Occurrence") + scale_fill_manual(values=c("grey80","grey60","black"))
 
-ggsave("FigureOverlay.jpeg",height=6,width=8,dpi=400)
+ggsave("Figure3Overlay.jpeg",height=6,width=8,dpi=400)
+```
+
+#Simulated trajectories
+```{r,fig.width=11}
+#overlay together
+ggplot(specdf[!specdf$Assemblage %in% c("Env","Env + Dispersal","Observed"),],aes(x=Relatedness,y=mean,ymin=lower,ymax=upper,fill=Assemblage)) + geom_ribbon(alpha=.5) + geom_line() + theme_bw()+ labs(x="Distance to closest related species",y="Probability of Occurrence") + scale_fill_manual(values=c("grey80","grey60","black")) + facet_wrap(~Assemblage)
+
+ggsave("Figure4Overlay.jpeg",height=6,width=10,dpi=400)
 
 save.image("PredictedRealized.RData")
 ```

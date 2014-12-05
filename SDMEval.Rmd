@@ -156,9 +156,6 @@ ss<-dplyr::group_by(thdf,Threshold) %>% dplyr::summarize(meanSuit= mean(Suitabil
 
 ssmelt<-melt(ss,id.var="Threshold")
 ggplot(ssmelt,aes(x=as.factor(Threshold),y=value,col=variable)) + geom_line(aes(group=1),col="black") + facet_wrap(~variable,scales="free") + geom_point(size=3) + theme_bw() + labs(x="Threshold"                                                                                                                                                                          )
-
-ggplot(ss,aes(y=Specificity,x=Sensitivity,col=as.factor(Threshold))) + geom_point(size=5) + geom_line(aes(group=1),col="black") + theme_bw()  + labs(col="Suitability Quantile Threshold")
-
 ```
 
 Because we are most interested in predicted suitable habitat, not species occupancy, what we want to do is maximize the number of true positives and true negatives, while minimizing the number of false negatives. The worst thing for the accuracy of the model would be alot of species occuring in predicted unsuitable habitat.
