@@ -450,7 +450,7 @@ return(PA_m2)
 
 Sensitivity analysis shows that suitabilty threshold of 80% is a reasonable value, compute predicted and realized distributions. The function is specified as 1-threshold/100.
 
-```{r pred assemb,eval=TRUE}
+```{r pred assemb,eval=FALSE}
 #Plotting gives summary graphs
 PA_m2<-predAssemblages(thresh=.05,plots=TRUE)   
 ```
@@ -546,7 +546,7 @@ Define a function that takes in species, presence/absence and distance to the cl
 
 ```{r singlemodel,echo=TRUE,eval=TRUE}
 
-Bayes<-function(presence,distance,species,runs,burn,folder){
+Bayes<-function(presence,distance,species,runs,burn){
 
 #needs libraries specified to run in parallel
 library(ggplot2)
@@ -567,7 +567,7 @@ Dat <- list(
   Species=as.numeric(species),
   s=nlevels(species))
 
-InitStage <- function() {list(alpha=rep(0.1,Dat$s),beta=rep(0.1,Dat$s),gamma=rep(0.1,Dat$s),intercept=0.001,tauIntercept=0.001,slope=0.1,tauSlope=0.001,tauSlope2=0.001,slope2=0.1)}
+InitStage <- function() {list(alpha=rep(0.1,Dat$s),beta=rep(0.1,Dat$s),gamma=rep(0.1,Dat$s),intercept=0.001,tauIntercept=0.001,linear=0.1,tauSlope=0.001,tauSlope2=0.001,polynomial=0.1)}
 
 #Parameters to track
 ParsStage <- c("intercept","linear","sigmaSlope","sigmaIntercept","polynomial","sigmaSlope2","alpha","beta","gamma")
@@ -589,7 +589,8 @@ m = jags(inits = InitStage,
          n.thin=nt,
          n.iter=ni,
          n.burnin=nb,
-         DIC=T)
+         DIC=T,
+         progress.bar="gui")
 
 #Remove Burnin
 pars<-melt(m$BUGSoutput$sims.array)
@@ -609,11 +610,14 @@ Run 6 models in parallel.
 
 cl<-snow::makeCluster(7,"SOCK")
 doSNOW::registerDoSNOW(cl)
-parall<-foreach(x=1:length(sdat),.errorhandling="stop",.export=c("gitpath")) %dopar% {
+parall<-foreach(x=1:length(sdat),.errorhandling="stop") %dopar% {
 #create folder name
-  fold<-paste(unique(sdat[[x]]$P_R),unique(sdat[[x]]$Hyp),sep="_")
-  
-  test<-Bayes(presence = sdat[[x]]$P_A,distance = sdat[[x]]$Phylo.Relatedness,species=sdat[[x]]$Species,runs = 50000,burn=48000,folder = fold)
+  fold<-paste(unique(sdat[[x]]$P_R),"_",unique(sdat[[x]]$Hyp),".txt",sep="")
+  print(fold)
+  sink(fold)
+  test<-Bayes(presence = sdat[[x]]$P_A,distance = sdat[[x]]$Phylo.Relatedness,species=sdat[[x]]$Species,runs = 100000,burn=96000)
+  sink()
+  return(test)
 }
 stopCluster(cl)
 
