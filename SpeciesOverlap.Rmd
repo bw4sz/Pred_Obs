@@ -67,25 +67,20 @@ The analysis takes in:
 
 ```{r import data}
 #Bring in Phylogenetic Data
-trx<-read.nexus(paste(gitpath,"InputData\\ColombiaPhylogenyUM.tre",sep=""))
-spnames<-read.table(paste(gitpath,"InputData\\SpNameTree.txt",sep=""), sep = "\t", header = TRUE)
+trx<-read.tree(paste(gitpath,"InputData\\hum294.tre",sep=""))
 
-#Replace tip.label with Spnames#
-#replace the tiplabels with periods, which is the biomod default
-trx$tip.label<-gsub("_",".",as.character(spnames$SpName))
+#format tips
+new<-str_extract(trx$tip.label,"(\\w+).(\\w+)")
+#get duplicates
+trx<-drop.tip(trx,trx$tip.label[duplicated(new)])
+
+#name tips.
+trx$tip.label<-str_extract(trx$tip.label,"(\\w+).(\\w+)")
+
 ctrx<-cophenetic(trx)
 
 #Bring in the assemblages, cleaned from JP
 Sites<-read.csv(paste(gitpath,"InputData//Sites.csv",sep=""),row.names=1)
-
-#Bring in Phylogenetic Data
-trx<-read.nexus(paste(gitpath,"InputData\\ColombiaPhylogenyUM.tre",sep=""))
-spnames<-read.table(paste(gitpath,"InputData\\SpNameTree.txt",sep="") , sep = "\t", header = TRUE)
-
-#Replace tip.label with Spnames#
-#replace the tiplabels with periods, which is the biomod default
-trx$tip.label<-gsub("_",".",as.character(spnames$SpName))
-ctrx<-cophenetic(trx)
 
 ####bring in Clade data
 clades<-read.csv(paste(gitpath,"InputData//CladeList.txt",sep=""),header=FALSE)[,-1]
@@ -608,6 +603,10 @@ Run 6 models in parallel.
 
 ```{r run jags,results='hide'}
 
+#There is no reason everyone needs the same number of runs
+runsl<-c(150000,70000,200000,70000,150000,150000)
+runsl-2000
+
 cl<-snow::makeCluster(7,"SOCK")
 doSNOW::registerDoSNOW(cl)
 parall<-foreach(x=1:length(sdat),.errorhandling="stop") %dopar% {
@@ -615,7 +614,7 @@ parall<-foreach(x=1:length(sdat),.errorhandling="stop") %dopar% {
   fold<-paste(unique(sdat[[x]]$P_R),"_",unique(sdat[[x]]$Hyp),".txt",sep="")
   print(fold)
   sink(fold)
-  test<-Bayes(presence = sdat[[x]]$P_A,distance = sdat[[x]]$Phylo.Relatedness,species=sdat[[x]]$Species,runs = 100000,burn=96000)
+  test<-Bayes(presence = sdat[[x]]$P_A,distance = sdat[[x]]$Phylo.Relatedness,species=sdat[[x]]$Species,runs = runsl[x],burn=runsl[x]-2000)
   sink()
   return(test)
 }
