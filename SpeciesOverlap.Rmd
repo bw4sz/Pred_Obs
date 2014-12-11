@@ -13,7 +13,7 @@ Insights from comparing phylogenetic and trait community spacing has led to a re
 
 #GitHub repository
 
-This entire analysis can be cloned from [here](https://github.com/bw4sz/BrazilDimDiv)
+This entire analysis can be cloned from [here](https://github.com/bw4sz/Pred_Obs.git)
 
 Github repos have 100MB file limit, all files larger then that are hosted on dropbox:
 
@@ -445,7 +445,7 @@ return(PA_m2)
 
 Sensitivity analysis shows that suitabilty threshold of 80% is a reasonable value, compute predicted and realized distributions. The function is specified as 1-threshold/100.
 
-```{r pred assemb,eval=FALSE}
+```{r pred assemb,eval=TRUE}
 #Plotting gives summary graphs
 PA_m2<-predAssemblages(thresh=.05,plots=TRUE)   
 ```
@@ -488,7 +488,7 @@ sdat<-split(datF,list(datF$P_R,datF$Hyp),drop=TRUE)
 
 names(sdat)<-c("Niche Cons + comp","Env","Observed","Env + Dispersal","Lottery","Niche Cons")
 
-#for now grab 10000 random samples and remove inf values
+# remove inf values
 sdat<-lapply(sdat,function(x){
   x<-x[is.finite(x$Phylo.Relatedness),]
   return(x)
@@ -541,18 +541,21 @@ Define a function that takes in species, presence/absence and distance to the cl
 
 ```{r singlemodel,echo=TRUE,eval=TRUE}
 
-Bayes<-function(presence,distance,species,runs,burn){
-
+Bayes<-function(presence,distance,species,runs,burn,hier){
 #needs libraries specified to run in parallel
 library(ggplot2)
 library(R2jags)
 library(reshape2)
 library(stringr)
 
-#Source model
-source(paste(gitpath,"Bayesian/BPhylo.R",sep="/"))
 
-#make species a factor
+#Full hierarchical or single slope model?
+#heir= full hierarchical
+
+if(hier){
+  source(paste(gitpath,"Bayesian/BPhylo.R",sep="/"))
+  
+    #make species a factor
 species<-as.factor(species)
 
 #Input Data
@@ -562,30 +565,53 @@ Dat <- list(
   Species=as.numeric(species),
   s=nlevels(species))
 
-InitStage <- function() {list(alpha=rep(0.1,Dat$s),beta=rep(0.1,Dat$s),gamma=rep(0.1,Dat$s),intercept=0.001,tauIntercept=0.001,linear=0.1,tauSlope=0.001,tauSlope2=0.001,polynomial=0.1)}
+  #Intials
+  InitStage <- function() {list(alpha=rep(1,Dat$s),beta=rep(1,Dat$s),gamma=rep(1,Dat$s),intercept=1,tauIntercept=0,linear=1,tauSlope=0,tauSlope2=0,polynomial=1)}
 
-#Parameters to track
-ParsStage <- c("intercept","linear","sigmaSlope","sigmaIntercept","polynomial","sigmaSlope2","alpha","beta","gamma")
+  #Parameters to track
+  ParsStage <- c("intercept","linear","sigmaSlope","sigmaIntercept","polynomial","sigmaSlope2","alpha","beta","gamma")
+  
+  #name of jags model
+  mf<-"BPhylo.jags"
+}
+
+if(!hier){
+  source(paste(gitpath,"Bayesian/Single.R",sep="/"))
+    #Intials
+  InitStage <- function() {list(intercept=0,linear=0,polynomial=0)}
+
+  #Parameters to track
+  ParsStage <- c("intercept","linear","polynomial")
+  mf<-"Single.jags"
+  
+  #Input Data
+  Dat <- list(
+  y=as.numeric(presence),
+  dist=distance)
+  
+  }
+
 
 #MCMC options
 ni <- runs  # number of draws from the posterior
-nt <- 1    #thinning rate
+nt <- 2    #thinning rate
 nb <- 0  # number to discard for burn-in
 nc <- 2  # number of chains
 
-#Jags
 
-m = jags(inits = InitStage,
+#Jags
+print(mf)
+
+m = jags(
          n.chains=nc,
-         model.file="BPhylo.jags",
+         model.file=mf,
          working.directory=getwd(),
          data=Dat,
          parameters.to.save=ParsStage,
          n.thin=nt,
          n.iter=ni,
          n.burnin=nb,
-         DIC=T,
-         progress.bar="gui")
+         DIC=T)
 
 #Remove Burnin
 pars<-melt(m$BUGSoutput$sims.array)
@@ -599,32 +625,35 @@ return(pars)}
 
 ##Bayes function for each assemblage type
 
-Run 6 models in parallel.
+Run 7 models in parallel.
 
 ```{r run jags,results='hide'}
 
 #There is no reason everyone needs the same number of runs
-runsl<-c(150000,70000,200000,70000,150000,150000)
-runsl-2000
+#Draws for each model
+runsl<-c(100000,100000,400000,100000,100000,100000)
 
-cl<-snow::makeCluster(7,"SOCK")
-doSNOW::registerDoSNOW(cl)
-parall<-foreach(x=1:length(sdat),.errorhandling="stop") %dopar% {
-#create folder name
-  fold<-paste(unique(sdat[[x]]$P_R),"_",unique(sdat[[x]]$Hyp),".txt",sep="")
-  print(fold)
-  sink(fold)
-  test<-Bayes(presence = sdat[[x]]$P_A,distance = sdat[[x]]$Phylo.Relatedness,species=sdat[[x]]$Species,runs = runsl[x],burn=runsl[x]-2000)
-  sink()
-  return(test)
+#Which model we want to draw , heir=T is for full model
+modhier<-c(F,T,T,T,F,F)
+
+#cl<-snow::makeCluster(8,"SOCK")
+#doSNOW::registerDoSNOW(cl)
+parall<-list()
+#parall<-foreach(x=1:length(sdat),.errorhandling="stop") %dopar% {
+for(x in 1:length(sdat)){
+  out<-Bayes(presence=sdat[[x]]$P_A,distance=sdat[[x]]$Phylo.Relatedness,species=sdat[[x]]$Species,runs = runsl[x],burn=(runsl[x]-3000)/2,hier=modhier[x])
+  #return(out)
+  parall[[x]]<-out
 }
-stopCluster(cl)
+#stopCluster(cl)
+
+save.image(paste(droppath,"Thesis\\Pred_Realized\\Assemblages\\Threshold0.05\\Results\\","PredictedRealized.RData",sep=""))
 
 ```
 
 Combine predicted and observed outputs:
 
-```{r}
+```{r combine par}
 #name each list
 for(i in 1:length(parall)){
   parall[[i]]$L1<-names(sdat)[i]
@@ -650,7 +679,7 @@ parmelts<-parmelt[!str_detect(parmelt$parameter,"alpha|beta|gamma|deviance"), ]
 ##View Chains
 
 ```{r,fig.height=10,fig.width=14}  
-ggplot(parmelts,aes(x=Draw,y=estimate,col=as.factor(Chain))) + geom_line() + facet_grid(L1~parameter,scales="free") + theme_bw() + labs(col="Chain")
+ggplot(droplevels(parmelts),aes(x=Draw,y=estimate,col=as.factor(Chain))) + geom_line() + facet_wrap(L1~parameter,scales="free") + theme_bw() + labs(col="Chain")
 ```
 
 ## Bayesian estimates figure
@@ -667,12 +696,12 @@ parmeltP<-parmelts[parmelts$parameter %in% c("linear","polynomial"),]
 finaltabP<-group_by(parmeltP,L1,Assemblage,parameter) %>% summarize(mean=round(mean(estimate),2),upper=round(quantile(estimate,0.975),2),lower=round(quantile(estimate,0.025),2)) 
 
 #plot simulated
-simulated<-ggplot(parmeltP[parmeltP$Assemblage %in% "Simulation",],aes(x=estimate,fill=parameter)) + facet_wrap(~L1,scale="free_y") + geom_histogram() + theme_bw() + ggtitle("Simulated") + scale_fill_discrete(guide="none") + labs(x="") + scale_x_continuous(limits=c(-45,25)) + scale_fill_manual(values=c("grey60","grey10"))
+simulated<-ggplot(parmeltP[parmeltP$Assemblage %in% "Simulation",],aes(x=estimate,fill=parameter)) + facet_wrap(~L1,scale="free_y") + geom_histogram() + theme_bw() + ggtitle("Simulated") + scale_fill_discrete(guide="none") + labs(x="") + scale_x_continuous(limits=c(-10,10)) + scale_fill_manual(values=c("grey60","grey10"))
 
 #CI intervals
 simulated<-simulated + geom_vline(data=finaltabP[finaltabP$Assemblage %in% "Simulation",],aes(xintercept=mean,group=parameter),linetype="dashed",col="black",size=1) + geom_vline(data=finaltabP[finaltabP$Assemblage %in% "Simulation",],aes(xintercept=upper,group=parameter),linetype="dashed",col="grey20",size=.5) + geom_vline(data=finaltabP[finaltabP$Assemblage %in% "Simulation",],aes(xintercept=lower,group=parameter),linetype="dashed",col="grey20",size=.5)
 
-predicted<-ggplot(parmeltP[parmeltP$Assemblage %in% "Predicted",],aes(x=estimate,fill=parameter)) + facet_wrap(~L1,scale="free_y") + geom_histogram() + theme_bw() + ggtitle("Predicted")+ scale_fill_discrete(guide="none") + labs(x="")+ scale_x_continuous(limits=c(-45,25))+ scale_fill_manual(values=c("grey60","grey10"))
+predicted<-ggplot(parmeltP[parmeltP$Assemblage %in% "Predicted",],aes(x=estimate,fill=parameter)) + facet_wrap(~L1,scale="free_y") + geom_histogram() + theme_bw() + ggtitle("Predicted")+ scale_fill_discrete(guide="none") + labs(x="")+ scale_x_continuous(limits=c(-30,30))+ scale_fill_manual(values=c("grey60","grey10"))
 
 #CI intervals
 predicted<-predicted + geom_vline(data=finaltabP[finaltabP$Assemblage %in% "Predicted",],aes(xintercept=mean,group=parameter),linetype="dashed",col="black",size=1) + geom_vline(data=finaltabP[finaltabP$Assemblage %in% "Predicted",],aes(xintercept=upper,group=parameter),linetype="dashed",col="grey20",size=.5) + geom_vline(data=finaltabP[finaltabP$Assemblage %in% "Predicted",],aes(xintercept=lower,group=parameter),linetype="dashed",col="grey20",size=.5)
@@ -729,11 +758,13 @@ specCast<-list()
 
 for(x in 1:length(trajsplit)){
   a<-trajsplit[[x]]
-  dat<-sdat[[which(names(sdat) %in% names(trajsplit)[x])]]$Phylo.Relatedness
+  dat<-sdat[[which(names(sdat) %in% names(trajsplit)[x])]]
   
   est<-list()
   for(p in 1:nrow(a)){
-    est[[p]]<-data.frame(Relatedness=dat,y=trajF(a[p,]$intercept,a[p,]$linear,a[p,]$polynomial,dat))
+  
+    est[[p]]<-data.frame(Relatedness=dat$Phylo.Relatedness,y=trajF(a[p,]$intercept,a[p,]$linear,a[p,]$polynomial,dat$Phylo.Relatedness))
+    
     }
   est<-rbind_all(est)
   mtraj<-group_by(est,Relatedness) %>% summarise(mean=mean(y),upper=quantile(y,0.975),lower=quantile(y,0.025))

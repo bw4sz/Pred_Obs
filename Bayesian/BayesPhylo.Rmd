@@ -51,7 +51,7 @@ droppath<-"C:/Users/Ben/Dropbox/"
 gitpath<-"C:/Users/Ben/Documents/Pred_Obs/"
 
 #Load image if desired
-load(paste(droppath,"Thesis/Pred_Realized/Assemblages/Threshold0.1/Results/PredictedRealized.RData",sep=""))
+load(paste(droppath,"Thesis/Pred_Realized/Assemblages/Threshold0.05/Results/PredictedRealized.RData",sep=""))
 
 #start with just the present sites
 #head(PA_m2)
