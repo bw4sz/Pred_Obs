@@ -1,28 +1,28 @@
 "","L1","Assemblage","parameter","mean","upper","lower"
-"1","Env","Predicted","intercept",0.83,7.26,-6.41
-"2","Env","Predicted","linear",-8.14,1.46,-15.92
-"3","Env","Predicted","polynomial",6.55,20.32,-8.5
-"4","Env","Predicted","sigmaIntercept",0.36,0.79,0.03
-"5","Env","Predicted","sigmaSlope",0.38,0.77,0.04
-"6","Env","Predicted","sigmaSlope2",0.31,0.73,0.04
-"7","Env + Dispersal","Predicted","intercept",3.65,5.42,1.67
-"8","Env + Dispersal","Predicted","linear",-0.76,6.27,-7.9
-"9","Env + Dispersal","Predicted","polynomial",-3.63,3.27,-9.26
-"10","Env + Dispersal","Predicted","sigmaIntercept",0.28,0.76,0.03
-"11","Env + Dispersal","Predicted","sigmaSlope",0.43,0.8,0.05
-"12","Env + Dispersal","Predicted","sigmaSlope2",0.3,0.77,0.03
-"13","Lottery","Simulation","intercept",-1.05,0.88,-2.78
-"14","Lottery","Simulation","linear",-0.1,3.06,-3.71
-"15","Lottery","Simulation","polynomial",0.23,2.21,-1.57
-"16","Niche Cons","Simulation","intercept",2.75,3.35,2.21
-"17","Niche Cons","Simulation","linear",-6.63,-5.99,-7.54
-"18","Niche Cons","Simulation","polynomial",2.52,2.99,2.17
-"19","Niche Cons + comp","Simulation","intercept",-4.56,-3.09,-6.2
-"20","Niche Cons + comp","Simulation","linear",3.05,4.04,1.91
-"21","Niche Cons + comp","Simulation","polynomial",-0.74,-0.09,-1.45
-"22","Observed","Observed","intercept",-14.7,0.79,-29.96
-"23","Observed","Observed","linear",16.21,19.48,11.5
-"24","Observed","Observed","polynomial",-3.39,9.5,-15.74
-"25","Observed","Observed","sigmaIntercept",0.28,0.65,0.03
-"26","Observed","Observed","sigmaSlope",0.23,0.62,0.02
-"27","Observed","Observed","sigmaSlope2",0.34,0.66,0.05
+"1","Env","Predicted","intercept",0.02,0.77,-0.71
+"2","Env","Predicted","linear",0.08,0.15,0.01
+"3","Env","Predicted","polynomial",0,0,-0.01
+"4","Env","Predicted","sigmaIntercept",2.29,3.08,1.67
+"5","Env","Predicted","sigmaSlope",0.21,0.27,0.16
+"6","Env","Predicted","sigmaSlope2",0.01,0.01,0.01
+"7","Env + Dispersal","Predicted","intercept",0.03,0.81,-0.72
+"8","Env + Dispersal","Predicted","linear",0.09,0.16,0.02
+"9","Env + Dispersal","Predicted","polynomial",0,0,-0.01
+"10","Env + Dispersal","Predicted","sigmaIntercept",2.34,3.11,1.7
+"11","Env + Dispersal","Predicted","sigmaSlope",0.21,0.28,0.16
+"12","Env + Dispersal","Predicted","sigmaSlope2",0.01,0.01,0.01
+"13","Lottery","Simulation","intercept",-1.24,-1.12,-1.36
+"14","Lottery","Simulation","linear",0.91,1.15,0.65
+"15","Lottery","Simulation","polynomial",-0.33,-0.22,-0.44
+"16","Niche Cons","Simulation","intercept",1.02,1.12,0.91
+"17","Niche Cons","Simulation","linear",-2.13,-1.9,-2.36
+"18","Niche Cons","Simulation","polynomial",0.42,0.53,0.31
+"19","Niche Cons + comp","Simulation","intercept",-1.72,-1.45,-2
+"20","Niche Cons + comp","Simulation","linear",1.42,2.02,0.79
+"21","Niche Cons + comp","Simulation","polynomial",-1.23,-0.92,-1.54
+"22","Observed","Observed","intercept",-2.45,-1.88,-3.09
+"23","Observed","Observed","linear",0.22,0.28,0.16
+"24","Observed","Observed","polynomial",-0.01,-0.01,-0.01
+"25","Observed","Observed","sigmaIntercept",1.4,1.93,0.97
+"26","Observed","Observed","sigmaSlope",0.11,0.16,0.07
+"27","Observed","Observed","sigmaSlope2",0.01,0.01,0.01

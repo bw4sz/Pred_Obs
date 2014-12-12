@@ -79,6 +79,8 @@ trx$tip.label<-str_extract(trx$tip.label,"(\\w+).(\\w+)")
 
 ctrx<-cophenetic(trx)
 
+ctrx<-ctrx/max(ctrx)
+
 #Bring in the assemblages, cleaned from JP
 Sites<-read.csv(paste(gitpath,"InputData//Sites.csv",sep=""),row.names=1)
 
@@ -696,17 +698,17 @@ parmeltP<-parmelts[parmelts$parameter %in% c("linear","polynomial"),]
 finaltabP<-group_by(parmeltP,L1,Assemblage,parameter) %>% summarize(mean=round(mean(estimate),2),upper=round(quantile(estimate,0.975),2),lower=round(quantile(estimate,0.025),2)) 
 
 #plot simulated
-simulated<-ggplot(parmeltP[parmeltP$Assemblage %in% "Simulation",],aes(x=estimate,fill=parameter)) + facet_wrap(~L1,scale="free_y") + geom_histogram() + theme_bw() + ggtitle("Simulated") + scale_fill_discrete(guide="none") + labs(x="") + scale_x_continuous(limits=c(-10,10)) + scale_fill_manual(values=c("grey60","grey10"))
+simulated<-ggplot(parmeltP[parmeltP$Assemblage %in% "Simulation",],aes(x=estimate,fill=parameter)) + facet_wrap(~L1,scale="free_y") + geom_histogram() + theme_bw() + ggtitle("Simulated") + scale_fill_discrete(guide="none") + labs(x="") + scale_x_continuous(limits=c(-2,2)) + scale_fill_manual(values=c("grey60","grey10"))
 
 #CI intervals
 simulated<-simulated + geom_vline(data=finaltabP[finaltabP$Assemblage %in% "Simulation",],aes(xintercept=mean,group=parameter),linetype="dashed",col="black",size=1) + geom_vline(data=finaltabP[finaltabP$Assemblage %in% "Simulation",],aes(xintercept=upper,group=parameter),linetype="dashed",col="grey20",size=.5) + geom_vline(data=finaltabP[finaltabP$Assemblage %in% "Simulation",],aes(xintercept=lower,group=parameter),linetype="dashed",col="grey20",size=.5)
 
-predicted<-ggplot(parmeltP[parmeltP$Assemblage %in% "Predicted",],aes(x=estimate,fill=parameter)) + facet_wrap(~L1,scale="free_y") + geom_histogram() + theme_bw() + ggtitle("Predicted")+ scale_fill_discrete(guide="none") + labs(x="")+ scale_x_continuous(limits=c(-30,30))+ scale_fill_manual(values=c("grey60","grey10"))
+predicted<-ggplot(parmeltP[parmeltP$Assemblage %in% "Predicted",],aes(x=estimate,fill=parameter)) + facet_wrap(~L1,scale="free_y") + geom_histogram() + theme_bw() + ggtitle("Predicted")+ scale_fill_discrete(guide="none") + labs(x="")+ scale_x_continuous(limits=c(-.5,.5))+ scale_fill_manual(values=c("grey60","grey10"))
 
 #CI intervals
 predicted<-predicted + geom_vline(data=finaltabP[finaltabP$Assemblage %in% "Predicted",],aes(xintercept=mean,group=parameter),linetype="dashed",col="black",size=1) + geom_vline(data=finaltabP[finaltabP$Assemblage %in% "Predicted",],aes(xintercept=upper,group=parameter),linetype="dashed",col="grey20",size=.5) + geom_vline(data=finaltabP[finaltabP$Assemblage %in% "Predicted",],aes(xintercept=lower,group=parameter),linetype="dashed",col="grey20",size=.5)
 
-observed<-ggplot(parmeltP[parmeltP$Assemblage %in% "Observed",],aes(x=estimate,fill=parameter)) + facet_wrap(~L1,scale="free_y") + geom_histogram() + theme_bw() + ggtitle("Observed")+ scale_x_continuous(limits=c(-45,25))+ scale_fill_manual(values=c("grey60","grey10"))
+observed<-ggplot(parmeltP[parmeltP$Assemblage %in% "Observed",],aes(x=estimate,fill=parameter)) + facet_wrap(~L1,scale="free_y") + geom_histogram() + theme_bw() + ggtitle("Observed")+ scale_x_continuous(limits=c(-.5,.5))+ scale_fill_manual(values=c("grey60","grey10"))
 
 #CI intervals
 observed<-observed + geom_vline(data=finaltabP[finaltabP$Assemblage %in% "Observed",],aes(xintercept=mean,group=parameter),linetype="dashed",col="black",size=1) + geom_vline(data=finaltabP[finaltabP$Assemblage %in% "Observed",],aes(xintercept=lower,group=parameter),linetype="dashed",col="grey20",size=.5) + geom_vline(data=finaltabP[finaltabP$Assemblage %in% "Observed",],aes(xintercept=upper,group=parameter),linetype="dashed",col="grey20",size=.5)
@@ -745,7 +747,7 @@ gdcast<-dcast(gdf,...~parameter,value.var="estimate")
 trajsplit<-split(gdcast,gdcast$L1)
 
 trajsplit<-lapply(trajsplit,function(x){
-  x[sample(1:nrow(x),1000,replace=F),]
+  x[sample(1:nrow(x),500,replace=F),]
 })
 
 #define trajectory function
@@ -789,19 +791,19 @@ specdf[specdf$Assemblage %in% c("Env","Env + Dispersal","Observed"),"Type"]<-"Ob
 
 
 #overlay together
-ggplot(data=specdf[specdf$Assemblage %in% c("Env","Env + Dispersal","Observed"),],aes(x=Relatedness,y=mean,ymin=lower,ymax=upper,fill=Assemblage)) + geom_ribbon(alpha=.5) + geom_line() + theme_bw()+ labs(x="Distance to closest related species",y="Probability of Occurrence") + scale_fill_manual(values=c("grey80","grey60","black"))
+ggplot(data=specdf[specdf$Assemblage %in% c("Env","Env + Dispersal","Observed"),],aes(x=Relatedness,y=mean,ymin=lower,ymax=upper,fill=Assemblage)) + geom_ribbon(alpha=.5) + geom_line() + theme_bw()+ labs(x="Distance to closest related species",y="Probability of Occurrence") + scale_fill_manual(values=c("grey80","grey60","black"),labels=c("Environment","Environment + Dispersal","Observed")) + ylim(0,.8) 
 
-ggsave("Figure3Overlay.jpeg",height=6,width=8,dpi=400)
+ggsave("Figure4Overlay.jpeg",height=6,width=8,dpi=400)
 ```
 
 #Simulated trajectories
 ```{r,fig.width=11}
 #overlay together
-ggplot(specdf[!specdf$Assemblage %in% c("Env","Env + Dispersal","Observed"),],aes(x=Relatedness,y=mean,ymin=lower,ymax=upper,fill=Assemblage)) + geom_ribbon(alpha=.5) + geom_line() + theme_bw()+ labs(x="Distance to closest related species",y="Probability of Occurrence") + scale_fill_manual(values=c("grey80","grey60","black")) + facet_wrap(~Assemblage)
+ggplot(specdf[!specdf$Assemblage %in% c("Env","Env + Dispersal","Observed"),],aes(x=Relatedness,y=mean,ymin=lower,ymax=upper,fill=Assemblage)) + geom_ribbon(alpha=.5) + geom_line() + theme_bw()+ labs(x="Phylogenetic Distance to closest related species in an assemblage",y="Probability of Occurrence") + scale_fill_manual(values=c("grey80","grey60","black")) + facet_wrap(~Assemblage)
 
-ggsave("Figure4Overlay.jpeg",height=6,width=10,dpi=400)
+ggsave("Figure3Overlay.jpeg",height=5,width=8,dpi=400)
 
-save.image("PredictedRealized.RData")
+save.image(paste(droppath,"Thesis\\Pred_Realized\\Assemblages\\Threshold0.05\\Results\\","PredictedRealized.RData",sep=""))
 ```
 
 
