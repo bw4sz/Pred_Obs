@@ -1,7 +1,0 @@
-Compiling model graph
-   Resolving undeclared variables
-   Allocating nodes
-   Graph Size: 19961
-
-Initializing model
-
