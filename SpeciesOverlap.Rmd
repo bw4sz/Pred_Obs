@@ -54,7 +54,7 @@ droppath<-"C:/Users/Ben/Dropbox/"
 setwd(gitpath)
 
 #Load image if desired
-load(paste(droppath,"Thesis/Pred_Realized/Assemblages/Threshold0.05/Results/PredictedRealized.RData",sep=""))
+#load(paste(droppath,"Thesis/Pred_Realized/Assemblages/Threshold0.05/Results/PredictedRealized.RData",sep=""))
 
 ```
 
@@ -597,8 +597,8 @@ if(!hier){
 
 #MCMC options
 ni <- runs  # number of draws from the posterior
-nt <- 2    #thinning rate
-nb <- 0  # number to discard for burn-in
+nt <- 3    #thinning rate
+nb <- burn  # number to discard for burn-in
 nc <- 2  # number of chains
 
 
@@ -629,7 +629,7 @@ Run 7 models in parallel.
 
 #There is no reason everyone needs the same number of runs
 #Draws for each model
-runsl<-c(100000,100000,100000,100000,100000,100000)
+runsl<-c(100000,100000,500000,100000,100000,100000)
 
 #Which model we want to draw , heir=T is for full model
 modhier<-c(F,T,T,T,F,F)
@@ -639,7 +639,7 @@ doSNOW::registerDoSNOW(cl)
 #parall<-list()
 parall<-foreach(x=1:length(sdat),.errorhandling="stop") %dopar% {
 #for(x in 1:length(sdat)){
-  out<-Bayes(presence=sdat[[x]]$P_A,distance=sdat[[x]]$Phylo.Relatedness,species=sdat[[x]]$Species,runs = runsl[x],burn=(runsl[x]-3000)/2,hier=modhier[x])
+  out<-Bayes(presence=sdat[[x]]$P_A,distance=sdat[[x]]$Phylo.Relatedness,species=sdat[[x]]$Species,runs = runsl[x],burn=(runsl[x]-3000)/3,hier=modhier[x])
   return(out)
   #parall[[x]]<-out
 }
@@ -653,7 +653,7 @@ save.image(paste(droppath,"Thesis\\Pred_Realized\\Assemblages\\Threshold0.05\\Re
 
 This model takes alot longer to converge than the others, needs to be updated and run seperately. 
 
-```{r update,eval=TRUE}
+```{r update,eval=FALSE}
 recompile(parall[[3]])
 add<-10000
 parall[[3]] <- update(parall[[3]],n.iter=add)
@@ -668,7 +668,7 @@ parburn<-list()
 for (x in 1:length(parall)){
 pars<-melt(parall[[x]]$BUGSoutput$sims.array)
 colnames(pars)<-c("Draw","Chain","parameter","estimate")
-pars<-pars[!pars$Draw %in% 1:((runsl[x]-3000)/2),]
+#pars<-pars[!pars$Draw %in% 1:((runsl[x]-3000)/2),]
   parburn[[x]]<-pars
 }
 ```
