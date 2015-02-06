@@ -54,7 +54,7 @@ droppath<-"C:/Users/Ben/Dropbox/"
 setwd(gitpath)
 
 #Load image if desired
-#load(paste(droppath,"Thesis/Pred_Realized/Assemblages/Threshold0.05/Results/PredictedRealized.RData",sep=""))
+load(paste(droppath,"Thesis/Pred_Realized/Assemblages/Threshold0.05/Results/PredictedRealized.RData",sep=""))
 
 ```
 
@@ -813,15 +813,23 @@ specdf[specdf$Assemblage %in% c("Env","Env + Dispersal","Observed"),"Type"]<-"Ob
 #overlay together
 ggplot(data=specdf[specdf$Assemblage %in% c("Env","Env + Dispersal","Observed"),],aes(x=Relatedness,y=mean,ymin=lower,ymax=upper,fill=Assemblage)) + geom_ribbon(alpha=.5) + geom_line() + theme_bw()+ labs(x="Distance to closest related species",y="Probability of Occurrence") + scale_fill_manual(values=c("grey80","grey60","black"),labels=c("Environment","Environment + Dispersal","Observed"))  
 
-ggsave("Figure4Overlay.jpeg",height=6,width=8,dpi=400)
+ggsave("Figure4Overlay.jpg",height=6,width=8,dpi=400)
 ```
 
 #Simulated trajectories
 ```{r,fig.width=11,cache=FALSE}
 #overlay together
-ggplot(specdf[!specdf$Assemblage %in% c("Env","Env + Dispersal","Observed"),],aes(x=Relatedness,y=mean,ymin=lower,ymax=upper,fill=Assemblage)) + geom_ribbon(alpha=.5) + geom_line() + theme_bw()+ labs(x="Phylogenetic Distance to closest related species in an assemblage",y="Probability of Occurrence") + scale_fill_manual(values=c("grey80","grey60","black"),labels=c("Lottery","Niche Conservatism","Niche Conservatism + Competition")) + facet_wrap(~Assemblage)
 
-ggsave("Figure3Overlay.jpeg",height=5,width=8,dpi=400)
+#rename levels
+specdf$AssemblageL<-factor(specdf$Assemblage)
+levels(specdf$AssemblageL)<-c("Environment","Environment + Dispersal","Lottery","Niche Conservatism","Niche Conservatism + Competition","Observed")
+
+levels(specdf$AssemblageL)
+ggplot(specdf[!specdf$Assemblage %in% c("Env","Env + Dispersal","Observed"),],aes(x=Relatedness,y=mean,ymin=lower,ymax=upper)) + geom_ribbon(alpha=.5) + geom_line() + theme_bw()+ labs(x="Phylogenetic distance to closest related species in an assemblage",y="Probability of Occurrence") + scale_fill_manual(guide='none') + facet_wrap(~AssemblageL)
+
+#values=c("grey80","grey60","black"),labels=c("Lottery","Niche Conservatism","Niche Conservatism + Competition")
+
+ggsave("Figure3Overlay.jpg",height=3,width=8,dpi=600,units="in")
 
 save.image(paste(droppath,"Thesis\\Pred_Realized\\Assemblages\\Threshold0.05\\Results\\","PredictedRealized.RData",sep=""))
 ```
