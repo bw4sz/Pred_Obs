@@ -824,13 +824,20 @@ ggsave("Figure4Overlay.jpg",height=6,width=8,dpi=400)
 specdf$AssemblageL<-factor(specdf$Assemblage)
 levels(specdf$AssemblageL)<-c("Environment","Environment + Dispersal","Lottery","Niche Conservatism","Niche Conservatism + Competition","Observed")
 
-levels(specdf$AssemblageL)
-ggplot(specdf[!specdf$Assemblage %in% c("Env","Env + Dispersal","Observed"),],aes(x=Relatedness,y=mean,ymin=lower,ymax=upper)) + geom_ribbon(alpha=.5) + geom_line() + theme_bw()+ labs(x="Phylogenetic distance to closest related species in an assemblage",y="Probability of Occurrence") + scale_fill_manual(guide='none') + facet_wrap(~AssemblageL,scales="free")
+
+#add some blank data to zoom out on lottery, its not readable.
+
+dummy<-data.frame(Relatedness=.9,mean=c(.4,.25),AssemblageL="Lottery",ymin=c(.5,.2),ymax=c(.4,.2))
+
+ggplot(data=specdf[!specdf$Assemblage %in% c("Env","Env + Dispersal","Observed"),],aes(x=Relatedness,y=mean))+ geom_ribbon(alpha=.5,aes(ymin=lower,ymax=upper)) + geom_line() + theme_bw()+ labs(x="Phylogenetic distance to closest related species in an assemblage",y="Probability of Occurrence") + scale_fill_manual(guide='none') + facet_wrap(~AssemblageL,scales="free")  + geom_blank(data=dummy,aes(x=Relatedness,y=mean))
+
 
 #values=c("grey80","grey60","black"),labels=c("Lottery","Niche Conservatism","Niche Conservatism + Competition")
 
 ggsave("Figure3Overlay.jpg",height=3,width=8,dpi=600,units="in")
+```
 
+```{r}
 save.image(paste(droppath,"Thesis\\Pred_Realized\\Assemblages\\Threshold0.05\\Results\\","PredictedRealized.RData",sep=""))
 ```
 
