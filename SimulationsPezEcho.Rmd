@@ -258,9 +258,9 @@ Visually, there should be a mix of blue (clade 1) and red (clade 2).
 #Threshold for presence
 th=.6
 
-sim.func<-function(){scape(trx, scape.size=10, g.center=1, g.range=1, g.repulse=1, wd.all=20, signal.center=FALSE, signal.range=FALSE, same.range=TRUE, repulse=FALSE,center.scale = 1, range.scale = 1, repulse.scale = 1, site.stoch.scale = 0, sd.center=1, sd.range=1,rho=NULL, th=th)}
+sim.func<-function(){scape(trx, scape.size=7, g.center=1, g.range=1, g.repulse=1, wd.all=15, signal.center=FALSE, signal.range=FALSE, same.range=TRUE, repulse=FALSE,center.scale = 1, range.scale = 1, repulse.scale = 1, site.stoch.scale = 0, sd.center=1, sd.range=1,rho=NULL, th=th)}
 
-sim.list<-replicate(10,sim.func(),simplify=FALSE)
+sim.list<-replicate(50,sim.func(),simplify=FALSE)
 
 gridlist<-lapply(sim.list[1:6],function(x){
   gridplot(x,tree=trx,threshold=-log10(th),opt.color=TRUE,guide=FALSE)})
@@ -282,13 +282,13 @@ ggplot(phy_lottery,aes(x=Phylo.Relatedness,y=P_A))  + geom_smooth(method="glm",f
 
 **Conclusion: Hypothesis confirmed. ** Although the line is slightly positive, i believe this is due to the fact that there are more species are distance of .2 then there are species at distance of .1 or .8, thus more liklihood of co-occurrence.
 
-##Try another assemblage size, grid = 7X7 and range=5 cells. 
+##Try another assemblage size, grid = 10X10 and range=20 cells. 
 
 ```{r}
 #Threshold for presence
 th=.6
 
-sim.func<-function(){scape(trx, scape.size=7, g.center=1, g.range=1, g.repulse=1, wd.all=5, signal.center=FALSE, signal.range=FALSE, same.range=TRUE, repulse=FALSE,center.scale = 1, range.scale = 1, repulse.scale = 1, site.stoch.scale = 0, sd.center=1, sd.range=1,rho=NULL, th=th)}
+sim.func<-function(){scape(trx, scape.size=10, g.center=1, g.range=1, g.repulse=1, wd.all=20, signal.center=FALSE, signal.range=FALSE, same.range=TRUE, repulse=FALSE,center.scale = 1, range.scale = 1, repulse.scale = 1, site.stoch.scale = 0, sd.center=1, sd.range=1,rho=NULL, th=th)}
 
 sim.list<-replicate(20,sim.func(),simplify=FALSE)
 
@@ -312,7 +312,7 @@ For the bayesian model, convergence takes a very long time if fitting more than 
 #Threshold for presence
 th=.6
 
-sim.func<-function(){scape(trx, scape.size=7, g.center=1, g.range=1, g.repulse=1, wd.all=5, signal.center=FALSE, signal.range=FALSE, same.range=TRUE, repulse=FALSE,center.scale = 1, range.scale = 1, repulse.scale = 1, site.stoch.scale = 0, sd.center=1, sd.range=1,rho=NULL, th=th)}
+sim.func<-function(){scape(trx, scape.size=7, g.center=1, g.range=1, g.repulse=1, wd.all=15, signal.center=FALSE, signal.range=FALSE, same.range=TRUE, repulse=FALSE,center.scale = 1, range.scale = 1, repulse.scale = 1, site.stoch.scale = 0, sd.center=1, sd.range=1,rho=NULL, th=th)}
 
 sim.list<-replicate(50,sim.func(),simplify=FALSE)
 
@@ -339,9 +339,9 @@ We expect that as there are a more closely related species, there should be grea
 #Threshold for presence
 th=.6
 
-sim.func<-function(){scape(trx, scape.size=10, g.center=1.5, g.range=1.5, g.repulse=1, wd.all=20, signal.center=TRUE, signal.range=TRUE, same.range=TRUE, repulse=FALSE,center.scale = 1, range.scale = 1, repulse.scale = 1, site.stoch.scale = 0, sd.center=1, sd.range=1,rho=NULL, th=th)}
+sim.func<-function(){scape(trx, scape.size=7, g.center=1.1, g.range=1.1, g.repulse=1, wd.all=15, signal.center=TRUE, signal.range=TRUE, same.range=TRUE, repulse=FALSE,center.scale = 1, range.scale = 1, repulse.scale = 1, site.stoch.scale = 0, sd.center=1, sd.range=1,rho=NULL, th=th)}
 
-sim.list<-replicate(10,sim.func(),simplify=FALSE)
+sim.list<-replicate(50,sim.func(),simplify=FALSE)
 
 gridlist<-lapply(sim.list[1:6],function(x){
   gridplot(x,tree=trx,threshold=-log10(th),opt.color=TRUE,guide=FALSE)})
@@ -366,7 +366,7 @@ ggplot(phy_nichec,aes(x=Phylo.Relatedness,y=P_A)) + geom_smooth(aes(group=1),met
 
 **Conclusion: As relatedness increases, species tend to co-occur more. This fits out prediction of niche conservatism. **
 
-##Try another assemblage size, grid = 7X7 and range=5 cells. 
+##Try another assemblage size, grid = 10X10 and range=5 cells. 
 
 ```{r,height=20}
 #Threshold for presence
@@ -397,9 +397,9 @@ ggplot(phy_nichec2,aes(x=Phylo.Relatedness,y=P_A)) + geom_smooth(aes(group=1),me
 We would expect red and blue clades to seperate, but then fragment to create the checkerboard pattern of distribution (see papers by Simberloff and Gotelli)
 
 ```{r,fig.height=10}
-sim.func<-function(){scape(trx, scape.size=10, g.center=2, g.range=2, g.repulse=5, wd.all=20, signal.center=TRUE, signal.range=FALSE, same.range=TRUE, repulse=TRUE,center.scale = 1, range.scale = 1, repulse.scale = 1, site.stoch.scale = 0, sd.center=1, sd.range=1,rho=NULL, th=th)}
+sim.func<-function(){scape(trx, scape.size=7, g.center=1.1, g.range=1.1, g.repulse=10, wd.all=15, signal.center=TRUE, signal.range=FALSE, same.range=TRUE, repulse=TRUE,center.scale = 1, range.scale = 1, repulse.scale = 1, site.stoch.scale = 0, sd.center=1, sd.range=1,rho=NULL, th=th)}
 
-sim.list<-replicate(30,sim.func(),simplify=FALSE)
+sim.list<-replicate(100,sim.func(),simplify=FALSE)
 
 gridlist<-lapply(sim.list[1:6],function(x){
   p<-gridplot(x,tree=trx,threshold=-log10(th),opt.color=TRUE,guide=F)})
@@ -430,7 +430,7 @@ ggplot(phy_comp,aes(x=Phylo.Relatedness,y=P_A)) + geom_smooth(method="glm",famil
 ##Try another assemblage size, grid = 7X7 and range =5 cells. 
 
 ```{r,fig.height=10}
-sim.func<-function(){scape(trx, scape.size=10, g.center=5, g.range=1, g.repulse=5, wd.all=20, signal.center=TRUE, signal.range=FALSE, same.range=TRUE, repulse=TRUE,center.scale = 1, range.scale = 1, repulse.scale = 1, site.stoch.scale = 0, sd.center=1, sd.range=1,rho=NULL, th=th)}
+sim.func<-function(){scape(trx, scape.size=7, g.center=1.1, g.range=1.1, g.repulse=5, wd.all=20, signal.center=TRUE, signal.range=FALSE, same.range=TRUE, repulse=TRUE,center.scale = 1, range.scale = 1, repulse.scale = 1, site.stoch.scale = 0, sd.center=1, sd.range=1,rho=NULL, th=th)}
 
 sim.list<-replicate(20,sim.func(),simplify=FALSE)
 
