@@ -8,15 +8,18 @@ output:
     number_sections: true
 ---
 
-**Disclaimer: The pez::scape function is a rewritten picante::pglmm.sim with much better user input written by Matt Helmus. This work is unpublished and is not to be distributed without explicit consent of package creator Will Pearse. Many thanks to Will and Matt Helmus for their work pushing the field forward.**
-
 Aim
 ---
-To describe the form of the function between distance to most closly related species and probability of co-occurrence under known mechanisms of assembly. I hypothesis that a this relationship is non-linear (2nd polynomial), such that species should increase in co-occurrence due to niche conservatism, then decrease in co-occurrence based on competition. I will then compare this simulated data with known mechanism to a empirical data using Andean Hummingbirds.
+To simulate assemblages without phylogenetic signal, with phylogenetic signal, and with phylogenetic signal and the addition of repulsion. 
+
 
 #Simulate Phylogeny
 
-Start with a simple balanced phylogeny with branch lengths
+Start with a simple unbalanced phylogeny with branch lengths. There needs to be a sufficient number of species to distinguish patterns from random, but not too many as to make the analysis huge and unwieldy. Let's begin with 16 species.
+
+* Create Phylogeny
+* Create branch lengths
+* Create cophenetic distance matrix
 
 ```{r,warning=FALSE,message=FALSE,echo=FALSE}
 library(knitr)
@@ -25,17 +28,17 @@ library(ape)
 library(dplyr)
 library(ggplot2)
 library(reshape2)
-library(phytools)
 library(vegan)
 library(RColorBrewer)
 library(gridExtra)
 library(scales)
+library(picante)
 
-opts_chunk$set(warning=FALSE,message=FALSE,echo=TRUE)
-opts_chunk$set(cache=TRUE, cache.path = 'SimulationsPez_cache/', fig.path='figure/',fig.width=10)
+opts_chunk$set(warning=FALSE,message=FALSE,echo=FALSE)
+opts_chunk$set(cache=TRUE, cache.path = 'SimulationsPez_cache/', fig.path='figure/',fig.width=10,fig.height=7)
 
-#create Phylogeny
-trx<-compute.brlen(stree(n=16,type="left"))
+#create phylogeny
+trx<-compute.brlen(stree(n=20,type="left"))
 plot(trx)
 
 #cophenetic distance
@@ -83,8 +86,6 @@ multiplot <- function(..., plotlist=NULL, file, cols=1, layout=NULL) {
 
 #Simulation Parameters
 
-Since this is a relatively unexplored landscape, let's assign a variable to all parameters and we can explore them.
-
 Parameter | Description
 ------------- | -------------
 tree|phylo object
@@ -109,37 +110,19 @@ th|probability threshold 10^-th above which species are considered present at a 
 
 #Paramater choices
 
-For the simulations the scape szie will be a 10*10 grid, with species ranges equal to 20 cells. This allows the species to have enough space to occupy their full range, without forcing overlap because not enough available cells. This value doesn't really matter, its the ratio of grid size to range size. I've chosen a relatively small number because i'm iterating twenty times in the model and it creates a relatively large dataframe (n=20,000) to fit the bayesian model.
+For the simulations the scape szie will be a 7*7 grid, with species ranges equal to 15 cells. This allows the species to have enough space to occupy their full range, without forcing overlap because not enough available cells. This value doesn't really matter, its the ratio of grid size to range size. I've chosen a relatively small number because i'm iterating twenty times in the model and it creates a relatively large dataframe (n=20,000). 
 
+For our purposes, we care most about the parameters g.center and g. repulse. The help functions reads: 
+
+```
+The amount and type of structure is determened by the signal parameters g.center, g.range and g.repulse. Parameters are based on an Ornstein-Uhlenbeck model of evolution with stabilizing selection. Values of g=1 indicate no stabilizing selection and correspond to the Brownian motion model of evolution; **0<g<1 represents stabilizing selection**; and **g>1 corresponds to disruptive selection** where phylogenetic signal for the supplied tree is amplified. See corBlomberg. Communities are simulated along two gradients where the positions along those gradients, g.center and range sizes g.range, can exhibit phylogenetic signal. Phylogenetic attraction is simulated in the g.center parameter, while repulsion in g.repulse.
+```
 ##View function
 ```{r}
 print(scape)
 ```
 
-```{r,fig.width=10}
-probPlot<-function(data,col,facet){
-X1<-melt(data$X1)
-X1$Gradient<-"1"
-X2<-melt(data$X2)
-X2$Gradient<-"2"
-colnames(X1)<-c("Site","Species","Prob","Gradient")
-colnames(X2)<-c("Site","Species","Prob","Gradient")
-f<-rbind(X1,X2)
-
-p<-ggplot(f,aes_string(x="Site",col=col,y="Prob")) + geom_line() + theme_bw()
-p
-p<-p+ facet_wrap(as.formula(facet))
-p + labs(col=col,y="Probability of Presence")
-}
-
-sim.dat<-scape(trx, scape.size=20, g.center=1, g.range=1, g.repulse=1, wd.all=30, signal.center=TRUE, signal.range=FALSE, same.range=FALSE, repulse=FALSE,center.scale = 1, range.scale = 1, repulse.scale = 1, site.stoch.scale = 0, sd.center=3, sd.range=1,rho=NULL, th=5)
-
-probPlot(sim.dat,col="Gradient",facet="~Species")
-```
-
-
-```{r}
-
+```{r,echo=FALSE}
 ###Species Ranges
 
 #Function to plot species ranges on to the simulated grid. Needs to specify the same threshold as the scape th function (see questions). Optional argument to color species 
@@ -185,12 +168,13 @@ gridplot<-function(x,tree,threshold,opt.color=FALSE,plot=TRUE,guide=TRUE){
 }
 ```
 
-Let's say i wanted to color by relatedness. One simple way to approximate this is to number the tips from 1 to n, and assume a divergent scale. This is not quite true, since the relationship is non linear, but its a start. 
+##Visualizing the simulation.
 
-**From now one, we have one clade 'blue' and one clade 'red'.**
+The easiest way to quickly tell the phylogenetic structure of a run would be to color each species range on a scale from red to blue. Let's say i wanted to color by relatedness. One simple way to approximate this is to number the tips from 1 to n, and assume a divergent scale. This is not quite true, since the relationship is non linear, but its a good start. 
 
+**For each visualization, we have one clade 'blue' and one clade 'red'.**
 
-```{r}
+```{r,echo=FALSE}
 #Co-occurrence wrapper function
 #For each simulation, i'm interested in the probability of occurrence as a function of distance to species nearest to in the assemblage. 
 
@@ -247,8 +231,42 @@ return(PA_phylo)
 
 ---
 
+##How is mean phylogenetic relatedness related to the parameter g.center? 
+
+* Create a sequence of g.center values from 0.01 to 5 and measure mean mpd at each simulation. 
+* For each value of g.center, take 20 simulations to get a feeling for the variance.
+
+```{r}
+
+vals<-seq(.001,1.2,.01)
+
+mpdLottery<-lapply(vals,function(x){
+  
+#Threshold for presence
+th=.6
+
+sim.func<-function(){scape(trx, scape.size=7, g.center=x, g.range=x, g.repulse=1, wd.all=10, signal.center=TRUE, signal.range=TRUE, same.range=TRUE, repulse=FALSE,center.scale = 1, range.scale = 1, repulse.scale = 1, site.stoch.scale = 0, sd.center=1, sd.range=1,rho=NULL, th=th)}
+
+sim.list<-replicate(10,sim.func(),simplify=FALSE)
+dat<-lapply(sim.list,function(j){
+  siteXspp<-j$Y
+colnames(siteXspp)<-colnames(ctrx)
+mean(mpd(siteXspp,ctrx),na.rm=TRUE)
+})
+})
+
+names(mpdLottery)<-vals
+mpd_gcenter<-melt(mpdLottery)
+mpd_gcenter$L1<-as.numeric(mpd_gcenter$L1)
+
+ggplot(mpd_gcenter,aes(x=L1,y=as.numeric(value))) + geom_point() + theme_bw() + xlab("g.center") + ylab("mean phylogenetic diversity") + ggtitle("As g (phylogenetic signal) increases, phylogenetic diversity decreases") + geom_smooth(aes(group=1),method="lm")
+
+```
+
+As the g.center parameter approach 1.2, there is greater phylogenetic attraction, leading to decreased phylogenetic diversity in a cell. I've test values above 1.2, but at about 1.5 there isn't much more signal to amplify and can't force more co-occurrence among closely related species.
+
 #Simulation 1: Lottery Model
-Assemblage structure is made solely based BM model of evolution with strong stabilizing in traits along two environmental variables.
+Assemblage structure is made solely based BM model of evolution with no stabilizing selection in traits along the environmental gradient.
 
 We expect a distance to related species and occurrence to be flat, with no explanatory power.
 
@@ -258,9 +276,9 @@ Visually, there should be a mix of blue (clade 1) and red (clade 2).
 #Threshold for presence
 th=.6
 
-sim.func<-function(){scape(trx, scape.size=7, g.center=1, g.range=1, g.repulse=1, wd.all=15, signal.center=FALSE, signal.range=FALSE, same.range=TRUE, repulse=FALSE,center.scale = 1, range.scale = 1, repulse.scale = 1, site.stoch.scale = 0, sd.center=1, sd.range=1,rho=NULL, th=th)}
+sim.func<-function(){scape(trx, scape.size=7, g.center=0.001, g.range=0.001, g.repulse=1, wd.all=10, signal.center=TRUE, signal.range=TRUE, same.range=TRUE, repulse=FALSE,center.scale = 1, range.scale = 1, repulse.scale = 1, site.stoch.scale = 0, sd.center=1, sd.range=1,rho=NULL, th=th)}
 
-sim.list<-replicate(50,sim.func(),simplify=FALSE)
+sim.list<-replicate(20,sim.func(),simplify=FALSE)
 
 gridlist<-lapply(sim.list[1:6],function(x){
   gridplot(x,tree=trx,threshold=-log10(th),opt.color=TRUE,guide=FALSE)})
@@ -269,7 +287,36 @@ multiplot(plotlist=gridlist,cols=3)
 
 ```
 
-###Co-occurrence as a function of relatedness
+We see no seperation from red species and blue species, its a big mix.
+
+###Mean Phylogenetic Distance compared to a null model.
+
+The first way to test if the simulation is performing as expected would be calculate the NRI for each cell. If the simulation is a lottery model, the NRI would not be different than randomly drawing species and assigning them to cells.
+
+* Calculate mean mpd for each cell, for each of the 50 simulations.
+* Compare each to null model of swapping tips (500 iterations)
+* If this true is a lottery model where there is no phylogenetic clustering or dispersion, we should see very few significantly overdispersed or underdispersed assemblages.
+
+```{r}
+mpdLottery<-lapply(sim.list,function(x){
+siteXspp<-x$Y
+colnames(siteXspp)<-colnames(ctrx)
+ses.mpd(siteXspp,ctrx,iterations=500)
+})
+m.dat<-melt(mpdLottery)
+lotterympd<-ggplot(m.dat[m.dat$variable=='mpd.obs.p',],aes(x=value)) + geom_histogram() + geom_vline(xintercept=c(.05),col='red')+ ggtitle("No Phylogenetic Signal in Occurrence Trait") + xlab("P.value after randomization")
+
+ldat<-rbind_all(mpdLottery)
+con<-table(ldat$mpd.obs.p < .05)
+
+paste("There are",con[[2]], "significantly clustered or overdispersed assemblages. This is",round(con[[2]]/(con[[1]]+con[[2]]),2),"%")
+```
+
+Given a two tailed test at $$ \alpha = .05 $$, this is exactly as many as we expect at random.
+
+###Co-occurrence as a function of phylogenetic distance to the closest related species.
+
+Given this mechanism (weak phylogenetic signal) of co-occurrence, what would a logistic function look like?
 
 ```{r}
 ### Compute co-occurrence
@@ -277,44 +324,18 @@ sim.occur<-lapply(sim.list,function(x){
   phy<-co_occur(x)})
 
 phy_lottery<-rbind_all(sim.occur)
-ggplot(phy_lottery,aes(x=Phylo.Relatedness,y=P_A))  + geom_smooth(method="glm",family="binomial",formula=(y~(poly(x,2)))) + labs(y="Probability of Presence",x="Phylogenetic Distance to Nearest Species in the Assemblage")
-```
-
-**Conclusion: Hypothesis confirmed. ** Although the line is slightly positive, i believe this is due to the fact that there are more species are distance of .2 then there are species at distance of .1 or .8, thus more liklihood of co-occurrence.
-
-##Try another assemblage size, grid = 10X10 and range=20 cells. 
-
-```{r}
-#Threshold for presence
-th=.6
-
-sim.func<-function(){scape(trx, scape.size=10, g.center=1, g.range=1, g.repulse=1, wd.all=20, signal.center=FALSE, signal.range=FALSE, same.range=TRUE, repulse=FALSE,center.scale = 1, range.scale = 1, repulse.scale = 1, site.stoch.scale = 0, sd.center=1, sd.range=1,rho=NULL, th=th)}
-
-sim.list<-replicate(20,sim.func(),simplify=FALSE)
-
-```
-
-```{r}
-### Compute co-occurrence
-sim.occur<-lapply(sim.list,function(x){
-  phy<-co_occur(x)})
-
-phy_lottery2<-rbind_all(sim.occur)
-ggplot(phy_lottery2,aes(x=Phylo.Relatedness,y=P_A))  + geom_smooth(method="glm",family="binomial",formula=(y~(poly(x,2)))) + labs(y="Probability of Presence",x="Phylogenetic Distance to Nearest Species in the Assemblage")
+lotteryplot<-ggplot(phy_lottery,aes(x=Phylo.Relatedness,y=P_A))  + geom_smooth(method="glm",family="binomial",formula=(y~(poly(x,2)))) + labs(y="Probability of Presence",x="Phylogenetic Distance to Nearest Species in the Assemblage") + ylim(0,1) + ggtitle("No Phylogenetic Signal in Occurrence Trait")
 ```
 
 ###Try much larger number of replicates.
 
 For the bayesian model, convergence takes a very long time if fitting more than 50,000 data points. I ran 10 replicates of the lottery model for bayesian, we should get the identical pattern for 50 replicates (big data), it will just narrow the CI intervals.
 
-
 ```{r}
 #Threshold for presence
 th=.6
 
-sim.func<-function(){scape(trx, scape.size=7, g.center=1, g.range=1, g.repulse=1, wd.all=15, signal.center=FALSE, signal.range=FALSE, same.range=TRUE, repulse=FALSE,center.scale = 1, range.scale = 1, repulse.scale = 1, site.stoch.scale = 0, sd.center=1, sd.range=1,rho=NULL, th=th)}
-
-sim.list<-replicate(50,sim.func(),simplify=FALSE)
+sim.list<-replicate(100,sim.func(),simplify=FALSE)
 
 ```
 
@@ -324,31 +345,58 @@ sim.occur<-lapply(sim.list,function(x){
   phy<-co_occur(x)})
 
 phy_lottery2<-rbind_all(sim.occur)
-ggplot(phy_lottery2,aes(x=Phylo.Relatedness,y=P_A))  + geom_smooth(method="glm",family="binomial",formula=(y~(poly(x,2)))) + labs(y="Probability of Presence",x="Phylogenetic Distance to Nearest Species in the Assemblage")
+ggplot(phy_lottery2,aes(x=Phylo.Relatedness,y=P_A))  + geom_smooth(method="glm",family="binomial",formula=(y~(poly(x,2)))) + labs(y="Probability of Presence",x="Phylogenetic Distance to Nearest Species in the Assemblage") + ylim(0,1) + ggtitle("No Phylogenetic Signal in Occurrence Trait")
 ```
+
+From this i conclude that it is safe to use a reduced number of replicates, which will greatly alleviate the burden of chugging through ten's of thousands of 0's.
 
 ---
 
 #Simulation 2: Niche conservatism and co-occurrence
 
-We expect that species in clade blue should overlap and species in clade red should overlap, but there should be no/little red-blue overlap.
+**Visual Expectation**: We expect that species in clade blue should overlap and species in clade red should overlap, but there should be no/little red-blue overlap.
 
-We expect that as there are a more closely related species, there should be greater probability of co-occurrence.
 
 ```{r,height=20}
 #Threshold for presence
 th=.6
 
-sim.func<-function(){scape(trx, scape.size=7, g.center=1.1, g.range=1.1, g.repulse=1, wd.all=15, signal.center=TRUE, signal.range=TRUE, same.range=TRUE, repulse=FALSE,center.scale = 1, range.scale = 1, repulse.scale = 1, site.stoch.scale = 0, sd.center=1, sd.range=1,rho=NULL, th=th)}
+sim.func<-function(){scape(trx, scape.size=7, g.center=1.5, g.range=1.5, g.repulse=1, wd.all=10, signal.center=TRUE, signal.range=TRUE, same.range=TRUE, repulse=FALSE,center.scale = 1.1, range.scale = 1.1, repulse.scale = 1, site.stoch.scale = 0, sd.center=1, sd.range=1,rho=NULL, th=th)}
 
-sim.list<-replicate(50,sim.func(),simplify=FALSE)
+sim.list<-replicate(10,sim.func(),simplify=FALSE)
 
 gridlist<-lapply(sim.list[1:6],function(x){
   gridplot(x,tree=trx,threshold=-log10(th),opt.color=TRUE,guide=FALSE)})
 multiplot(plotlist=gridlist,cols=3)
 ```
 
+Starting to seperation in the red and blue clades, which suggests the simulation is working as expected.
+
+##Mean Phylogenetic Diversity compared to a null model
+
+```{r}
+mpdNiche<-lapply(sim.list,function(x){
+siteXspp<-x$Y
+colnames(siteXspp)<-colnames(ctrx)
+ses.mpd(siteXspp,ctrx,iterations=500)
+})
+m.dat<-melt(mpdNiche)
+
+nichempd<-ggplot(m.dat[m.dat$variable=='mpd.obs.p',],aes(x=value)) + geom_histogram() + geom_vline(xintercept=c(.05),col='red') + ggtitle("Strong Phylogenetic Signal in Occurrance Trait") + xlab("P.value after randomization test")
+
+ldat<-rbind_all(mpdNiche)
+con<-table(ldat$mpd.obs.p < .05)
+
+paste("There are",con[[2]], "significantly clustered assemblages. This is",round(con[[2]]/(con[[1]]+con[[2]]),2),"%")
+```
+
 ###Co-occurrence as a function of relatedness
+
+What would the form of the logistic model be if niche conservatism (i.e strong phylogenetic signal in a trait governing occurrence) was the dominant mechanism shaping assembly?
+
+
+**Functional Form**: We expect that as there is a more closely related species, there should be greater probability of co-occurrence.
+
 
 ```{r}
 ### Compute co-occurrence
@@ -361,57 +409,41 @@ for (x in 1:length(sim.list)){
 
 phy_nichec<-rbind_all(sim.occur)
 
-ggplot(phy_nichec,aes(x=Phylo.Relatedness,y=P_A)) + geom_smooth(aes(group=1),method="glm",family="binomial",formula=(y~(poly(x,2))))+ labs(y="Probability of Presence",x="Phylogenetic Distance to Nearest Species in the Assemblage")
+nicheplot<-ggplot(phy_nichec,aes(x=Phylo.Relatedness,y=P_A)) + geom_smooth(aes(group=1),method="glm",family="binomial",formula=(y~(poly(x,2))))+ labs(y="Probability of Presence",x="Phylogenetic Distance to Nearest Species in the Assemblage") + ggtitle("Strong Phylogenetic Signal in Occurrance Trait")
+nicheplot
 ```
 
 **Conclusion: As relatedness increases, species tend to co-occur more. This fits out prediction of niche conservatism. **
-
-##Try another assemblage size, grid = 10X10 and range=5 cells. 
-
-```{r,height=20}
-#Threshold for presence
-th=.6
-
-sim.func<-function(){scape(trx, scape.size=10, g.center=2, g.range=2, g.repulse=1, wd.all=20, signal.center=TRUE, signal.range=TRUE, same.range=TRUE, repulse=FALSE,center.scale = 1, range.scale = 1, repulse.scale = 1, site.stoch.scale = 0, sd.center=1, sd.range=1,rho=NULL, th=th)}
-
-sim.list<-replicate(20,sim.func(),simplify=FALSE)
-
-```
-
-```{r}
-### Compute co-occurrence
-sim.occur<-list()
-for (x in 1:length(sim.list)){
-  phy<-co_occur(sim.list[[x]])
-  phy$Iteration<-x
-  sim.occur[[x]]<-phy
-  }
-
-phy_nichec2<-rbind_all(sim.occur)
-
-ggplot(phy_nichec2,aes(x=Phylo.Relatedness,y=P_A)) + geom_smooth(aes(group=1),method="glm",family="binomial",formula=(y~(poly(x,2))))+ labs(y="Probability of Presence",x="Phylogenetic Distance to Nearest Species in the Assemblage")
-```
 
 #Simulation 3: Niche Conservatism and competition
 
 We would expect red and blue clades to seperate, but then fragment to create the checkerboard pattern of distribution (see papers by Simberloff and Gotelli)
 
 ```{r,fig.height=10}
-sim.func<-function(){scape(trx, scape.size=7, g.center=1.1, g.range=1.1, g.repulse=2, wd.all=15, signal.center=TRUE, signal.range=TRUE, same.range=TRUE, repulse=TRUE,center.scale = 1, range.scale = 1, repulse.scale = 100, site.stoch.scale = .0, sd.center=1, sd.range=1,rho=NULL, th=th)}
+sim.func<-function(){scape(trx, scape.size=7, g.center=.8, g.range=.8, g.repulse=2, wd.all=10, signal.center=TRUE, signal.range=TRUE, same.range=TRUE, repulse=TRUE,center.scale = 1, range.scale = 1, repulse.scale = 1, site.stoch.scale = 0, sd.center=1, sd.range=1,rho=NULL, th=th)}
 
 sim.list<-replicate(50,sim.func(),simplify=FALSE)
 
 gridlist<-lapply(sim.list[1:6],function(x){
   p<-gridplot(x,tree=trx,threshold=-log10(th),opt.color=TRUE,guide=F)})
 multiplot(plotlist=gridlist,cols=3)
+```
 
-#gridlist<-lapply(sim.list[1:5],function(x){
-#probPlot(x,col="Species",facet="~Gradient")})
+Now we see the checkerboard pattern!
 
-#multiplot(plotlist=gridlist,cols=2) 
+
+```{r}
+mpdNicheC<-lapply(sim.list,function(x){
+siteXspp<-x$Y
+colnames(siteXspp)<-colnames(ctrx)
+ses.mpd(siteXspp,ctrx,iterations=1000)
+})
+m.dat<-melt(mpdNicheC)
+nicheCmpd<-ggplot(m.dat[m.dat$variable=='mpd.obs.p',],aes(x=value)) + geom_histogram() + geom_vline(xintercept=c(.05),col='red') + ggtitle("Weak Phylogenetic Signal and Competition")
 ```
 
 ###Co-occurrence as a function of relatedness
+Using a logistic model, what would the functional form be between probability of co-occurrence and phylogenetic distane to closest related species, if we knew that both niche conservatism and competition were acting simultanesouly?
 
 ```{r}
 th=.6 
@@ -424,47 +456,37 @@ sim.occur<-sim.occur[!sapply(sim.occur,length)==1]
 
 phy_comp<-rbind_all(sim.occur)
 
-ggplot(phy_comp,aes(x=Phylo.Relatedness,y=P_A)) + geom_smooth(method="glm",family="binomial",formula=(y~(poly(x,2)))) + labs(y="Probability of Presence",x="Phylogenetic Distance to Nearest Species in the Assemblage")
-```
-
-##Try another assemblage size, grid = 7X7 and range =5 cells. 
-
-```{r,fig.height=10}
-sim.func<-function(){scape(trx, scape.size=7, g.center=1.1, g.range=1.1, g.repulse=2, wd.all=5, signal.center=TRUE, signal.range=FALSE, same.range=TRUE, repulse=TRUE,center.scale = 1, range.scale = 1, repulse.scale = 100, site.stoch.scale = 0, sd.center=1, sd.range=1,rho=NULL, th=th)}
-
-sim.list<-replicate(20,sim.func(),simplify=FALSE)
-
-```
-
-```{r}
-th=.6 
-### Compute co-occurrence
-sim.occur<-lapply(sim.list,function(x){
-  phy<-co_occur(x)})
-
-#remove null lists
-sim.occur<-sim.occur[!sapply(sim.occur,length)==1]
-
-phy_comp2<-rbind_all(sim.occur)
-
-ggplot(phy_comp2,aes(x=Phylo.Relatedness,y=P_A)) + geom_smooth(method="glm",family="binomial",formula=(y~(poly(x,2)))) + labs(y="Probability of Presence",x="Phylogenetic Distance to Nearest Species in the Assemblage")
+nicheCplot<-ggplot(phy_comp,aes(x=Phylo.Relatedness,y=P_A)) + geom_smooth(method="glm",family="binomial",formula=(y~(poly(x,2)))) + labs(y="Probability of Presence",x="Phylogenetic Distance to Nearest Species in the Assemblage") + ggtitle("Strong Phylogenetic Signal in Occurance Trait")
+nicheCplot
 ```
 
 **Conclusion: Hypothesis supported. We see a non-linear relationship between distance to closest related species and probability of co-occurrence.**
+
+#Comparison of pattern of phylogenetic diversity
+```{r}
+multiplot(plotlist=list(nichempd,nicheCmpd,lotterympd),cols=3)
+```
+
+#Comparison of functional form
+
+```{r}
+multiplot(plotlist=list(nicheCplot,lotteryplot,nicheplot),cols=3)
+```
+
 
 #Varying levels of repulsion and signal
 
 One important question would be the sensitivity of the level of repulsion and range signal in creating our predicted pattern.
 
-
-```{r,fig.height=10}
-sim.func<-function(repulse,signal){scape(trx, scape.size=7, g.center=signal, g.range=1, g.repulse=repulse, wd.all=5, signal.center=TRUE, signal.range=TRUE, same.range=TRUE, repulse=TRUE,center.scale = 1, range.scale = 1, repulse.scale = 100, site.stoch.scale = 0, sd.center=1, sd.range=1,rho=NULL, th=th)} 
+```{r,fig.height=8}
+sim.func<-function(repulse,signal,scale){scape(trx, scape.size=7, g.center=signal, g.range=signal, g.repulse=repulse, wd.all=10, signal.center=TRUE, signal.range=TRUE, same.range=TRUE, repulse=TRUE,center.scale = 1, range.scale = 1, repulse.scale = 1, site.stoch.scale = 0, sd.center=1, sd.range=1,rho=NULL, th=th)} 
 
 #repeat 5 times for each set
-sig<-seq(1.5,5,.5)
-repel<-seq(1.5,5,.5)
-ins<-expand.grid(sig,repel)
-ins<-rbind(ins,ins,ins,ins,ins,ins,ins,ins,ins,ins,ins,ins,ins,ins,ins,ins,ins,ins,ins,ins)
+sig<-seq(0.1,1,.1)
+repel<-seq(20,21,.1)
+
+ins<-expand.grid(sig,repel,scale=1)
+ins<- ins[rep(seq_len(nrow(ins)), 50), ]
 colnames(ins)<-c("Signal","Repulse") 
 
 #container
@@ -474,11 +496,6 @@ for (x in 1:nrow(ins)){
   sim.list[[x]]<-sim.func(signal=ins[x,1],repulse=ins[x,2])
 }
 
-```
-
-###Co-occurrence as a function of relatedness
-
-```{r}
 ### Compute co-occurrence
 sim.occur<-list()
 for(x in 1:length(sim.list)){
@@ -490,9 +507,8 @@ for(x in 1:length(sim.list)){
 
 sim.occur<-sim.occur[!sapply(sim.occur,length)==3]
  
-
 phy<-rbind_all(sim.occur)
-ggplot(phy,aes(x=Phylo.Relatedness,y=P_A,col=as.factor(Repulsion))) + geom_smooth(method="glm",family="binomial",formula=(y~(poly(x,2)))) + labs(y="Probability of Presence",x="Phylogenetic Distance to Nearest Species in the Assemblage") + theme_bw() + facet_wrap(~Signal,scales="free") + labs(col="Repulsion") + scale_color_brewer(palette="RdBu")
+ggplot(phy,aes(x=Phylo.Relatedness,y=P_A,col=Repulsion)) + geom_smooth(method="glm",family="binomial",formula=(y~(poly(x,2))),aes(group=as.factor(Repulsion)),se=F) + labs(y="Probability of Presence",x="Phylogenetic Distance to Nearest Species in the Assemblage") + theme_bw() + facet_wrap(~Signal,scales="free") + labs(col="Repulsion") + scale_color_continuous(low="blue",high="red")
 ```
 
 Conclusion: The observed pattern is pretty robust to the exact parameters of g.center (facets) and g.repulse (color). 
@@ -504,21 +520,22 @@ for(x in 1:length(ps)){
   ps[[x]]$Hyp<-names(ps)[x]
 }
 
-lapply(ps,nrow) 
+nda<-lapply(ps,nrow) 
 
 psdat<-rbind_all(ps)
 write.csv(psdat,"C:/Users/Ben/Documents/Pred_Obs/Bayesian/simdats.csv")
 ```
 
+#Coefficients of the regression.
+
 #Does tree size effect the predicted pattern?
 
-Run a series of tree sizes, 4-32 species. For this analysis, i'm using generalized linear models with binomial fits, since each species has the same occurrence probability, this would be extremely similiar to the hiericichal bayes model, and saves alot of time for sensitivity analysis.
+Let's run a series of tree sizes from 20 to 100 species. For this analysis, i'm using generalized linear models with binomial fits, since each species has the same occurrence probability.
 
 ```{r,eval=FALSE}
 #create Phylogeny
 treeS<-function(size){
-  browser()
-trx<-compute.brlen(stree(n=size,type="balanced"))
+trx<-compute.brlen(stree(n=size,type="left"))
 plot(trx)
 
 #cophenetic distance
@@ -526,9 +543,9 @@ ctrx<-cophenetic(trx)
 
 th=.6
 
-sim.func<-function(){scape(trx, scape.size=5, g.center=10, g.range=1, g.repulse=10, wd.all=5, signal.center=TRUE, signal.range=FALSE, same.range=TRUE, repulse=TRUE,center.scale = 1, range.scale = 1, repulse.scale = 1, site.stoch.scale = 0, sd.center=1, sd.range=1,rho=NULL, th=th)}
+sim.func<-function(){scape(trx, scape.size=7, g.center=.8, g.range=.8, g.repulse=10, wd.all=10, signal.center=TRUE, signal.range=FALSE, same.range=TRUE, repulse=TRUE,center.scale = 1, range.scale = 1, repulse.scale = 1, site.stoch.scale = 0, sd.center=1, sd.range=1,rho=NULL, th=th)}
 
-sim.list<-replicate(20,sim.func(),simplify=FALSE)
+sim.list<-replicate(50,sim.func(),simplify=FALSE)
 
 ### Compute co-occurrence
 sim.occur<-lapply(sim.list,function(x){
@@ -544,11 +561,9 @@ p<-ggplot(phy_comp,aes(x=Phylo.Relatedness,y=P_A))  + geom_smooth(method="glm",f
 return(p)
 }
 
-sizes<-c(4,8,16,32)
-treeS(8)
-treeS(16)
-treeS(4)
+sizes<-seq(10,100,5)
 pl<-lapply(sizes,treeS)
 multiplot(plotlist=pl,cols=2)
 ```
 
+# Does tree shape effect predicted pattern?
