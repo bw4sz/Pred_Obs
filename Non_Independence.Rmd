@@ -1,0 +1,47 @@
+---
+title: "Non-independence in the Logistic Model"
+author: "Ben Weinstein"
+date: "Thursday, February 12, 2015"
+output: html_document
+---
+
+From Tony Ives:
+
+```
+Suppose there are three species, 1, 2, and 3, with the distance between 1 and 2 = 1, and between 3 and the other two species = 2. Then assume three sites with each site having two species, with species 1, 2,  and 3 missing from sites 1, 2, and 3, respectively. So the data look like
+```
+
+```{r}
+dat <- data.frame(sp=c(1,2,3,1,2,3,1,2,3), site=c(1,1,1,2,2,2,3,3,3), Y=c(0,1,1,1,0,1,1,1,0), x=c(1,2,2,2,1,2,1,1,2))
+```
+
+```{r}
+glm(formula = Y ~ x, family = "binomial", data = dat)
+```
+
+```
+So this gives a positive relationship between distance and presence, even though the presence of species is random under the constraint that there are two species in each site. Obviously, this isn’t a desirable property. 
+
+The reason that you get this is that the values of Y and x are structurally intertwined, so the values of Y aren’t independent.
+
+I’m wondering if there is a simpler way to do this
+```
+
+#Aim
+To address Tony's concern, i want to evaluate: 
+
+* How this potential non-independence could effect results
+
+* What is the range of covariates we could expect by random chance
+
+## Simulate a tree
+
+```{r}
+library(ape)
+library(picante)
+
+#Create a tree of 8 species
+tr<-stree(8,"balanced")
+
+
+Let's have a look a brief simulation and see if we can 
