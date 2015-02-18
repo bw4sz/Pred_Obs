@@ -1,14 +1,31 @@
 ---
-title: "Non-independence in the Logistic Model"
+title: "Structural independence in the logistic model"
 author: "Ben Weinstein"
 date: "Thursday, February 12, 2015"
 output: html_document
 ---
 
-From Tony Ives:
+```{r,message=FALSE,warning=FALSE}
+library(knitr)
+library(pez)
+library(ape)
+library(dplyr)
+library(ggplot2)
+library(reshape2)
+library(vegan)
+library(RColorBrewer)
+library(gridExtra)
+library(scales)
+library(picante)
+
+opts_chunk$set(warning=FALSE,message=FALSE,echo=TRUE)
+opts_chunk$set(cache=TRUE, cache.path = 'Independence_cache/', fig.path='figure/',fig.width=11,fig.height=6)
+```
+
+#Problem Statement
 
 ```
-Suppose there are three species, 1, 2, and 3, with the distance between 1 and 2 = 1, and between 3 and the other two species = 2. Then assume three sites with each site having two species, with species 1, 2,  and 3 missing from sites 1, 2, and 3, respectively. So the data look like
+Suppose there are three species, 1, 2, and 3, with the distance between 1 and 2 = 1, and between 3 and the other two species = 2. Then assume three sites with each site having two species, with species 1, 2,  and 3 missing from sites 1, 2, and 3, respectively. So the data look like:
 ```
 
 ```{r}
@@ -16,16 +33,22 @@ dat <- data.frame(sp=c(1,2,3,1,2,3,1,2,3), site=c(1,1,1,2,2,2,3,3,3), Y=c(0,1,1,
 ```
 
 ```{r}
+ggplot(dat,aes(x=x,y=Y)) + geom_point() + geom_smooth(method="lm")
 glm(formula = Y ~ x, family = "binomial", data = dat)
 ```
 
-```
-So this gives a positive relationship between distance and presence, even though the presence of species is random under the constraint that there are two species in each site. Obviously, this isn’t a desirable property. 
+So this gives a positive relationship between distance and  presence, even though the presence of species is random under the constraint that there are two species in each site. Obviously, this isn’t a desirable property. 
 
 The reason that you get this is that the values of Y and x are structurally intertwined, so the values of Y aren’t independent.
 
 I’m wondering if there is a simpler way to do this
-```
+
+
+----
+
+----
+
+----
 
 #Aim
 To address Tony's concern, i want to evaluate: 
@@ -34,14 +57,134 @@ To address Tony's concern, i want to evaluate:
 
 * What is the range of covariates we could expect by random chance
 
-## Simulate a tree
+```{r,echo=FALSE}
+#Define co-occur function
+
+co_occur<-function(dat,trx,ctrx){
+ 
+f<-split(dat,dat$site)
+
+#remove the localities with only 2 species
+f<-f[sapply(f,function(x) sum(x$Y)) > 1]
+
+if(length(f)==0){return(NA)}
+
+#Get closest related species in each site
+closest<-lapply(f,function(x){
+  
+  #species present
+  pres<-x$sp[x$Y==1]
+    dis<-ctrx[rownames(ctrx) %in% trx$tip.label,colnames(ctrx) %in% pres]
+    apply(dis,1,function(y){
+      as.matrix(min(y[!y==0]))
+      })
+  }) 
+
+#melt each list, a bit ugly
+tomerge<-lapply(closest,function(x){
+ dm<-melt(as.matrix(x))[,-2]
+ colnames(dm)<-c("sp","x")
+ return(dm)})
+
+tomerge<-melt(tomerge,id.var=c("sp"))
+
+tomerge<-dcast(tomerge,...~variable)
+colnames(tomerge)<-c("sp","site","x")
+
+#need to be characters not factors
+dat$site<-as.character(dat$site)
+tomerge$site<-as.character(tomerge$site)
+
+PA_phylo<-merge(dat,tomerge,by=c("site","sp"))
+PA_phylo$Y<-as.numeric(PA_phylo$Y)
+
+#remove Inf lengths, no co-occurrence
+PA_phylo[!is.finite(PA_phylo$Y),"Y"]<-NA
+
+return(PA_phylo)
+}
+
+```
+
+##What does the relationship look like with increasing species and sites
+
+Let's generalize this structure and see how this relationship changes with more sites and species, does it flatten out?
+
+  * Each species draw is bernoulli trial
+  * There is no min or max richness
+
+###Simulate phylogeny
+  * Start with a balanced tree, we can check other topologies as well
+
+### Build a function to compute logistic regression for any given number of species in a phylogeny and sites
+
+  * Occupancy is drawn from a bernoulli trial 
+  
+```{r}
+
+simL<-function(species,sites){
+
+#Simulate a balanced phylogeny
+trx<-compute.brlen(stree(species,"balanced",tip.label=1:species))
+
+#Cophenetic matrix
+ctrx<-cophenetic(trx)
+
+#Create data.frame
+sp=rep(1:species,sites)
+site=as.vector(sapply(1:sites,function(x) rep(x,species)))
+dat<-data.frame(sp,site)
+
+#Presence/absence
+dat$Y<-rbinom(sites*species,1,.5)
+
+#Compute co-occurrence
+dat<-co_occur(dat,trx,ctrx)
+return(dat)}
+```
+
+## Iterate over a large parameter space
 
 ```{r}
-library(ape)
-library(picante)
+species.space<-rep(2^(3:7),50)
+site.space<-rep(c(20,40,60,80,100),50)
+```
 
-#Create a tree of 8 species
-tr<-stree(8,"balanced")
+#Simulate Data
 
+  * For each site and species combination draw random occurrence
+  
+```{r}
+simdat<-lapply(species.space,function(x){ 
+    lapply(site.space,function(y){
+      l<-simL(x,y) 
+  mod<-glm(data=l,formula = Y ~ x, family = "binomial")  
+  summary(mod)$coefficients["x","Estimate"]
+      })
+})
+  
+#name layers
+names(simdat)<-species.space
 
-Let's have a look a brief simulation and see if we can 
+for(x in 1:length(simdat)){
+  names(simdat[[x]])<-site.space
+}
+
+```
+
+## View regression
+```{r}
+mdat<-melt(simdat)
+colnames(mdat)<-c("Estimate","Sites","Species")
+
+mdat$Sites<-as.numeric(mdat$Sites)
+mdat$Species<-as.numeric(mdat$Species)
+
+ggplot(mdat,aes(x=as.factor(Species),y=Estimate,fill=as.factor(Sites))) + geom_violin() + theme_bw() + labs(fill="# of Sites",x="# of Species") + coord_flip() + facet_wrap(~Sites,ncol=5) + ggtitle("Null Distribution: Sensitivity Analysis")
+```
+
+```{r}
+save.image("Independence.Rdata")
+#load image if desired
+#load("Independence.Rdata")
+```
