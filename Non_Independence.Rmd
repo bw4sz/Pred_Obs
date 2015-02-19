@@ -146,8 +146,8 @@ return(dat)}
 ## Iterate over a large parameter space
 
 ```{r}
-species.space<-rep(2^(3:7),50)
-site.space<-rep(c(20,40,60,80,100),50)
+species.space<-rep(2^(3:7))
+site.space<-rep(c(20,40,60,80,100),2)
 ```
 
 #Simulate Data
@@ -157,9 +157,10 @@ site.space<-rep(c(20,40,60,80,100),50)
 ```{r}
 simdat<-lapply(species.space,function(x){ 
     lapply(site.space,function(y){
-      l<-simL(x,y) 
-  mod<-glm(data=l,formula = Y ~ x, family = "binomial")  
-  summary(mod)$coefficients["x","Estimate"]
+      l<-simL(x,y)  
+  mod<-glm(data=l,formula = Y ~ x, family = "binomial") 
+  mode<-summary(mod)$coefficients[,"Estimate"]
+  data.frame(Intercept=mode[[1]],x=mode[[2]])
       })
 })
   
@@ -175,7 +176,7 @@ for(x in 1:length(simdat)){
 ## View regression
 ```{r}
 mdat<-melt(simdat)
-colnames(mdat)<-c("Estimate","Sites","Species")
+colnames(mdat)<-c("variable","Estimate","Sites","Species")
 
 mdat$Sites<-as.numeric(mdat$Sites)
 mdat$Species<-as.numeric(mdat$Species)
@@ -183,8 +184,41 @@ mdat$Species<-as.numeric(mdat$Species)
 ggplot(mdat,aes(x=as.factor(Species),y=Estimate,fill=as.factor(Sites))) + geom_violin() + theme_bw() + labs(fill="# of Sites",x="# of Species") + coord_flip() + facet_wrap(~Sites,ncol=5) + ggtitle("Null Distribution: Sensitivity Analysis")
 ```
 
+##Observed versus null distribution
+
+Read in data
+```{r}
+#read in tree
+trx<-read.tree("InputData\\hum294.tre")
+ctrx<-cophenetic(trx)
+
+siteXspp<-t(read.csv(paste(gitpath,"InputData//siteXspp.csv",sep=""),row.names=1))
+
+source(paste(gitpath,"SpeciesOverlapSourceFunctions.R",sep=""))
+
+```
+
+Define function compute co-occurrence in each row
+
+#Sample trajectories
+```{r}
+traj<-group_by(mdat,Sites,Species,variable) %>% summarize(Lower=quantile(Estimate,0.025),Higher=quantile(Estimate,0.975),mean=mean(Estimate)) 
+
+names(traj)[3]<-"parameter"
+mtraj<-melt(traj,measure.vars=c("Lower","Higher","mean"))
+mtraj<-dcast(mtraj,...~parameter)
+
+#Write a function that computes a random trajectory
+ggplot(mtraj,aes(x=))
+head(dcast(traj,...~variable))
+
+ggplot(traj,aes(x=))
+
+
+```
+
 ```{r}
 save.image("Independence.Rdata")
 #load image if desired
-#load("Independence.Rdata")
+load("Independence.Rdata")
 ```
