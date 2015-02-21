@@ -16,7 +16,10 @@ library(vegan)
 library(RColorBrewer)
 library(gridExtra)
 library(scales)
+library(stringr)
 library(picante)
+library(foreach)
+library(doSNOW)
 
 opts_chunk$set(warning=FALSE,message=FALSE,echo=TRUE)
 opts_chunk$set(cache=TRUE, cache.path = 'Independence_cache/', fig.path='figure/',fig.width=11,fig.height=6)
@@ -147,7 +150,7 @@ return(dat)}
 
 ```{r}
 species.space<-rep(2^(3:7))
-site.space<-rep(c(20,40,60,80,100),2)
+site.space<-rep(c(20,40,60,80,100),500)
 ```
 
 #Simulate Data
@@ -184,24 +187,55 @@ mdat$Species<-as.numeric(mdat$Species)
 ggplot(mdat,aes(x=as.factor(Species),y=Estimate,fill=as.factor(Sites))) + geom_violin() + theme_bw() + labs(fill="# of Sites",x="# of Species") + coord_flip() + facet_wrap(~Sites,ncol=5) + ggtitle("Null Distribution: Sensitivity Analysis")
 ```
 
+### Conclusion
+
 ##Observed versus null distribution
 
 Read in data
 ```{r}
 #read in tree
 trx<-read.tree("InputData\\hum294.tre")
+
+new<-str_extract(trx$tip.label,"(\\w+).(\\w+)")
+#get duplicates
+trx<-drop.tip(trx,trx$tip.label[duplicated(new)])
+
+#name tips.
+trx$tip.label<-str_extract(trx$tip.label,"(\\w+).(\\w+)")
+
 ctrx<-cophenetic(trx)
 
-siteXspp<-t(read.csv(paste(gitpath,"InputData//siteXspp.csv",sep=""),row.names=1))
+siteXspp<-read.csv("C:/Users/Ben/Dropbox/Thesis/Pred_Realized/Assemblages/SiteXsppraster.csv",row.names=1)
 
-source(paste(gitpath,"SpeciesOverlapSourceFunctions.R",sep=""))
+dim(siteXspp)
+print("133 Species at 201 Sites")
+source("SpeciesOverlapSourceFunctions.R")
 
 ```
 
-Define function compute co-occurrence in each row
+```{r}
+#definite function to randomize assemblage and compute glm
+randomCo<-function(){
+  r<-randomizeMatrix(siteXspp,"independentswap")
+  l<-co_occur(melt(r))
+  mod<-glm(data=l,formula = P_A ~ Phylo.Relatedness, family = "binomial") 
+  mode<-summary(mod)$coefficients[,"Estimate"]
+  data.frame(Intercept=mode[[1]],x=mode[[2]])
+}
+```
+
+```{r}
+cl<-makeCluster(6,"SOCK")
+registerDoSNOW(cl)
+out<-times(2) %do% {
+  list(randomCo())
+  }
+
+stopCluster()
+```
 
 #Sample trajectories
-```{r}
+```{r,eval=FALSE}
 traj<-group_by(mdat,Sites,Species,variable) %>% summarize(Lower=quantile(Estimate,0.025),Higher=quantile(Estimate,0.975),mean=mean(Estimate)) 
 
 names(traj)[3]<-"parameter"

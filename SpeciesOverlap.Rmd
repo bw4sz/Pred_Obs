@@ -54,7 +54,7 @@ droppath<-"C:/Users/Ben/Dropbox/"
 setwd(gitpath)
 
 #Load image if desired
-#load(paste(droppath,"Thesis/Pred_Realized/Assemblages/Threshold0.05/Results/PredictedRealized.RData",sep=""))
+load(paste(droppath,"Thesis/Pred_Realized/Assemblages/Threshold0.05/Results/PredictedRealized.RData",sep=""))
 
 ```
 
@@ -180,6 +180,9 @@ rownames(cellSitesXY@coords)<-colnames(siteXspp.raster)
 congruence<-melt(list(Phylo=rownames(ctrx),Assemblage=rownames(siteXspp.raster),Suitability=names(niche),Clades=clades$double.))
 
 write.csv(table(congruence),paste(droppath,"Thesis/Pred_Realized/Assemblages//DataOverlap.csv",sep=""))
+
+#write siteXspp table
+write.csv(siteXspp.raster,paste(droppath,"Thesis/Pred_Realized/Assemblages//SiteXsppraster.csv",sep="/"))
 
 cong<-as.data.frame.array(table(congruence))
 
