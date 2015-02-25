@@ -184,10 +184,13 @@ colnames(mdat)<-c("variable","Estimate","Sites","Species")
 mdat$Sites<-as.numeric(mdat$Sites)
 mdat$Species<-as.numeric(mdat$Species)
 
-ggplot(mdat,aes(x=as.factor(Species),y=Estimate,fill=as.factor(Sites))) + geom_violin() + theme_bw() + labs(fill="# of Sites",x="# of Species") + coord_flip() + facet_wrap(~Sites,ncol=5) + ggtitle("Null Distribution: Sensitivity Analysis")
+ggplot(mdat,aes(x=as.factor(Species),y=Estimate,fill=as.factor(Sites))) + geom_violin() + theme_bw() + labs(fill="# of Sites",x="# of Species", y= "Covariate Estimate for phylogenetic distance to closest related species") + coord_flip() + facet_wrap(~Sites,ncol=5) + ggtitle("Null Distribution: Sensitivity Analysis")
 ```
 
+The x axis is the estimate for the x covariate (phylogenetic distance )
 ### Conclusion
+
+
 
 ##Observed versus null distribution
 
@@ -205,6 +208,11 @@ trx$tip.label<-str_extract(trx$tip.label,"(\\w+).(\\w+)")
 
 ctrx<-cophenetic(trx)
 
+#standardize the distances, just to avoid rounding error.
+ctrx<-ctrx/max(ctrx)
+
+
+
 siteXspp<-read.csv("C:/Users/Ben/Dropbox/Thesis/Pred_Realized/Assemblages/SiteXsppraster.csv",row.names=1)
 
 dim(siteXspp)
@@ -218,36 +226,38 @@ source("SpeciesOverlapSourceFunctions.R")
 randomCo<-function(){
   r<-randomizeMatrix(siteXspp,"independentswap")
   l<-co_occur(melt(r))
-  mod<-glm(data=l,formula = P_A ~ Phylo.Relatedness, family = "binomial") 
+  mod<-glm(data=l,formula = P_A ~ poly(Phylo.Relatedness,2), family = "binomial") 
   mode<-summary(mod)$coefficients[,"Estimate"]
-  data.frame(Intercept=mode[[1]],x=mode[[2]])
+  data.frame(Intercept=mode[[1]],x=mode[[2]],x2=mode[[3]])
 }
 ```
 
 ```{r}
-cl<-makeCluster(6,"SOCK")
+cl<-makeCluster(20,"SOCK")
 registerDoSNOW(cl)
-out<-times(2) %do% {
-  list(randomCo())
+out<-foreach(x=1:1000,.packages=c("picante","reshape2")) %dopar% {
+  randomCo()
   }
 
-stopCluster()
+stopCluster(cl)
 ```
 
-#Sample trajectories
-```{r,eval=FALSE}
-traj<-group_by(mdat,Sites,Species,variable) %>% summarize(Lower=quantile(Estimate,0.025),Higher=quantile(Estimate,0.975),mean=mean(Estimate)) 
+#Observed value
+```{r}
+l<-co_occur(melt(as.matrix(siteXspp)))
+  mod<-glm(data=l,formula = P_A ~ poly(Phylo.Relatedness,2), family = "binomial") 
+  mode<-summary(mod)$coefficients[,"Estimate"]
+  observed<-melt(data.frame(Intercept=mode[[1]],x=mode[[2]],x2=mode[[3]]))
+```
 
-names(traj)[3]<-"parameter"
-mtraj<-melt(traj,measure.vars=c("Lower","Higher","mean"))
-mtraj<-dcast(mtraj,...~parameter)
+#Visualize null distribution versus observed value
 
-#Write a function that computes a random trajectory
-ggplot(mtraj,aes(x=))
-head(dcast(traj,...~variable))
+```{r,eval=TRUE}
 
-ggplot(traj,aes(x=))
+#melt data frame
+dat<-melt(out)
 
+ggplot(dat,aes(x=value)) + geom_histogram() + facet_wrap(~variable,scales="free") + theme_bw() + ggtitle("Null Distribution of GLM Covariates") + geom_vline(data=observed,aes(xintercept=value),col='red',linetype='dashed')
 
 ```
 

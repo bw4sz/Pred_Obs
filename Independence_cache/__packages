@@ -1,8 +1,11 @@
 ape
 base
+doSNOW
 dplyr
+foreach
 ggplot2
 gridExtra
+iterators
 knitr
 lattice
 nlme
@@ -12,4 +15,6 @@ picante
 RColorBrewer
 reshape2
 scales
+snow
+stringr
 vegan
