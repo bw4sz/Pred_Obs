@@ -268,32 +268,33 @@ if(plotR){return(nicheCplot)} else {return(phy_comp)}
 
 ---
 
-#Visualizing the simulation.
+#Visualizing the simulation
 
 The easiest way to quickly tell the phylogenetic structure of a run would be to color each species range on a scale from red to blue. Let's say i wanted to color by relatedness. One simple way to approximate this is to number the tips from 1 to n, and assume a divergent scale. This is not quite true, since the relationship is non linear, but its a good start.
 
-For each visualization, we have one clade 'blue' and one clade 'red'.
-
+```
+**For each visualization, we have one clade 'blue' and one clade 'red'.**
+```
 #Simulation 1: No Phylogenetic Signal Followed by Strong Repulsion in Occurrence Trait
 
 We would expect red and blue clades to seperate, but then fragment to create the checkerboard pattern of distribution.
 
 Using a logistic model, what would the functional form be between probability of co-occurrence and phylogenetic distane to closest related species, if we knew that both niche conservatism and competition were acting simultanesouly?
 
-```{r,fig.height=3,fig.width=3}
+```{r,fig.height=4,fig.width=4}
 nicheWCplot<-sim(trx,size=10,breadth=40,signalFlag=F,repulse=T,replicates=20,multiplot=T)
 nicheWCplot<-nicheWCplot + ggtitle("No Phylogenetic Signal and Strong Repulsion in Occurance Trait")
 ```
 
 #Simulation 2: Strong Phylogenetic Signal Followed by Strong Repulsion in Occurrence Trait
 
-```{r,fig.height=3,fig.width=3}
+```{r,fig.height=4,fig.width=4}
 nicheCplot<-sim(trx,size=10,breadth=40,signalFlag=T,repulse=T,replicates=20,multiplot=T,ylm=c(0,1)) + ggtitle("Strong Phylogenetic Signal and Repulsion in Occurance Trait")
 ```
 
 #Simulation 3: No Phylogenetic Signal Followed by No Repulsion in Occurrence Trait
 
-```{r,fig.height=3,fig.width=3}
+```{r,fig.height=4,fig.width=4}
 nicheWCNRplot<-sim(trx,size=10,breadth=40,signalFlag=F,repulse=F,replicates=20,multiplot=T)
 
 nicheWCNRplot<-nicheWCNRplot + ggtitle("No Phylogenetic Signal and No Repulsion in Occurance Trait")
@@ -301,7 +302,7 @@ nicheWCNRplot<-nicheWCNRplot + ggtitle("No Phylogenetic Signal and No Repulsion 
 
 #Simulation 4: Strong Phylogenetic Signal Followed by No Repulsion in Occurrence Trait
 
-```{r,fig.height=3,fig.width=3}
+```{r,fig.height=4,fig.width=4}
  
 nicheCNRplot<-sim(trx,size=10,breadth=40,signalFlag=T,repulse=F,replicates=20,multiplot=T)
 
@@ -453,12 +454,33 @@ trees(sp=32,type="balanced",size=20,breadth=200,replicates=50,ylm=c(0,.5))
 ###Ladder
 
 ```{r,fig.height=6}
-trees(sp=32,type="left",size=20,breadth=200,replicates=50,ylm=c(0,.5)) 
+trees(sp=32,type="left",size=20,breadth=200,replicates=50,ylm=c(0,.7)) 
 ```
 
+Looks like just the strong signal and the strong repulsion is more sensitive to tip size at 32 tips, let's explore this in a bit more detail.
+
+```{r}
+trx<-compute.brlen(stree(n=32,type="balanced"))
+plot(trx)
+
+nicheCplot<-sim(trx,size=20,breadth=500,signalFlag=T,repulse=T,replicates=5,multiplot=T,ylm=c(0,1),repulseVal=100,signal=100) + ggtitle("Stronger Phylogenetic Signal and Stronger Repulsion in Occurance Trait")
+nicheCplot
+```
+
+As species # increase, the level of repulsion and signal needs to increase to get the predicted pattern.
+
+```{r}
+trx<-compute.brlen(stree(n=32,type="left"))
+plot(trx)
+
+nicheCplot<-sim(trx,size=20,breadth=500,signalFlag=T,repulse=T,replicates=5,multiplot=T,ylm=c(0,1),repulseVal=100,signal=100) + ggtitle("Stronger Phylogenetic Signal and Stronger Repulsion in Occurance Trait")
+nicheCplot
+```
+
+Once we increase the signal and repulsion, we recover the polynomial pattern we see with smaller trees.
 
 #Conclusion
-The polynomial pattern seems robust to tree shape. It seems dulled by increasing tree size, i.e that it takes more repulsion in larger trees to decrease co-occurrance among closely related species. The polynomial pattern must be the balance between the trait conservatism and the repulsion, and with more species its probably a narrower range that creates this pattern. As # of tips increases, there is more stochasticity.
+The polynomial pattern seems robust to tree size, although the level of repulsion needs to be increased as there are more species in the tree. This is due to more time since most recent common ancestory. The pattern is not very robust to ladder trees, this is because there are very few closely related species in a ladder tree. We would expect this pattern to be more possible in tippy trees that have many late branching taxa and a more even distribution of tip distances.
 
 ```{r}
 save.image("Simulation.RData")
