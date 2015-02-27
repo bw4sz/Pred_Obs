@@ -34,6 +34,9 @@ library(gridExtra)
 library(scales)
 library(picante)
 
+#Load Data
+#load("Simulation.RData")
+
 opts_chunk$set(warning=FALSE,message=FALSE,echo=FALSE)
 opts_chunk$set(cache=TRUE, cache.path = 'SimulationsPez_cache/', fig.path='figure/',fig.width=11,fig.height=6)
 
@@ -225,6 +228,39 @@ return(PA_phylo)
   
 ```
 
+```{r,echo=F}
+sim<-function(trx,size,breadth,signal,repulse,repulseVal=1,replicates,plotR=T){
+#Create a function to run any combiation of parameters and create the plot
+sim.func<-function(){
+  #probability of occupancy
+  th=.6
+  
+  scape(trx, scape.size=size, g.center=1, g.range=1, g.repulse=repulseVal, wd.all=breadth, signal.center=TRUE, signal.range=TRUE, same.range=TRUE, repulse=repulse,center.scale = 1, range.scale = 1, repulse.scale = 1, site.stoch.scale = 0, sd.center=1, sd.range=1,rho=NULL, th=th)}
+
+sim.list<-replicate(replicates,sim.func(),simplify=FALSE)
+
+th=.6 
+
+### Compute co-occurrence
+sim.occur<-lapply(sim.list,function(x){
+  phy<-co_occur(x,trx,ctrx)})
+
+#remove null lists
+sim.occur<-sim.occur[!sapply(sim.occur,length)==1]
+
+#Iteration count
+for(x in 1:length(sim.occur)){
+  sim.occur[[x]]$Iteration<-x
+}
+phy_comp<-rbind_all(sim.occur)
+
+phy_comp$I<-cut(phy_comp$Iteration,c(seq(0,replicates,1)),labels=1:replicates)
+
+nicheCplot<-ggplot(phy_comp,aes(x=Phylo.Relatedness,y=P_A)) + geom_smooth(aes(group=Iteration),method="glm",family="binomial",formula=(y~(poly(x,2)))) + labs(y="Probability of Presence",x="Phylogenetic Distance to Nearest Species in the Assemblage") + theme_bw()
+if(plotR){return(nicheCplot)} else {return(phy_comp)}
+}
+```
+
 ---
 
 #Visualizing the simulation.
@@ -235,57 +271,13 @@ For each visualization, we have one clade 'blue' and one clade 'red'.
 
 #Simulation 1: Weak Phylogenetic Signal Followed by Repulsion in Occurrence Trait
 
-We would expect red and blue clades to seperate, but then fragment to create the checkerboard pattern of distribution (see papers by Simberloff and Gotelli)
+We would expect red and blue clades to seperate, but then fragment to create the checkerboard pattern of distribution.
 
-```{r,fig.height=6}
-th=.6 
-
-sim.func<-function(){scape(trx, scape.size=20, g.center=.1, g.range=.1, g.repulse=1, wd.all=500, signal.center=TRUE, signal.range=TRUE, same.range=TRUE, repulse=TRUE,center.scale = 1, range.scale = 1, repulse.scale = 1, site.stoch.scale = 0, sd.center=1, sd.range=1,rho=NULL, th=th)}
-
-sim.list<-replicate(20,sim.func(),simplify=FALSE)
-
-gridlist<-lapply(sim.list[1:6],function(x){
-  p<-gridplot(x,tree=trx,threshold=-log10(th),opt.color=TRUE,guide=F)})
-multiplot(plotlist=gridlist,cols=3)
-```
-
-Now we see the checkerboard pattern of occurrence, where related species tend to in the same area, but not alongside very closely related species.
-
-##Mean Phylogenetic Diversity
-
-```{r,eval=FALSE}
-mpdNicheC<-lapply(sim.list,function(x){
-siteXspp<-x$Y
-colnames(siteXspp)<-colnames(ctrx)
-ses.mpd(siteXspp,ctrx,iterations=500)
-})
-m.dat<-melt(mpdNicheC)
-nicheWCmpd<-ggplot(m.dat[m.dat$variable=='mpd.obs.z',],aes(x=value)) + geom_histogram() + geom_vline(xintercept=c(.00),col='red') + ggtitle("Weak Phylogenetic Signal and Repulsion") + xlim(-5,5) + xlab("Effective Size")
-nicheWCmpd
-```
-
-###Co-occurrence as a function of relatedness
 Using a logistic model, what would the functional form be between probability of co-occurrence and phylogenetic distane to closest related species, if we knew that both niche conservatism and competition were acting simultanesouly?
 
-```{r}
-th=.6 
-### Compute co-occurrence
-sim.occur<-lapply(sim.list,function(x){
-  phy<-co_occur(x,trx,ctrx)})
-
-#remove null lists
-sim.occur<-sim.occur[!sapply(sim.occur,length)==1]
-
-
-#Iteration count
-for(x in 1:length(sim.occur)){
-  sim.occur[[x]]$Iteration<-x
-}
-phy_comp_model1<-rbind_all(sim.occur)
-
-phy_comp_model1$I<-cut(phy_comp_model1$Iteration,c(seq(0,20,1)),labels=1:20)
-
-nicheWCplot<-ggplot(phy_comp_model1,aes(x=Phylo.Relatedness,y=P_A)) + geom_smooth(aes(group=Iteration),method="glm",family="binomial",formula=(y~(poly(x,2)))) + labs(y="Probability of Presence",x="Phylogenetic Distance to Nearest Species in the Assemblage") + ggtitle("Weak Phylogenetic Signal and Repulsion in Occurance Trait")
+```{r,fig.height=6}
+nicheWCplot<-sim(trx,size=10,breadth=100,signal=.1,repulse=T,replicates=50)
+nicheWCplot<-nicheWCplot + ggtitle("Weak Phylogenetic Signal and Repulsion in Occurance Trait")
 nicheWCplot
 ```
 
@@ -296,65 +288,33 @@ nicheWCplot
 We would expect red and blue clades to seperate, but then fragment to create the checkerboard pattern of distribution (see papers by Simberloff and Gotelli)
 
 ```{r,fig.height=6}
-sim.func<-function(){scape(trx, scape.size=20, g.center=1, g.range=1, g.repulse=1, wd.all=500, signal.center=TRUE, signal.range=TRUE, same.range=TRUE, repulse=TRUE,center.scale = 1, range.scale = 1, repulse.scale = 1, site.stoch.scale = 0, sd.center=1, sd.range=1,rho=NULL, th=th)}
-
-sim.list<-replicate(20,sim.func(),simplify=FALSE)
-
-gridlist<-lapply(sim.list[1:6],function(x){
-  p<-gridplot(x,tree=trx,threshold=-log10(th),opt.color=TRUE,guide=F)})
-multiplot(plotlist=gridlist,cols=3)
-```
-
-##Mean Phylogenetic Diversity
-
-```{r,eval=FALSE}
-mpdNicheC<-lapply(sim.list,function(x){
-siteXspp<-x$Y
-colnames(siteXspp)<-colnames(ctrx)
-ses.mpd(siteXspp,ctrx,iterations=500)
-})
-m.dat<-melt(mpdNicheC)
-nicheCmpd<-ggplot(m.dat[m.dat$variable=='mpd.obs.z',],aes(x=value)) + geom_histogram() + geom_vline(xintercept=c(.00),col='red') + ggtitle("Strong Phylogenetic Signal and Repulsion") + xlim(-5,5) + xlab("Effective Size")
-nicheCmpd
-```
-
-###Co-occurrence as a function of relatedness
-Using a logistic model, what would the functional form be between probability of co-occurrence and phylogenetic distane to closest related species, if we knew that both strong niche conservatism and competition were acting simultanesouly?
-
-```{r}
-th=.6 
-### Compute co-occurrence
-sim.occur<-lapply(sim.list,function(x){
-  phy<-co_occur(x,trx,ctrx)})
-
-#remove null lists
-sim.occur<-sim.occur[!sapply(sim.occur,length)==1]
-
-
-#Iteration count
-for(x in 1:length(sim.occur)){
-  sim.occur[[x]]$Iteration<-x
-}
-phy_comp_model2<-rbind_all(sim.occur)
-
-phy_comp_model2$I<-cut(phy_comp_model2$Iteration,c(seq(0,20,1)),labels=1:20)
-
-nicheCplot<-ggplot(phy_comp_model2,aes(x=Phylo.Relatedness,y=P_A)) + geom_smooth(aes(group=Iteration),method="glm",family="binomial",formula=(y~(poly(x,2)))) + labs(y="Probability of Presence",x="Phylogenetic Distance to Nearest Species in the Assemblage") + ggtitle("Strong Phylogenetic Signal and Repulsion in Occurance Trait")
+nicheCplot<-sim(trx,size=10,breadth=100,signal=1,repulse=T,replicates=50) + ggtitle("Strong Phylogenetic Signal and Repulsion in Occurance Trait")
 nicheCplot
 ```
 
+#Simulation 3: Weak Phylogenetic Signal Followed by No Repulsion in Occurrence Trait
 
-#Comparison of pattern of phylogenetic diversity
-```{r,eval=FALSE}
-grid.arrange(nicheWCmpd,nicheCmpd,ncol=2) 
+```{r,fig.height=6}
+nicheWCNRplot<-sim(trx,size=10,breadth=100,signal=.1,repulse=F,replicates=50)
+
+nicheWCNRplot<-nicheWCNRplot + ggtitle("Weak Phylogenetic Signal and No Repulsion in Occurance Trait")
+nicheWCNRplot
 ```
 
-Positive values are considered phylogenetic overdispersed, negative value are considered clustered.
+#Simulation 4: Strong Phylogenetic Signal Followed by No Repulsion in Occurrence Trait
+
+```{r,fig.height=6}
+ 
+nicheCNRplot<-sim(trx,size=10,breadth=100,signal=1,repulse=F,replicates=50)
+
+nicheCNRplot<-nicheCNRplot + ggtitle("Weak Phylogenetic Signal and No Repulsion in Occurance Trait")
+nicheCNRplot
+```
 
 #Comparison of functional form
 
 ```{r}
-grid.arrange(nicheWCplot,nicheCplot,ncol=2) 
+grid.arrange(nicheWCplot,nicheCplot,nicheWCNRplot,nicheCNRplotncol=2) 
 ```
 
 ```{r,echo=FALSE,eval=TRUE}
@@ -378,11 +338,11 @@ One important question would be the sensitivity of the level of repulsion and ra
 sim.func<-function(repulse,signal,scale){scape(trx, scape.size=20, g.center=signal, g.range=signal, g.repulse=repulse, wd.all=500, signal.center=TRUE, signal.range=TRUE, same.range=TRUE, repulse=TRUE,center.scale = 1, range.scale = 1, repulse.scale = 1, site.stoch.scale = 0, sd.center=1, sd.range=1,rho=NULL, th=th)} 
 
 #repeat 5 times for each set
-sig<-seq(0.2,1,.4)
-repel<-c(seq(0.2,1,.4))
+sig<-seq(0.2,1,.2)
+repel<-c(seq(0.2,1,.2))
 
 ins<-expand.grid(sig,repel,scale=1) 
-ins<- ins[rep(seq_len(nrow(ins)), 5), ]
+ins<- ins[rep(seq_len(nrow(ins)), 10), ]
 colnames(ins)<-c("Signal","Repulse") 
 
 #container
@@ -416,10 +376,10 @@ Let's run a series of tree shapes and just look at the logistic function.
 
 ```{r}
 #create Phylogeny
-trees<-function(size,type,repulse){
+trees<-function(sp,type,size,breadth,replicates){
 
 #create phylogeny
-trx<-compute.brlen(stree(n=size,type))
+trx<-compute.brlen(stree(n=sp,type))
 
 #cophenetic distance
 ctrx<-cophenetic(trx)
@@ -427,80 +387,54 @@ ctrx<-ctrx/max(ctrx)
 
 #Threshold for presence
 th=.6
+#Compute Models
+nicheWCplot<-sim(trx,size=size,breadth=breadth,signal=.1,repulse=T,replicates=replicates)
 
-#Model 1
-sim.func<-function(){scape(trx, scape.size=20, g.center=.1, g.range=.1, g.repulse=1, wd.all=500, signal.center=TRUE, signal.range=TRUE, same.range=TRUE, repulse=TRUE,center.scale = 1, range.scale = 1, repulse.scale = 1, site.stoch.scale = 0, sd.center=1, sd.range=1,rho=NULL, th=th)}
+nicheCplot<-sim(trx,size=size,breadth=breadth,signal=1,repulse=T,replicates=replicates)
 
-sim.list<-replicate(20,sim.func(),simplify=FALSE)
+nicheWCNRplot<-sim(trx,size=size,breadth=breadth,signal=.1,repulse=F,replicates=replicates)
 
-th=.6 
-### Compute co-occurrence
-sim.occur<-lapply(sim.list,function(x){
-  phy<-co_occur(x,trx,ctrx)})
+nicheCNRplot<-sim(trx,size=size,breadth=breadth,signal=1,repulse=F,replicates=replicates)
 
-#remove null lists
-sim.occur<-sim.occur[!sapply(sim.occur,length)==1]
-
-gridlist<-lapply(sim.list[1:6],function(x){
-  gridplot(x,tree=trx,threshold=-log10(th),opt.color=TRUE,guide=FALSE)})
-
-multiplot(plotlist=gridlist,cols=3)
-
-
-#Iteration count
-for(x in 1:length(sim.occur)){
-  sim.occur[[x]]$Iteration<-x
+grid.arrange(nicheWCplot,nicheCplot,nicheWCNRplot,nicheCNRplot,ncol=2)
 }
-phy_comp<-rbind_all(sim.occur)
-
-phy_comp$I<-cut(phy_comp$Iteration,c(seq(0,20,1)),labels=1:20)
-
-phy_comp<-rbind_all(sim.occur)
-
-nicheWCplot<-ggplot(phy_comp,aes(x=Phylo.Relatedness,y=P_A)) + geom_smooth(method="glm",family="binomial",formula=(y~(poly(x,2)))) + labs(y="Probability of Presence",x="Phylogenetic Distance to Nearest Species in the Assemblage") + ggtitle("Weak Phylogenetic Signal and Strong Repulsion in Occurance Trait") + theme_bw()
-
-nicheWCplot
-
-#Simulation 2: Strong Phylogenetic Signal Followed by Repulsion in Occurrence Trait
-
-sim.func<-function(){scape(trx, scape.size=20, g.center=1, g.range=1, g.repulse=repulse, wd.all=500, signal.center=TRUE, signal.range=TRUE, same.range=TRUE, repulse=TRUE,center.scale = 1, range.scale = 1, repulse.scale = 1, site.stoch.scale = 0, sd.center=1, sd.range=1,rho=NULL, th=th)}
-
-sim.list<-replicate(20,sim.func(),simplify=FALSE)
-th=.6 
-
-### Compute co-occurrence
-sim.occur<-lapply(sim.list,function(x){
-  phy<-co_occur(x,trx,ctrx)})
-
-#remove null lists
-sim.occur<-sim.occur[!sapply(sim.occur,length)==1]
-
-phy_comp<-rbind_all(sim.occur)
-
-nicheCplot<-ggplot(phy_comp,aes(x=Phylo.Relatedness,y=P_A)) + geom_smooth(method="glm",family="binomial",formula=(y~(poly(x,2)))) + labs(y="Probability of Presence",x="Phylogenetic Distance to Nearest Species in the Assemblage") + ggtitle("Strong Phylogenetic Signal and Repulsion in Occurance Trait")
- 
-grid.arrange(nicheWCplot,nicheCplot,ncol=2) 
-} 
 ```
 
-##Trees of 8,16,32 Species
+##Balanced Trees of 8,16,32 Species
 
 ### 8 Tips
 ```{r,fig.height=5}
-trees(8,"balanced",repulse=1) 
+trees(8,"balanced",size=10,breadth=100,replicates=2) 
 ```
 
 ### 16 Tips
 
 ```{r,fig.height=5}
-trees(16,"balanced",repulse=1) 
+trees(16,"balanced",repulse=1,size=20,breadth=500) 
 ```
-
-
 
 ### 32 Tips
 ```{r,fig.height=5}
-trees(32,"balanced",repulse=.3)  
+trees(32,"balanced",repulse=1,size=20,breadth=500)  
+```
+
+
+##Unbalanced Trees of 8,16,32 Species
+
+### 8 Tips
+```{r,fig.height=5}
+trees(8,"balanced",repulse=1,size=20,breadth=500) 
+```
+
+### 16 Tips
+
+```{r,fig.height=5}
+trees(16,"balanced",repulse=1,size=20,breadth=500) 
+```
+
+### 32 Tips
+```{r,fig.height=5}
+trees(32,"balanced",repulse=1,size=20,breadth=500)  
 ```
 
 #Conclusion
@@ -548,5 +482,4 @@ nicheWCplot
 
 ```{r}
 save.image("Simulation.RData")
-load("Smulation.RData")
 ````
