@@ -457,27 +457,17 @@ trees(sp=32,type="balanced",size=20,breadth=200,replicates=50,ylm=c(0,.5))
 trees(sp=32,type="left",size=20,breadth=200,replicates=50,ylm=c(0,.7)) 
 ```
 
-Looks like just the strong signal and the strong repulsion is more sensitive to tip size at 32 tips, let's explore this in a bit more detail.
+**Looks like just the strong signal and the strong repulsion is more sensitive to tip size at 32 tips, let's explore this in a bit more detail. Let's increase the level of repulsion.**
 
 ```{r}
 trx<-compute.brlen(stree(n=32,type="balanced"))
 plot(trx)
 
-nicheCplot<-sim(trx,size=20,breadth=500,signalFlag=T,repulse=T,replicates=5,multiplot=T,ylm=c(0,1),repulseVal=100,signal=100) + ggtitle("Stronger Phylogenetic Signal and Stronger Repulsion in Occurance Trait")
+nicheCplot<-sim(trx,size=20,breadth=500,signalFlag=T,repulse=T,replicates=5,multiplot=T,ylm=c(0,.5),repulseVal=100,signal=100) + ggtitle("Stronger Phylogenetic Signal and Stronger Repulsion in Occurance Trait")
 nicheCplot
 ```
 
-As species # increase, the level of repulsion and signal needs to increase to get the predicted pattern.
-
-```{r}
-trx<-compute.brlen(stree(n=32,type="left"))
-plot(trx)
-
-nicheCplot<-sim(trx,size=20,breadth=500,signalFlag=T,repulse=T,replicates=5,multiplot=T,ylm=c(0,1),repulseVal=100,signal=100) + ggtitle("Stronger Phylogenetic Signal and Stronger Repulsion in Occurance Trait")
-nicheCplot
-```
-
-Once we increase the signal and repulsion, we recover the polynomial pattern we see with smaller trees.
+As species # increase, the level of repulsion and signal needs to increase to get the predicted pattern. Once we increase the signal and repulsion, we recover the polynomial pattern we see with smaller trees.
 
 #Conclusion
 The polynomial pattern seems robust to tree size, although the level of repulsion needs to be increased as there are more species in the tree. This is due to more time since most recent common ancestory. The pattern is not very robust to ladder trees, this is because there are very few closely related species in a ladder tree. We would expect this pattern to be more possible in tippy trees that have many late branching taxa and a more even distribution of tip distances.
