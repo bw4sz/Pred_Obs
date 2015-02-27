@@ -470,8 +470,6 @@ Read in simulated data - see Simulations.Rmd
 ```{r}
 simall<-read.csv("C:/Users/Ben/Documents/Pred_Obs/Bayesian/simdats.csv",row.names=1)
 
-colnames(simall)<-c("Locality","Species","P_A","Phylo.Relatedness","Hyp","Iteration")
-
 simall$P_R<-"Simulation"
 ```
 
@@ -492,7 +490,7 @@ datF<-rbind_all(list(datF,simall))
 #drop Env + Dispersal for observed, its just a data subset
 sdat<-split(datF,list(datF$P_R,datF$Hyp),drop=TRUE)
 
-names(sdat)<-c("Niche Cons + comp","Env","Observed","Env + Dispersal","Lottery","Niche Cons")
+names(sdat)<-c("Env","Observed","Env + Dispersal","Strong","Weak")
 
 # remove inf values
 sdat<-lapply(sdat,function(x){

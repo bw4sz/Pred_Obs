@@ -127,7 +127,7 @@ print(scape)
 ###Species Ranges
 
 #Function to plot species ranges on to the simulated grid. Needs to specify the same threshold as the scape th function (see questions). Optional argument to color species 
-
+ 
 #color ramp function
 gs.pal <- colorRampPalette(c("red","blue"),space="rgb")
 
@@ -253,7 +253,7 @@ Now we see the checkerboard pattern of occurrence, where related species tend to
 
 ##Mean Phylogenetic Diversity
 
-```{r}
+```{r,eval=FALSE}
 mpdNicheC<-lapply(sim.list,function(x){
 siteXspp<-x$Y
 colnames(siteXspp)<-colnames(ctrx)
@@ -281,11 +281,11 @@ sim.occur<-sim.occur[!sapply(sim.occur,length)==1]
 for(x in 1:length(sim.occur)){
   sim.occur[[x]]$Iteration<-x
 }
-phy_comp<-rbind_all(sim.occur)
+phy_comp_model1<-rbind_all(sim.occur)
 
-phy_comp$I<-cut(phy_comp$Iteration,c(seq(0,20,1)),labels=1:20)
+phy_comp_model1$I<-cut(phy_comp_model1$Iteration,c(seq(0,20,1)),labels=1:20)
 
-nicheWCplot<-ggplot(phy_comp,aes(x=Phylo.Relatedness,y=P_A)) + geom_smooth(aes(group=Iteration),method="glm",family="binomial",formula=(y~(poly(x,2)))) + labs(y="Probability of Presence",x="Phylogenetic Distance to Nearest Species in the Assemblage") + ggtitle("Weak Phylogenetic Signal and Repulsion in Occurance Trait")
+nicheWCplot<-ggplot(phy_comp_model1,aes(x=Phylo.Relatedness,y=P_A)) + geom_smooth(aes(group=Iteration),method="glm",family="binomial",formula=(y~(poly(x,2)))) + labs(y="Probability of Presence",x="Phylogenetic Distance to Nearest Species in the Assemblage") + ggtitle("Weak Phylogenetic Signal and Repulsion in Occurance Trait")
 nicheWCplot
 ```
 
@@ -307,7 +307,7 @@ multiplot(plotlist=gridlist,cols=3)
 
 ##Mean Phylogenetic Diversity
 
-```{r}
+```{r,eval=FALSE}
 mpdNicheC<-lapply(sim.list,function(x){
 siteXspp<-x$Y
 colnames(siteXspp)<-colnames(ctrx)
@@ -330,23 +330,22 @@ sim.occur<-lapply(sim.list,function(x){
 #remove null lists
 sim.occur<-sim.occur[!sapply(sim.occur,length)==1]
 
-phy_comp<-rbind_all(sim.occur)
 
 #Iteration count
 for(x in 1:length(sim.occur)){
   sim.occur[[x]]$Iteration<-x
 }
-phy_comp<-rbind_all(sim.occur)
+phy_comp_model2<-rbind_all(sim.occur)
 
-phy_comp$I<-cut(phy_comp$Iteration,c(seq(0,20,1)),labels=1:20)
+phy_comp_model2$I<-cut(phy_comp_model2$Iteration,c(seq(0,20,1)),labels=1:20)
 
-nicheCplot<-ggplot(phy_comp,aes(x=Phylo.Relatedness,y=P_A)) + geom_smooth(aes(group=Iteration),method="glm",family="binomial",formula=(y~(poly(x,2)))) + labs(y="Probability of Presence",x="Phylogenetic Distance to Nearest Species in the Assemblage") + ggtitle("Strong Phylogenetic Signal and Repulsion in Occurance Trait")
+nicheCplot<-ggplot(phy_comp_model2,aes(x=Phylo.Relatedness,y=P_A)) + geom_smooth(aes(group=Iteration),method="glm",family="binomial",formula=(y~(poly(x,2)))) + labs(y="Probability of Presence",x="Phylogenetic Distance to Nearest Species in the Assemblage") + ggtitle("Strong Phylogenetic Signal and Repulsion in Occurance Trait")
 nicheCplot
 ```
 
 
 #Comparison of pattern of phylogenetic diversity
-```{r}
+```{r,eval=FALSE}
 grid.arrange(nicheWCmpd,nicheCmpd,ncol=2) 
 ```
 
@@ -358,6 +357,19 @@ Positive values are considered phylogenetic overdispersed, negative value are co
 grid.arrange(nicheWCplot,nicheCplot,ncol=2) 
 ```
 
+```{r,echo=FALSE,eval=TRUE}
+#Write simulations to file to be used in bayesian estimation
+ps<-list(Weak=phy_comp_model2,Strong=phy_comp_model2)
+for(x in 1:length(ps)){
+  ps[[x]]$Hyp<-names(ps)[x]
+}
+
+nda<-lapply(ps,nrow) 
+
+psdat<-rbind_all(ps)
+write.csv(psdat,"C:/Users/Ben/Documents/Pred_Obs/Bayesian/simdats.csv")
+```
+
 #Varying levels of repulsion and signal
 
 One important question would be the sensitivity of the level of repulsion and range signal in creating our predicted pattern.
@@ -366,11 +378,11 @@ One important question would be the sensitivity of the level of repulsion and ra
 sim.func<-function(repulse,signal,scale){scape(trx, scape.size=20, g.center=signal, g.range=signal, g.repulse=repulse, wd.all=500, signal.center=TRUE, signal.range=TRUE, same.range=TRUE, repulse=TRUE,center.scale = 1, range.scale = 1, repulse.scale = 1, site.stoch.scale = 0, sd.center=1, sd.range=1,rho=NULL, th=th)} 
 
 #repeat 5 times for each set
-sig<-seq(0.2,1,.2)
-repel<-c(seq(0.2,1,.2))
+sig<-seq(0.2,1,.4)
+repel<-c(seq(0.2,1,.4))
 
 ins<-expand.grid(sig,repel,scale=1) 
-ins<- ins[rep(seq_len(nrow(ins)), 10), ]
+ins<- ins[rep(seq_len(nrow(ins)), 5), ]
 colnames(ins)<-c("Signal","Repulse") 
 
 #container
@@ -397,19 +409,6 @@ ggplot(phy,aes(x=Phylo.Relatedness,y=P_A,col=Repulsion)) + geom_smooth(method="g
 
 Each facet is a value of g.center (phylogenetic signal) for the occurrence trait, and each color is a value of repulsion among closely related species. Fifty replicates were used for each run.
 Conclusion: The observed pattern is pretty robust to the exact parameters of g.center (facets) and g.repulse (color). 
-
-```{r,echo=FALSE,eval=FALSE}
-#Write simulations to file to be used in bayesian estimation
-ps<-list(Lottery=phy_lottery,NicheC=phy_nichec,Comp=phy_comp)
-for(x in 1:length(ps)){
-  ps[[x]]$Hyp<-names(ps)[x]
-}
-
-nda<-lapply(ps,nrow) 
-
-psdat<-rbind_all(ps)
-write.csv(psdat,"C:/Users/Ben/Documents/Pred_Obs/Bayesian/simdats.csv")
-```
 
 #Does # of tips effect the pattern?
 
@@ -458,7 +457,7 @@ phy_comp$I<-cut(phy_comp$Iteration,c(seq(0,20,1)),labels=1:20)
 
 phy_comp<-rbind_all(sim.occur)
 
-nicheWCplot<-ggplot(phy_comp,aes(x=Phylo.Relatedness,y=P_A)) + geom_smooth(method="glm",family="binomial",formula=(y~(poly(x,2)))) + labs(y="Probability of Presence",x="Phylogenetic Distance to Nearest Species in the Assemblage") + ggtitle("Weak Phylogenetic Signal and Strong Repulsion in Occurance Trait")
+nicheWCplot<-ggplot(phy_comp,aes(x=Phylo.Relatedness,y=P_A)) + geom_smooth(method="glm",family="binomial",formula=(y~(poly(x,2)))) + labs(y="Probability of Presence",x="Phylogenetic Distance to Nearest Species in the Assemblage") + ggtitle("Weak Phylogenetic Signal and Strong Repulsion in Occurance Trait") + theme_bw()
 
 nicheWCplot
 
@@ -498,13 +497,13 @@ trees(16,"balanced",repulse=1)
 ```
 
 
+
 ### 32 Tips
 ```{r,fig.height=5}
 trees(32,"balanced",repulse=.3)  
 ```
 
 #Conclusion
-
 The polynomial pattern seems robust to tree shape. It seems dulled by increasing tree size, i.e that it takes more repulsion in larger trees to decrease co-occurrance among closely related species. The polynomial pattern must be the balance between the trait conservatism and the repulsion, and with more species its probably a narrower range that creates this pattern.
 
 
@@ -517,7 +516,6 @@ trx<-compute.brlen(stree(64,"balanced"))
 ctrx<-cophenetic(trx)
 
 #Model 3
-sim.func<-function(){scape(trx, scape.size=20, g.center=.1, g.range=.1, g.repulse=1, wd.all=500, signal.center=TRUE, signal.range=TRUE, same.range=TRUE, repulse=TRUE,center.scale = 1, range.scale = 1, repulse.scale = 1, site.stoch.scale = 0, sd.center=1, sd.range=1,rho=NULL, th=th)}
 
 sim.list<-replicate(10,sim.func(),simplify=FALSE)
 
@@ -542,20 +540,13 @@ phy_comp<-rbind_all(sim.occur)
 
 phy_comp$I<-cut(phy_comp$Iteration,c(seq(0,10,1)),labels=1:10)
 
-nicheWCplot<-ggplot(phy_comp,aes(x=Phylo.Relatedness,y=P_A)) + geom_smooth(aes(group=I),method="glm",family="binomial",formula=(y~(poly(x,2)))) + labs(y="Probability of Presence",x="Phylogenetic Distance to Nearest Species in the Assemblage") + ggtitle("Weak Phylogenetic Signal and Strong Repulsion in Occurance Trait")
+nicheWCplot<-ggplot(phy_comp,aes(x=Phylo.Relatedness,y=P_A)) + geom_smooth(aes(group=I),method="glm",family="binomial",formula=(y~(poly(x,2)))) + labs(y="Probability of Presence",x="Phylogenetic Distance to Nearest Species in the Assemblage") + ggtitle("Weak Phylogenetic Signal and Strong Repulsion in Occurance Trait") + theme_bw()
 
 nicheWCplot
 ```
 
-```{r,echo=FALSE,eval=FALSE}
-#Write simulations to file to be used in bayesian estimation
-ps<-list(Lottery=phy_lottery,NicheC=phy_nichec,Comp=phy_comp)
-for(x in 1:length(ps)){
-  ps[[x]]$Hyp<-names(ps)[x]
-}
 
-nda<-lapply(ps,nrow) 
-
-psdat<-rbind_all(ps)
-write.csv(psdat,"C:/Users/Ben/Documents/Pred_Obs/Bayesian/simdats.csv")
-```
+```{r}
+save.image("Simulation.RData")
+load("Smulation.RData")
+````

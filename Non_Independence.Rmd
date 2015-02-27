@@ -23,6 +23,9 @@ library(doSNOW)
 
 opts_chunk$set(warning=FALSE,message=FALSE,echo=TRUE)
 opts_chunk$set(cache=TRUE, cache.path = 'Independence_cache/', fig.path='figure/',fig.width=11,fig.height=6)
+
+load("Independence.Rdata")
+
 ```
 
 #Problem Statement
@@ -187,10 +190,11 @@ mdat$Species<-as.numeric(mdat$Species)
 ggplot(mdat,aes(x=as.factor(Species),y=Estimate,fill=as.factor(Sites))) + geom_violin() + theme_bw() + labs(fill="# of Sites",x="# of Species", y= "Covariate Estimate for phylogenetic distance to closest related species") + coord_flip() + facet_wrap(~Sites,ncol=5) + ggtitle("Null Distribution: Sensitivity Analysis")
 ```
 
-The x axis is the estimate for the x covariate (phylogenetic distance )
 ### Conclusion
 
+The relationship between x and y is structure, since a species occurring at a site changes the phylogenetic composition at the site. However, this relationship is largely the same across number of sites and number of species. This suggestions its the topology of the tree that controls the null distribution of potential covariates.
 
+The way forward is then to randomize the tips of the phylogeny by creating random assemblages of the same size and species prevalence and compare the observed glm estimate  with the null distribution of covariate estimates and consider how probability of observing our estimate given the topology of our tree.
 
 ##Observed versus null distribution
 
@@ -260,6 +264,9 @@ dat<-melt(out)
 ggplot(dat,aes(x=value)) + geom_histogram() + facet_wrap(~variable,scales="free") + theme_bw() + ggtitle("Null Distribution of GLM Covariates") + geom_vline(data=observed,aes(xintercept=value),col='red',linetype='dashed')
 
 ```
+
+The red dashed line is the observed glm estimate for the intercept, x and x^2. I can infer from this that the probability of getting our result by the intertwined structure of the model is very low.
+
 
 ```{r}
 save.image("Independence.Rdata")
