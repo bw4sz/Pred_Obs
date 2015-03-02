@@ -315,13 +315,15 @@ nicheCNRplot<-nicheCNRplot + ggtitle("Strong Phylogenetic Signal and No Repulsio
 grid.arrange(nicheWCplot,nicheCplot,nicheWCNRplot,nicheCNRplot,ncol=2) 
 ```
 
-```{r,echo=FALSE,eval=F}
-mod1<-sim(trx,size=10,breadth=40,signalFlag=F,repulse=T,replicates=20,multiplot=F,plotR=F)
+```{r,echo=FALSE,eval=T}
 
-mod2<-sim(trx,size=10,breadth=40,signalFlag=T,repulse=T,replicates=20,plotR=F,ylm=c(0,1)) 
-mod3<-sim(trx,size=10,breadth=40,signalFlag=F,repulse=F,replicates=20,plotR=F)
+mod1<-sim(trx,size=10,breadth=40,signalFlag=F,repulse=T,replicates=50,multiplot=F,plotR=F)
 
-mod4<-sim(trx,size=10,breadth=40,signalFlag=T,repulse=F,replicates=20,plotR=F)
+mod2<-sim(trx,size=10,breadth=40,signalFlag=T,repulse=T,replicates=50,plotR=F,ylm=c(0,1)) 
+
+mod3<-sim(trx,size=10,breadth=40,signalFlag=F,repulse=F,replicates=50,plotR=F)
+
+mod4<-sim(trx,size=10,breadth=40,signalFlag=T,repulse=F,replicates=50,plotR=F)
 
 #Write simulations to file to be used in bayesian estimation
 ps<-list(Mod1=mod1,Mod2=mod2,Mod3=mod3,Mod4=mod4)
