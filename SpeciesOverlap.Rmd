@@ -54,7 +54,7 @@ droppath<-"C:/Users/Ben/Dropbox/"
 setwd(gitpath)
 
 #Load image if desired
-load(paste(droppath,"Thesis/Pred_Realized/Assemblages/Threshold0.05/Results/PredictedRealized.RData",sep=""))
+load(paste(droppath,"Thesis\\Pred_Realized\\Assemblages\\Threshold0.05\\Results\\","PredictedRealized_Revis.RData",sep=""))
 
 ```
 
@@ -460,7 +460,7 @@ Save image in case we need to start here.
 
 ```{r}
 #load("PredictedRealized.Rdata")
-save.image("PredictedRealized.Rdata")
+#save.image("PredictedRealized.Rdata")
 ```
 
 ##Combine simulation, predicted and observed assemblages.
@@ -598,7 +598,7 @@ if(!hier){
 
 #MCMC options
 ni <- runs  # number of draws from the posterior
-nt <- 5    #thinning rate
+nt <- 25    #thinning rate
 nb <- burn  # number to discard for burn-in
 nc <- 2  # number of chains
 
@@ -630,7 +630,7 @@ Run 7 models in parallel.
 
 #There is no reason everyone needs the same number of runs
 #Draws for each model
-runsl<-rep(100000,100000,100000,100000,100000,100000,100000)
+runsl<-rep(200000,400000,200000,200000,200000,200000,200000)
 
 #Which model we want to draw , heir=T is for full model
 modhier<-rep(T,7)
@@ -640,7 +640,7 @@ doSNOW::registerDoSNOW(cl)
 #parall<-list()
 parall<-foreach(x=1:length(sdat),.errorhandling="stop") %dopar% {
 #for(x in 1:length(sdat)){
-  out<-Bayes(presence=sdat[[x]]$P_A,distance=sdat[[x]]$Phylo.Relatedness,species=sdat[[x]]$Species,runs = runsl[x],burn=((runsl[x]/nt)-2000),hier=modhier[x])
+  out<-Bayes(presence=sdat[[x]]$P_A,distance=sdat[[x]]$Phylo.Relatedness,species=sdat[[x]]$Species,runs = runsl[x],burn=((runsl[x]/25)-2000),hier=modhier[x])
   return(out)
   #parall[[x]]<-out
 }
@@ -836,7 +836,7 @@ ggsave("Figure3Overlay.jpg",height=3,width=8,dpi=600,units="in")
 ```
 
 ```{r}
-save.image(paste(droppath,"Thesis\\Pred_Realized\\Assemblages\\Threshold0.05\\Results\\","PredictedRealized_Revis.RData",sep=""))
+#save.image(paste(droppath,"Thesis\\Pred_Realized\\Assemblages\\Threshold0.05\\Results\\","PredictedRealized_Revis.RData",sep=""))
 ```
 
 
