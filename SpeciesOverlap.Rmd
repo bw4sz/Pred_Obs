@@ -490,7 +490,7 @@ datF<-rbind_all(list(datF,simall))
 #drop Env + Dispersal for observed, its just a data subset
 sdat<-split(datF,list(datF$P_R,datF$Hyp),drop=TRUE)
 
-names(sdat)<-c("Env","Observed","Env + Dispersal","NoSignal.StrongRepulsion","StrongSignal.StrongRepulsion","NoSignal.NoRepulse","StrongSignal.NoRepulse")
+names(sdat)<-c("Env","Observed","Env + Dispersal","No Signal & Strong Repulsion","Strong Signal & Strong Repulsion","No Signal & No Repulsion","Strong Signal & No Repulsion")
 
 # remove inf values
 sdat<-lapply(sdat,function(x){
@@ -626,7 +626,7 @@ return(m)}
 
 Run 7 models in parallel.
 
-```{r run jags,results='hide',eval=TRUE}
+```{r run jags,results='hide',eval=F}
 
 #There is no reason everyone needs the same number of runs
 #Draws for each model
