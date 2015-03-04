@@ -19,3 +19,6 @@ foreach
 iterators
 snow
 doSNOW
+Matrix
+Rcpp
+lme4

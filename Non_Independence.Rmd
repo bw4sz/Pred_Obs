@@ -21,8 +21,8 @@ library(stringr)
 library(picante)
 library(foreach)
 library(doSNOW)
-
-opts_chunk$set(warning=FALSE,message=FALSE,echo=TRUE)
+library(lme4)
+opts_chunk$set(warning=FALSE,message=FALSE,echo=TRUE,eval=T)
 opts_chunk$set(cache=TRUE, cache.path = 'Independence_cache/', fig.path='figure/',fig.width=11,fig.height=6)
 
 load("Independence.Rdata")
@@ -120,10 +120,10 @@ Let's generalize this structure and see how this relationship changes with more 
   * Each species draw is bernoulli trial
   * There is no min or max richness
 
-###Simulate phylogeny
+Simulate phylogeny
   * Start with a balanced tree, we can check other topologies as well
 
-### Build a function to compute logistic regression for any given number of species in a phylogeny and sites
+Build a function to compute logistic regression for any given number of species in a phylogeny and sites
 
   * Occupancy is drawn from a bernoulli trial 
   
@@ -150,7 +150,7 @@ dat<-co_occur(dat,trx,ctrx)
 return(dat)}
 ```
 
-## Iterate over a large parameter space
+Iterate over a large parameter space
 
 ```{r}
 species.space<-rep(2^(3:7))
@@ -161,7 +161,7 @@ site.space<-rep(c(20,40,60,80,100),200)
 
   * For each site and species combination draw random occurrence
   
-```{r,eval=FALSE}
+```{r,eval=T}
 simdat<-lapply(species.space,function(x){ 
     lapply(site.space,function(y){
       l<-simL(x,y)  
@@ -181,7 +181,7 @@ for(x in 1:length(simdat)){
 ```
 
 ## View regression
-```{r}
+```{r,fig.height=5}
 mdat<-melt(simdat)
 colnames(mdat)<-c("variable","Estimate","Sites","Species")
 
@@ -215,8 +215,6 @@ ctrx<-cophenetic(trx)
 #standardize the distances, just to avoid rounding error.
 ctrx<-ctrx/max(ctrx)
 
-
-
 siteXspp<-read.csv("C:/Users/Ben/Dropbox/Thesis/Pred_Realized/Assemblages/SiteXsppraster.csv",row.names=1)
 
 dim(siteXspp)
@@ -230,13 +228,13 @@ source("SpeciesOverlapSourceFunctions.R")
 randomCo<-function(){
   r<-randomizeMatrix(siteXspp,"independentswap")
   l<-co_occur(melt(r))
-  mod<-glm(data=l,formula = P_A ~ poly(Phylo.Relatedness,2), family = "binomial") 
+  mod<-glm(data=l,formula = P_A ~ poly(Phylo.Relatedness,2,raw=TRUE), family = "binomial") 
   mode<-summary(mod)$coefficients[,"Estimate"]
   data.frame(Intercept=mode[[1]],x=mode[[2]],x2=mode[[3]])
 }
 ```
 
-```{r}
+```{r,eval=FALSE}
 cl<-makeCluster(3,"SOCK")
 registerDoSNOW(cl)
 out<-foreach(x=1:5000,.packages=c("picante","reshape2")) %dopar% {
@@ -244,40 +242,70 @@ out<-foreach(x=1:5000,.packages=c("picante","reshape2")) %dopar% {
   }
 
 stopCluster(cl)
-```
-
-#Observed value
-
-```{r,fig.height=4,fig.width=4,cache=FALSE}
-l<-co_occur(melt(as.matrix(siteXspp)))
-  
-
-ggplot(data=l,aes(x=Phylo.Relatedness,y=P_A)) + geom_smooth(family="binomial",method="glm",formula=y~poly(x,2)) + theme_bw() + ggtitle("Observed Relationship")
-
-mod<-glm(data=l,formula = as.factor(P_A) ~ poly(Phylo.Relatedness,2,raw=TRUE), family = "binomial") 
-
-mode<-summary(mod)$coefficients[,"Estimate"]
-
-observed<-melt(data.frame(Intercept=mode[[1]],x=mode[[2]],x2=mode[[3]]))
-```
-
-#Visualize null distribution versus observed value
-
-```{r,eval=TRUE}
 
 #melt data frame
 dat<-melt(out)
+#remove last column
+dat<-dat[,-3]
+
+```
+
+#Observed Relationship
+
+What is our observed relationship between probability of presence and 
+  * Fit a glm without a random effect
+  * Fit a mixed model (glmer) with a species level random effect
+
+Since i have to compute 5000 models, its not really feasible to make a null distribution in the bayesian approach, but we can compare our results here to the predicted function at the end.
+
+###GLM
+```{r model fit,fig.height=4,fig.width=4,cache=FALSE,eval=TRUE}
+
+l<-co_occur(melt(as.matrix(siteXspp)))
+
+#glm observed
+mod<-glm(data=l,formula = as.factor(P_A) ~ poly(Phylo.Relatedness,2,raw=TRUE), family = "binomial") 
+summary(mod)
+mode<-summary(mod)$coefficients[,"Estimate"]
+observed<-melt(data.frame(Intercept=mode[[1]],x=mode[[2]],x2=mode[[3]]))
+confint.glm<-confint(mod)
+predict.glm<-data.frame(x=l$Phylo.Relatedness,y=predict(mod))
+```
+
+### GLMM (1|Species)
+```{r,eval=FALSE}
+mod2<-glmer(data=l,formula = as.factor(P_A) ~ poly(Phylo.Relatedness,2,raw=T) + (1|Species), family = "binomial")
+smod2<-summary(mod2)
+smod2
+coef.glmer<-smod2$coefficients
+observed.glmer<-melt(data.frame(Intercept=coef.glmer[1,1],x=coef.glmer[2,1],x2=coef.glmer[3,1]))
+confint.glmer<-confint(mod2)
+predict.glmer<-data.frame(x=l$Phylo.Relatedness,y=predict(mod2))
+
+#bind results
+coef.dat<-melt(list(GLM=observed,GLMM=observed.glmer))
+```
+
+###Interpretation: 
+Both the glm and glmer results suggest that the polynomial 'fixed' effect is signficant. Normally i'd be concerned with high corerlation between fixed effects, but it makes sense how the linear and polynomial terms are linked. 
+
+#Visualize null distribution versus observed value
+
+  * View the mean estimates against the null distribution
+  
+```{r,eval=TRUE}
+
 
 quants<-group_by(dat,variable) %>% summarize(lower=quantile(value,0.025),upper=quantile(value,0.975))
 
-ggplot(dat,aes(x=value)) + geom_histogram() + facet_wrap(~variable,scales="free") + theme_bw() + ggtitle("Null Distribution of GLM Covariates") + geom_vline(data=observed,aes(xintercept=value),col='red',linetype='dashed') + geom_vline(data=quants,aes(xintercept=lower),col='black',size=.7)+ geom_vline(data=quants,aes(xintercept=upper),col='black',size=.7)
+ggplot(dat,aes(x=value)) + geom_histogram() + facet_wrap(~variable,scales="free") + theme_bw() + ggtitle("Null Distribution of GLM and GLMM Covariates") + geom_vline(data=coef.dat,aes(xintercept=value,col=L1),linetype='dashed',size=1.1,show_guide = T) + geom_vline(data=quants,aes(xintercept=lower),col='black',size=.7)+ geom_vline(data=quants,aes(xintercept=upper),col='black',size=.7) + labs(col="Modeling Approach")
 
-observed
 ```
 
-The red dashed line is the observed glm estimate for the intercept, x and x^2. The thin black line is the central 95th quantile. From these simulations I infer that the the probability of getting our result by the intertwined structure of the model is very low. This is compounded that to get our result we need to get both the x and x^2 terms, they are not independent, so the joint probability of getting our result is even more remote than just $\alpha=0.05$ would suggest.
+The red dashed line is the observed glm estimate for the intercept, x and x^2. The teal line is the observed glmm (1|Species) estimate, The thin black line is the central 95th quantile of the null distribution. From these simulations I infer that the the probability of getting our result by the intertwined structure of the model is very low. This is compounded that to get our result we need to get both the x and x^2 terms, they are not independent, so the joint probability of getting our result is even more remote than just $\alpha=0.05$ would suggest.
 
 #Simulated Trajectories
+
 ```{r,cache=FALSE}
 
 #define trajectory function
@@ -298,11 +326,40 @@ ynew<-melt(ynew,id.var=c("s","y"))
 conf<-group_by(ynew,s) %>% summarise(mean=mean(y),upper=quantile(y,0.975),lower=quantile(y,0.025))
 
 
-#Observed
-yobs<-data.frame(x=l$Phylo.Relatedness,y=trajF(observed[1,2],observed[2,2],observed[3,2],l$Phylo.Relatedness))
+#Observed glm
+yobs.glm<-data.frame(x=l$Phylo.Relatedness,y=trajF(observed[1,2],observed[2,2],observed[3,2],l$Phylo.Relatedness))
 
-ggplot(data=conf,aes(x=s,y=mean)) + geom_ribbon(aes(ymin=lower,ymax=upper),fill='gray80') + theme_bw() + scale_color_discrete(guide='none') + labs(x="Phylogenetic distance to the closest related species",y="Probability of Presence") + geom_line(data=yobs,aes(x=x,y=y),size=1.5,linetype="dashed",col="red") + ggtitle("Observed versus null fit") + geom_line(aes(y=mean))
+#observed glmer (1|Species)
+yobs.glmer<-data.frame(x=l$Phylo.Relatedness,y=trajF(observed.glmer[1,2],observed.glmer[2,2],observed.glmer[3,2],l$Phylo.Relatedness))
 
+#observed bayesian with species level effect
+observed.bayes<-melt(data.frame(Intercept=-1.96,x=6.64,x2=-11.69))
+confint.bayes<-data.frame("2.5%"=c(-2.44,4.72,-9.37),"97.5%"=c(-1.48,8.62,-14.71))
+colnames(confint.bayes)<-colnames(confint.glm)
+
+yobs.bayes<-data.frame(x=l$Phylo.Relatedness,y=trajF(observed.bayes[1,2],observed.bayes[2,2],observed.bayes[3,2],l$Phylo.Relatedness))
+
+obs<-melt(list(GLM=yobs.glm,Mixed_Effects=yobs.glmer,Bayes=yobs.bayes),id.var=c("x","y"))
+
+ggplot(data=conf,aes(x=s,y=mean)) + geom_ribbon(aes(ymin=lower,ymax=upper),fill='gray80') + theme_bw()  + labs(x="Phylogenetic distance to the closest related species",y="Probability of Presence") + geom_line(data=obs,aes(x=x,y=y,col=L1),show_guide=TRUE,size=1.5,linetype="dashed") + ggtitle("Observed versus null fit") + geom_line(aes(y=mean)) + labs(col="Modeling Approach") 
+
+```
+
+The grey area is the null distrubition of glm estimates. The red line is the Bayesian estimate, teal is the glm mixed effects (1|Species), and the green is glm without accounting for species differences. 
+
+##CI Intervals
+The confidence intervals are not show here, and there is quite a bit of variance in the bayesian thats not quite as extensive in the glmm.
+
+```{r}
+co<-list(GLM=confint.glm,GLMM=confint.glmer[-1,],Bayes=confint.bayes)
+#standardize row and columne names
+co<-lapply(co,function(x){
+  rownames(x)<-c("Intercept","Linear","Polynomial")
+  colnames(x)<-c("Lower","Upper")
+  return(as.matrix(x))
+})
+co<-dcast(co,...~Var2)
+ggplot(co,aes(x=L1,ymin=Lower,ymax=Upper))  + facet_wrap(~Var1,scales="free") + geom_linerange(size=1.4) + theme_bw() + ggtitle("Confidence Intervals of Estimates") + labs(x="Model",y="Estimate")
 ```
 
 ```{r}
