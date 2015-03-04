@@ -193,8 +193,7 @@ ggplot(mdat,aes(x=as.factor(Species),y=Estimate,fill=as.factor(Sites))) + geom_v
 
 ### Conclusion
 
-The relationship between x and y is structure, since a species occurring at a site changes the phylogenetic composition at the site. However, this relationship is largely the same across number of sites and number of species. This suggestions its the topology of the tree that controls the null distribution of potential covariates.
-
+The relationship between x and y is indeed structured, since a species occurring at a site changes the phylogenetic composition at the site. This relationship is largely the same across number of sites and number of species. This suggestions its the topology of the tree that controls the null distribution of potential covariates. 
 The way forward is then to randomize the tips of the phylogeny by creating random assemblages of the same size and species prevalence and compare the observed glm estimate  with the null distribution of covariate estimates and consider how probability of observing our estimate given the topology of our tree.
 
 ##Observed versus null distribution
@@ -269,14 +268,14 @@ observed<-melt(data.frame(Intercept=mode[[1]],x=mode[[2]],x2=mode[[3]]))
 #melt data frame
 dat<-melt(out)
 
-ggplot(dat,aes(x=value)) + geom_histogram() + facet_wrap(~variable,scales="free") + theme_bw() + ggtitle("Null Distribution of GLM Covariates") + geom_vline(data=observed,aes(xintercept=value),col='red',linetype='dashed')
+quants<-group_by(dat,variable) %>% summarize(lower=quantile(value,0.025),upper=quantile(value,0.975))
 
-group_by(dat,variable) %>% summarize(lower=quantile(value,0.025),upper=quantile(value,0.975))
+ggplot(dat,aes(x=value)) + geom_histogram() + facet_wrap(~variable,scales="free") + theme_bw() + ggtitle("Null Distribution of GLM Covariates") + geom_vline(data=observed,aes(xintercept=value),col='red',linetype='dashed') + geom_vline(data=quants,aes(xintercept=lower),col='black',size=.7)+ geom_vline(data=quants,aes(xintercept=upper),col='black',size=.7)
 
 observed
 ```
 
-The red dashed line is the observed glm estimate for the intercept, x and x^2. I can infer from this that the probability of getting our result by the intertwined structure of the model is very low.
+The red dashed line is the observed glm estimate for the intercept, x and x^2. The thin black line is the central 95th quantile. From these simulations I infer that the the probability of getting our result by the intertwined structure of the model is very low. This is compounded that to get our result we need to get both the x and x^2 terms, they are not independent, so the joint probability of getting our result is even more remote than just $\alpha=0.05$ would suggest.
 
 #Simulated Trajectories
 ```{r,cache=FALSE}
