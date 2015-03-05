@@ -161,7 +161,7 @@ site.space<-rep(c(20,40,60,80,100),200)
 
   * For each site and species combination draw random occurrence
   
-```{r,eval=T}
+```{r,eval=F}
 simdat<-lapply(species.space,function(x){ 
     lapply(site.space,function(y){
       l<-simL(x,y)  
@@ -188,7 +188,7 @@ colnames(mdat)<-c("variable","Estimate","Sites","Species")
 mdat$Sites<-as.numeric(mdat$Sites)
 mdat$Species<-as.numeric(mdat$Species)
 
-ggplot(mdat,aes(x=as.factor(Species),y=Estimate,fill=as.factor(Sites))) + geom_violin() + theme_bw() + labs(fill="# of Sites",x="# of Species", y= "Covariate Estimate for phylogenetic distance to closest related species") + coord_flip() + facet_wrap(~Sites,ncol=5) + ggtitle("Null Distribution: Sensitivity Analysis")
+ggplot(mdat,aes(x=as.factor(Species),y=Estimate,fill=as.factor(Sites))) + geom_violin() + theme_bw() + labs(fill="# of Sites",x="# of Species", y= "Covariate Estimate for phylogenetic distance to closest related species") + coord_flip() + facet_wrap(~Sites,ncol=5) + ggtitle("Null Distribution: Sensitivity of GLM to # of Sites and Species")
 ```
 
 ### Conclusion
@@ -235,19 +235,20 @@ randomCo<-function(){
 ```
 
 ```{r,eval=FALSE}
-cl<-makeCluster(3,"SOCK")
+cl<-makeCluster(20,"SOCK")
 registerDoSNOW(cl)
 out<-foreach(x=1:5000,.packages=c("picante","reshape2")) %dopar% {
   randomCo()
   }
 
 stopCluster(cl)
+```
 
+```{r}
 #melt data frame
 dat<-melt(out)
 #remove last column
 dat<-dat[,-3]
-
 ```
 
 #Observed Relationship
@@ -259,7 +260,7 @@ What is our observed relationship between probability of presence and
 Since i have to compute 5000 models, its not really feasible to make a null distribution in the bayesian approach, but we can compare our results here to the predicted function at the end.
 
 ###GLM
-```{r model fit,fig.height=4,fig.width=4,cache=FALSE,eval=TRUE}
+```{r model fit,fig.height=4,fig.width=4,cache=TRUE,eval=TRUE}
 
 l<-co_occur(melt(as.matrix(siteXspp)))
 
@@ -273,7 +274,7 @@ predict.glm<-data.frame(x=l$Phylo.Relatedness,y=predict(mod))
 ```
 
 ### GLMM (1|Species)
-```{r,eval=FALSE}
+```{r,eval=TRUE}
 mod2<-glmer(data=l,formula = as.factor(P_A) ~ poly(Phylo.Relatedness,2,raw=T) + (1|Species), family = "binomial")
 smod2<-summary(mod2)
 smod2
@@ -282,8 +283,10 @@ observed.glmer<-melt(data.frame(Intercept=coef.glmer[1,1],x=coef.glmer[2,1],x2=c
 confint.glmer<-confint(mod2)
 predict.glmer<-data.frame(x=l$Phylo.Relatedness,y=predict(mod2))
 
+observed.bayes<-melt(data.frame(Intercept=-1.96,x=6.64,x2=-11.69))
+
 #bind results
-coef.dat<-melt(list(GLM=observed,GLMM=observed.glmer))
+coef.dat<-melt(list(GLM=observed,GLMM=observed.glmer,Bayesian=observed.bayes))
 ```
 
 ###Interpretation: 
@@ -295,18 +298,18 @@ Both the glm and glmer results suggest that the polynomial 'fixed' effect is sig
   
 ```{r,eval=TRUE}
 
-
 quants<-group_by(dat,variable) %>% summarize(lower=quantile(value,0.025),upper=quantile(value,0.975))
 
 ggplot(dat,aes(x=value)) + geom_histogram() + facet_wrap(~variable,scales="free") + theme_bw() + ggtitle("Null Distribution of GLM and GLMM Covariates") + geom_vline(data=coef.dat,aes(xintercept=value,col=L1),linetype='dashed',size=1.1,show_guide = T) + geom_vline(data=quants,aes(xintercept=lower),col='black',size=.7)+ geom_vline(data=quants,aes(xintercept=upper),col='black',size=.7) + labs(col="Modeling Approach")
-
+  
 ```
 
-The red dashed line is the observed glm estimate for the intercept, x and x^2. The teal line is the observed glmm (1|Species) estimate, The thin black line is the central 95th quantile of the null distribution. From these simulations I infer that the the probability of getting our result by the intertwined structure of the model is very low. This is compounded that to get our result we need to get both the x and x^2 terms, they are not independent, so the joint probability of getting our result is even more remote than just $\alpha=0.05$ would suggest.
+The thin black line are the central 95th quantiles of the null distribution for each parameter based on 5000 glm models for randomized data. We compare this null distrubtion to the observed mean covariate estimates for glm glmm, and bayesian models. 
+From this figure I infer that the the probability of getting our result by the intertwined structure of the model is very low. This is because to get our result we need to get both the x and x^2 terms, they are not independent, so the joint probability of getting our result is even more remote than just $\alpha=0.05$ would suggest.
 
 #Simulated Trajectories
 
-```{r,cache=FALSE}
+```{r,cache=TRUE}
 
 #define trajectory function
 trajF<-function(intercept,linear,polynomial,x){
@@ -321,7 +324,8 @@ ynew<-lapply(out,function(x){
   y<-trajF(x$Intercept,x$x,x$x2,s)
   data.frame(s,y)
   })
-ynew<-melt(ynew,id.var=c("s","y"))
+
+ynew<-rbind_all(ynew)
 
 conf<-group_by(ynew,s) %>% summarise(mean=mean(y),upper=quantile(y,0.975),lower=quantile(y,0.025))
 
@@ -333,7 +337,6 @@ yobs.glm<-data.frame(x=l$Phylo.Relatedness,y=trajF(observed[1,2],observed[2,2],o
 yobs.glmer<-data.frame(x=l$Phylo.Relatedness,y=trajF(observed.glmer[1,2],observed.glmer[2,2],observed.glmer[3,2],l$Phylo.Relatedness))
 
 #observed bayesian with species level effect
-observed.bayes<-melt(data.frame(Intercept=-1.96,x=6.64,x2=-11.69))
 confint.bayes<-data.frame("2.5%"=c(-2.44,4.72,-9.37),"97.5%"=c(-1.48,8.62,-14.71))
 colnames(confint.bayes)<-colnames(confint.glm)
 
@@ -358,6 +361,7 @@ co<-lapply(co,function(x){
   colnames(x)<-c("Lower","Upper")
   return(as.matrix(x))
 })
+co<-melt(co)
 co<-dcast(co,...~Var2)
 ggplot(co,aes(x=L1,ymin=Lower,ymax=Upper))  + facet_wrap(~Var1,scales="free") + geom_linerange(size=1.4) + theme_bw() + ggtitle("Confidence Intervals of Estimates") + labs(x="Model",y="Estimate")
 ```
