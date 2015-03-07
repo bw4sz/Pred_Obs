@@ -2,7 +2,7 @@
 title: "Structural independence in the logistic model"
 author: "Ben Weinstein"
 date: "Thursday, February 12, 2015"
-output: pdf_document
+output: html_document
 ---
 
 ```{r,message=FALSE,warning=FALSE}
@@ -234,10 +234,10 @@ randomCo<-function(){
 }
 ```
 
-```{r,eval=FALSE}
+```{r,eval=TRUE}
 cl<-makeCluster(20,"SOCK")
 registerDoSNOW(cl)
-out<-foreach(x=1:5000,.packages=c("picante","reshape2")) %dopar% {
+out<-foreach(x=1:1000,.packages=c("picante","reshape2")) %dopar% {
   randomCo()
   }
 
@@ -248,7 +248,7 @@ stopCluster(cl)
 #melt data frame
 dat<-melt(out)
 #remove last column
-dat<-dat[,-3]
+dat<-dat[,-3] 
 ```
 
 #Observed Relationship
@@ -261,7 +261,7 @@ Since i have to compute 5000 models, its not really feasible to make a null dist
 
 ###GLM
 ```{r model fit,fig.height=4,fig.width=4,cache=TRUE,eval=TRUE}
-
+ 
 l<-co_occur(melt(as.matrix(siteXspp)))
 
 #glm observed
@@ -286,7 +286,7 @@ predict.glmer<-data.frame(x=l$Phylo.Relatedness,y=predict(mod2))
 observed.bayes<-melt(data.frame(Intercept=-1.96,x=6.64,x2=-11.69))
 
 #bind results
-coef.dat<-melt(list(GLM=observed,GLMM=observed.glmer,Bayesian=observed.bayes))
+coef.dat<-melt(list(GLM=observed,GLMM=observed.glmer,Bayesian=observed.bayes)) 
 ```
 
 ###Interpretation: 
@@ -300,7 +300,7 @@ Both the glm and glmer results suggest that the polynomial 'fixed' effect is sig
 
 quants<-group_by(dat,variable) %>% summarize(lower=quantile(value,0.025),upper=quantile(value,0.975))
 
-ggplot(dat,aes(x=value)) + geom_histogram() + facet_wrap(~variable,scales="free") + theme_bw() + ggtitle("Null Distribution of GLM and GLMM Covariates") + geom_vline(data=coef.dat,aes(xintercept=value,col=L1),linetype='dashed',size=1.1,show_guide = T) + geom_vline(data=quants,aes(xintercept=lower),col='black',size=.7)+ geom_vline(data=quants,aes(xintercept=upper),col='black',size=.7) + labs(col="Modeling Approach")
+ggplot(dat,aes(x=value)) + geom_histogram() + facet_wrap(~variable,scales="free") + theme_bw() + ggtitle("Null Distribution of GLM and GLMM Covariates") + geom_vline(data=coef.dat,aes(xintercept=value,col=L1),linetype='dashed',size=1.1,show_guide = T) + geom_vline(data=quants,aes(xintercept=lower),col='black',size=.7)+ geom_vline(data=quants,aes(xintercept=upper),col='black',size=.7) + labs(col="Modeling Approach") 
   
 ```
 
@@ -324,7 +324,7 @@ ynew<-lapply(out,function(x){
   y<-trajF(x$Intercept,x$x,x$x2,s)
   data.frame(s,y)
   })
-
+ 
 ynew<-rbind_all(ynew)
 
 conf<-group_by(ynew,s) %>% summarise(mean=mean(y),upper=quantile(y,0.975),lower=quantile(y,0.025))
@@ -367,7 +367,7 @@ ggplot(co,aes(x=L1,ymin=Lower,ymax=Upper))  + facet_wrap(~Var1,scales="free") + 
 ```
 
 ```{r}
-save.image("Independence.Rdata")
+save.image("Independence.Rdata") 
 #load image if desired
 load("Independence.Rdata")
 ```
