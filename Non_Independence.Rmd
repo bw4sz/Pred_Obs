@@ -2,7 +2,7 @@
 title: "Structural independence in the logistic model"
 author: "Ben Weinstein"
 date: "Thursday, February 12, 2015"
-output: html_document
+output: pdf_document
 ---
 
 ```{r,message=FALSE,warning=FALSE}
