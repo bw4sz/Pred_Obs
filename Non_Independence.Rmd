@@ -50,7 +50,6 @@ The reason that you get this is that the values of Y and x are structurally inte
 
 I’m wondering if there is a simpler way to do this
 
-
 ----
 
 ----
@@ -275,7 +274,11 @@ predict.glm<-data.frame(x=l$Phylo.Relatedness,y=predict(mod))
 
 ### GLMM (1|Species)
 ```{r,eval=TRUE}
+
 mod2<-glmer(data=l,formula = as.factor(P_A) ~ poly(Phylo.Relatedness,2,raw=T) + (1|Species), family = "binomial")
+
+~1+linear+quad+(1+linear+quad|species)
+mod2<-glmer(data=l[,],formula = as.factor(P_A) ~ poly(Phylo.Relatedness,2,raw=T) + (poly(Phylo.Relatedness,2,raw=T)|Species), family = "binomial")
 smod2<-summary(mod2)
 smod2
 coef.glmer<-smod2$coefficients
@@ -290,7 +293,7 @@ coef.dat<-melt(list(GLM=observed,GLMM=observed.glmer,Bayesian=observed.bayes))
 ```
 
 ###Interpretation: 
-Both the glm and glmer results suggest that the polynomial 'fixed' effect is signficant. Normally i'd be concerned with high corerlation between fixed effects, but it makes sense how the linear and polynomial terms are linked. 
+Both the glm and glmer results suggest that the polynomial 'fixed' effect is signficant.  Normally i'd be concerned with high corerlation between fixed effects, but it makes sense how the linear and polynomial terms are linked. 
 
 #Visualize null distribution versus observed value
 
