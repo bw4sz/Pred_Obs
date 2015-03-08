@@ -765,7 +765,7 @@ gdcast<-dcast(gdf,...~parameter,value.var="estimate")
 trajsplit<-split(gdcast,gdcast$L1)
 
 trajsplit<-lapply(trajsplit,function(x){
-  x[sample(1:nrow(x),500,replace=F),]
+  x[sample(1:nrow(x),1000,replace=F),]
 })
 
 #define trajectory function
@@ -825,12 +825,9 @@ specdf$AssemblageL<-factor(specdf$Assemblage)
 
 #add some blank data to zoom out on lottery, its not readable.
 
-#dummy<-data.frame(Relatedness=.9,mean=c(.4,.25),AssemblageL="Lottery",ymin=c(.5,.2),ymax=c(.4,.2))
+dummy<-data.frame(Relatedness=.9,mean=c(.4,.25),AssemblageL="No Signal & No Repulsion",ymin=c(.05,.2),ymax=c(.4,.2))
 
-ggplot(data=specdf[!specdf$Assemblage %in% c("Env","Env + Dispersal","Observed"),],aes(x=Relatedness,y=mean))+ geom_ribbon(alpha=.5,aes(ymin=lower,ymax=upper)) + geom_line() + theme_bw()+ labs(x="Phylogenetic distance to closest related species",y="Probability of Occurrence") + scale_fill_manual(guide='none') + facet_wrap(~AssemblageL,scales="free") 
-
-
-#values=c("grey80","grey60","black"),labels=c("Lottery","Niche Conservatism","Niche Conservatism + Competition")
+ggplot(data=specdf[!specdf$Assemblage %in% c("Env","Env + Dispersal","Observed"),],aes(x=Relatedness,y=mean))+ geom_ribbon(alpha=.5,aes(ymin=lower,ymax=upper)) + geom_line() + theme_bw()+ labs(x="Phylogenetic distance to closest related species",y="Probability of Occurrence") + scale_fill_manual(guide='none') + facet_wrap(~AssemblageL) + geom_blank(data=dummy,aes(ymin=ymin,ymax=ymax))
 
 ggsave("Figure3Overlay.jpg",height=6,width=7,dpi=600,units="in")
 ```
