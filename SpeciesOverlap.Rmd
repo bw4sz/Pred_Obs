@@ -54,7 +54,7 @@ droppath<-"C:/Users/Ben/Dropbox/"
 setwd(gitpath)
 
 #Load image if desired
-load(paste(droppath,"Thesis\\Pred_Realized\\Assemblages\\Threshold0.05\\Results\\","PredictedRealized_Revis.RData",sep=""))
+#load(paste(droppath,"Thesis\\Pred_Realized\\Assemblages\\Threshold0.05\\Results\\","PredictedRealized_Revis.RData",sep=""))
 
 ```
 
@@ -459,8 +459,10 @@ PA_m2<-predAssemblages(thresh=.05,plots=TRUE)
 Save image in case we need to start here.
 
 ```{r}
+#write.csv(PA_m2,"InputData/SpeciesData.csv",row.names=F)
 #load("PredictedRealized.Rdata")
 #save.image("PredictedRealized.Rdata")
+PA_m2<-read.csv("InputData/SpeciesData.csv")
 ```
 
 ##Combine simulation, predicted and observed assemblages.
@@ -476,31 +478,31 @@ simall$P_R<-"Simulation"
 Bind data to one dataframe.
 
 ```{r}
-#legacy name change.
-datF<-PA_m2
 
 #make formats the same
-datF$Locality<-as.numeric(as.character(datF$Locality))
-datF$P_A<-as.integer(datF$P_A)
+PA_m2$Locality<-as.numeric(as.character(PA_m2$Locality))
+PA_m2$P_A<-as.integer(PA_m2$P_A)
 
 #bind with simulated data
-datF<-rbind_all(list(datF,simall))
+PA_m2<-rbind_all(list(PA_m2,simall))
 
+#fill in iteration for non simulations
+PA_m2$Iteration[is.na(PA_m2$Iteration)]<-1
 #split data into types of assemblages
+
 #drop Env + Dispersal for observed, its just a data subset
-sdat<-split(datF,list(datF$P_R,datF$Hyp),drop=TRUE)
+sdat<-split(PA_m2,list(PA_m2$P_R,PA_m2$Hyp),drop=TRUE)
 
 names(sdat)<-c("Env","Observed","Env + Dispersal","No Signal & Strong Repulsion","Strong Signal & Strong Repulsion","No Signal & No Repulsion","Strong Signal & No Repulsion")
 
 # remove inf values
-sdat<-lapply(sdat,function(x){
-  x<-x[is.finite(x$Phylo.Relatedness),]
-  return(x)
+sdat<-lapply(sdat,function(y){
+    y<-y[is.finite(y$Phylo.Relatedness),]
 })
 
 ```
 
-How many data points in each assemblage?
+On average, how many data points in each simulation and observed data?
 ```{r}
 sapply(sdat,nrow)
 ```
@@ -511,7 +513,7 @@ While these are constrained to have the same intercept and slope for each specie
 
 ```{r,fig.height=10}
 plotlist<-lapply(sdat,function(x){
-p<-ggplot(x,aes(x=Phylo.Relatedness,y=P_A)) + geom_smooth(method="glm",family="binomial",formula=y~poly(x,2)) + theme_bw() + labs("x=Distance to closest related species in an assemblage",y="Probability of presence") + ggtitle("")
+p<-ggplot(x,aes(x=Phylo.Relatedness,y=P_A)) + geom_line(aes(group=Iteration),stat="smooth",method="glm",family="binomial",formula=y~poly(x,2),alpha=min(c(1,(1/max(x$Iteration)*10)))) + theme_bw() + labs("x=Distance to closest related species in an assemblage",y="Probability of presence") + ggtitle("") + scale_alpha(guide="none")
 return(p)
 })
 
@@ -545,16 +547,12 @@ Define a function that takes in species, presence/absence and distance to the cl
 
 ```{r singlemodel,echo=TRUE,eval=TRUE}
 
-Bayes<-function(presence,distance,species,runs,burn,hier){
+Bayes<-function(presence,distance,species,Iteration,runs,burn,hier){
 #needs libraries specified to run in parallel
 library(ggplot2)
 library(R2jags)
 library(reshape2)
 library(stringr)
-
-
-#Full hierarchical or single slope model?
-#heir= full hierarchical
 
 if(hier){
   source(paste(gitpath,"Bayesian/BPhylo.R",sep="/"))
@@ -580,21 +578,29 @@ Dat <- list(
 }
 
 if(!hier){
-  source(paste(gitpath,"Bayesian/Single.R",sep="/"))
-    #Intials
-  InitStage <- function() {list(intercept=0,linear=0,polynomial=0)}
+  source(paste(gitpath,"Bayesian/BPhyloSim.R",sep="/"))
+  
+    #make species a factor
+species<-as.factor(species)
+
+#Input Data
+Dat <- list(
+  y=as.numeric(presence),
+  dist=distance,
+  Species=as.numeric(species),
+  s=nlevels(species),
+  Iteration=Iteration,
+  Iterations=max(Iteration))
+
+  #Intials
+  InitStage <- function() {list(alpha=rep(1,Dat$s),beta=rep(1,Dat$s),gamma=rep(1,Dat$s),intercept=1,tauIntercept=0,linear=1,tauSlope=0,tauSlope2=0,polynomial=1)}
 
   #Parameters to track
-  ParsStage <- c("intercept","linear","polynomial")
-  mf<-"Single.jags"
+  ParsStage <- c("intercept","linear","sigmaSlope","sigmaIntercept","polynomial","sigmaSlope2","alpha","beta","gamma")
   
-  #Input Data
-  Dat <- list(
-  y=as.numeric(presence),
-  dist=distance)
-  
-  }
-
+  #name of jags model
+  mf<-"BPhylo.jags"
+}
 
 #MCMC options
 ni <- runs  # number of draws from the posterior
@@ -630,23 +636,23 @@ Run 7 models in parallel.
 
 #There is no reason everyone needs the same number of runs
 #Draws for each model
-runsl<-rep(200000,400000,200000,200000,200000,200000,200000)
+runsl<-rep(2000,4000,2000,5000,5000,5000,5000)
 
 #Which model we want to draw , heir=T is for full model
-modhier<-rep(T,7)
+modhier<-c(rep(T,3),rep(F,4))
 
-cl<-snow::makeCluster(8,"SOCK")
-doSNOW::registerDoSNOW(cl)
+#cl<-snow::makeCluster(8,"SOCK")
+#doSNOW::registerDoSNOW(cl)
 #parall<-list()
-parall<-foreach(x=1:length(sdat),.errorhandling="stop") %dopar% {
+parall<-foreach(x=1:length(sdat),.errorhandling="stop") %do% {
 #for(x in 1:length(sdat)){
-  out<-Bayes(presence=sdat[[x]]$P_A,distance=sdat[[x]]$Phylo.Relatedness,species=sdat[[x]]$Species,runs = runsl[x],burn=((runsl[x]/25)-2000),hier=modhier[x])
+  out<-Bayes(presence=sdat[[x]]$P_A,distance=sdat[[x]]$Phylo.Relatedness,species=sdat[[x]]$Species,Iteration=sdat[[x]]$Iteration,runs =runsl[x],burn=((runsl[x]/25)-2000),hier=modhier[x])
   return(out)
   #parall[[x]]<-out
 }
-stopCluster(cl)
+#stopCluster(cl)
 
-save.image(paste(droppath,"Thesis\\Pred_Realized\\Assemblages\\Threshold0.05\\Results\\","PredictedRealized_Revision.RData",sep=""))
+#save.image(paste(droppath,"Thesis\\Pred_Realized\\Assemblages\\Threshold0.05\\Results\\","PredictedRealized_Revision.RData",sep=""))
 
 ```
 
