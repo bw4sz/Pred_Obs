@@ -459,8 +459,10 @@ PA_m2<-predAssemblages(thresh=.05,plots=TRUE)
 Save image in case we need to start here.
 
 ```{r}
+write.csv(PA_m2,"InputData/SpeciesData.csv",row.names=F)
 #load("PredictedRealized.Rdata")
 #save.image("PredictedRealized.Rdata")
+PA_m2<-read.csv("InputData/SpeciesData.csv")
 ```
 
 ##Combine simulation, predicted and observed assemblages.
@@ -476,33 +478,44 @@ simall$P_R<-"Simulation"
 Bind data to one dataframe.
 
 ```{r}
-#legacy name change.
-datF<-PA_m2
 
 #make formats the same
-datF$Locality<-as.numeric(as.character(datF$Locality))
-datF$P_A<-as.integer(datF$P_A)
+PA_m2$Locality<-as.numeric(as.character(PA_m2$Locality))
+PA_m2$P_A<-as.integer(PA_m2$P_A)
 
 #bind with simulated data
-datF<-rbind_all(list(datF,simall))
+PA_m2<-rbind_all(list(PA_m2,simall))
 
+#fill in iteration for non simulations
+PA_m2$Iteration[is.na(PA_m2$Iteration)]<-1
 #split data into types of assemblages
+
 #drop Env + Dispersal for observed, its just a data subset
-sdat<-split(datF,list(datF$P_R,datF$Hyp),drop=TRUE)
+sdat<-split(PA_m2,list(PA_m2$P_R,PA_m2$Hyp),drop=TRUE)
 
 names(sdat)<-c("Env","Observed","Env + Dispersal","No Signal & Strong Repulsion","Strong Signal & Strong Repulsion","No Signal & No Repulsion","Strong Signal & No Repulsion")
 
+#split simulations inside
+sdats<-lapply(sdat,function(x){
+  split(x,x$Iteration)
+})
+
+names(sdats)<-c("Env","Observed","Env + Dispersal","No Signal & Strong Repulsion","Strong Signal & Strong Repulsion","No Signal & No Repulsion","Strong Signal & No Repulsion")
+
 # remove inf values
-sdat<-lapply(sdat,function(x){
-  x<-x[is.finite(x$Phylo.Relatedness),]
-  return(x)
+sdats<-lapply(sdats,function(x){
+  lapply(x,function(y){
+    y<-y[is.finite(y$Phylo.Relatedness),]
+  })
 })
 
 ```
 
-How many data points in each assemblage?
+On average, how many data points in each simulation and observed data?
 ```{r}
-sapply(sdat,nrow)
+sapply(sdats,function(x){
+  mean(sapply(x,nrow))
+})
 ```
 
 #Compare to generalized linear models
@@ -511,7 +524,7 @@ While these are constrained to have the same intercept and slope for each specie
 
 ```{r,fig.height=10}
 plotlist<-lapply(sdat,function(x){
-p<-ggplot(x,aes(x=Phylo.Relatedness,y=P_A)) + geom_smooth(method="glm",family="binomial",formula=y~poly(x,2)) + theme_bw() + labs("x=Distance to closest related species in an assemblage",y="Probability of presence") + ggtitle("")
+p<-ggplot(x,aes(x=Phylo.Relatedness,y=P_A,col=I)) + geom_smooth(method="glm",family="binomial",formula=y~poly(x,2),alpha=) + theme_bw() + labs("x=Distance to closest related species in an assemblage",y="Probability of presence") + ggtitle("") + scale_col_discrete(show_guide="none")
 return(p)
 })
 
