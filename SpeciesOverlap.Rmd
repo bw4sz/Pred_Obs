@@ -814,8 +814,8 @@ specdf[specdf$Assemblage %in% c("Env","Env + Dispersal","Observed"),"Type"]<-"Ob
 
 
 #overlay together
-ggplot(data=specdf[specdf$Assemblage %in% c("Env","Env + Dispersal","Observed"),],aes(x=Relatedness,y=mean,ymin=lower,ymax=upper,fill=Assemblage)) + geom_ribbon(alpha=.5) + geom_line() + theme_bw()+ labs(x="Phylogenetic distance to closest related species",y="Probability of Occurrence") + scale_fill_manual(values=c("grey80","grey60","black"),labels=c("Environment","Environment + Dispersal","Observed"))  
-
+figure4<-ggplot(data=specdf[specdf$Assemblage %in% c("Env","Env + Dispersal","Observed"),],aes(x=Relatedness,y=mean,ymin=lower,ymax=upper,fill=Assemblage)) + geom_ribbon(alpha=.5) + geom_line() + theme_bw()+ labs(x="Phylogenetic distance to closest related species",y="Probability of Occurrence") + scale_fill_manual(values=c("grey80","grey60","black"),labels=c("Environment","Environment + Dispersal","Observed"))  
+figure4
 ggsave("Figure4Overlay.jpg",height=5,width=7,dpi=400)
 ```
 
@@ -832,9 +832,85 @@ specdf$AssemblageL<-factor(specdf$Assemblage)
 
 dummy<-data.frame(Relatedness=.9,mean=c(.4,.25),AssemblageL="No Signal & No Repulsion",ymin=c(.05,.2),ymax=c(.4,.2))
 
-ggplot(data=specdf[!specdf$Assemblage %in% c("Env","Env + Dispersal","Observed"),],aes(x=Relatedness,y=mean))+ geom_ribbon(alpha=.5,aes(ymin=lower,ymax=upper)) + geom_line() + theme_bw()+ labs(x="Phylogenetic distance to closest related species",y="Probability of Occurrence") + scale_fill_manual(guide='none') + facet_wrap(~AssemblageL) + geom_blank(data=dummy,aes(ymin=ymin,ymax=ymax))
-
+figure3<-ggplot(data=specdf[!specdf$Assemblage %in% c("Env","Env + Dispersal","Observed"),],aes(x=Relatedness,y=mean))+ geom_ribbon(alpha=.5,aes(ymin=lower,ymax=upper)) + geom_line() + theme_bw()+ labs(x="Phylogenetic distance to closest related species",y="Probability of Occurrence") + scale_fill_manual(guide='none') + facet_wrap(~AssemblageL) + geom_blank(data=dummy,aes(ymin=ymin,ymax=ymax))
+figure3
 ggsave("Figure3Overlay.jpg",height=6,width=7,dpi=600,units="in")
+```
+
+```{r}
+#plot both together
+svg("PanelFigure.svg",height=8,width=9)
+grid.arrange(figure3,figure4,heights=c(0.45,0.55))
+dev.off()
+```
+#plot species level
+
+
+```{r view slope species,fig.height=40}
+#just get observed data
+spec<-spec[spec$Assemblage %in% "Observed",]
+spec$ind<-str_extract(spec$parameter,pattern="\\d+")
+
+#split into species, needs to be numeric to be properly ordered?
+spec$ind<-as.numeric(spec$ind)
+
+specS<-split(spec,spec$ind)
+
+#match index with species names, this needs to be confirmed, i'm unsure about the index ordering, could have been sorted.
+
+for (x in 1:length(specS)){
+  specS[[x]]$Species<-unique(sdat[[2]]$Species)[x]
+}
+
+#plot gamma slopes
+
+specSdf<-rbind_all(specS)
+
+gdf<-group_by(specSdf,Species) %>% filter(str_detect(parameter,"gamma")) %>%summarize(Lower=quantile(estimate,0.025),Upper=quantile(estimate,0.975),mean=mean(estimate))
+
+ord<-gdf%>% arrange(mean)
+
+gdf$Species<-factor(gdf$Species,levels=ord$Species)
+
+#merge with clades
+gdf<-merge(gdf,clades[,!colnames(clades) %in% "Species"],by.x="Species",by.y="double.")
+
+ggplot(gdf,aes(x=Species,col=Clade)) + geom_linerange(aes(ymin=Lower,ymax=Upper)) + geom_point(aes(y=mean)) + theme_bw() + theme(axis.text.x = element_text(angle = 65, hjust = 1)) + ylab("Polynomial Coefficient")
+ggsave("PolynomialEstimates.svg",dpi=300,height=5,width=11)
+
+specCast<-lapply(specS,function(y){
+  samp<-dcast(y,...~parameter,value.var="estimate")
+  
+  #species trajectories
+  traj<-list()
+  #Get species relatedness subset
+  R<-PA_m2[PA_m2$Species %in% unique(samp$Species) & PA_m2$P_R %in% "PA_Binary",]$Phylo.Relatedness
+  
+  for(x in 1:nrow(samp)){
+    s<-samp[x,]
+    #careful on the inline naming, but gets away from winbugs indexing.
+    p<-inv.logit(s[[7]] + s[[8]]*R+s[[9]] * R^2)
+    traj[[x]]<-data.frame(x=R,y=p,Iteration=x)
+    }
+  traj<-rbind_all(traj)
+  
+  #summarise mean and interval
+  mtraj<-group_by(traj,x) %>% summarise(mean=mean(y),upper=quantile(y,0.975,na.rm=T),lower=quantile(y,0.025,na.rm=T))
+})
+
+
+alpha_plot<-function(alpha,sp){
+  ggplot(alpha,aes(x=x,y=mean)) + geom_line(col="red",linetype="dashed") + geom_line(aes(y=upper),col="blue",linetype="dashed") + geom_line(aes(y=lower),col="blue",linetype="dashed")+ theme_bw() + labs(x="",y="") + ggtitle(sp)
+  }
+
+pl<-list()
+for(x in 1:length(specS)){
+  #Species
+  sp<-unique(sdat[[2]]$Species)[x]
+  pl[[x]]<-alpha_plot(specCast[[x]],sp)
+}
+
+do.call("grid.arrange", c(pl, ncol=5))
 ```
 
 ```{r}
