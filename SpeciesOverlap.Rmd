@@ -54,7 +54,7 @@ droppath<-"C:/Users/Ben/Dropbox/"
 setwd(gitpath)
 
 #Load image if desired
-#load(paste(droppath,"Thesis\\Pred_Realized\\Assemblages\\Threshold0.05\\Results\\","PredictedRealized_Revis.RData",sep=""))
+load(paste(droppath,"Thesis\\Pred_Realized\\Assemblages\\Threshold0.05\\Results\\","PredictedRealized_Revis.RData",sep=""))
 
 ```
 
@@ -761,7 +761,7 @@ ggplot(finaltab,aes(x=L1,col=Assemblage,shape=parameter),size=3) + geom_pointran
 
 ##Plot trajectories.
 
-```{r view slope species,fig.height=6,cache=FALSE}
+```{r,fig.height=6,cache=FALSE}
 
 gdf<-parmelts
 
@@ -814,9 +814,13 @@ specdf[specdf$Assemblage %in% c("Env","Env + Dispersal","Observed"),"Type"]<-"Ob
 
 
 #overlay together
-figure4<-ggplot(data=specdf[specdf$Assemblage %in% c("Env","Env + Dispersal","Observed"),],aes(x=Relatedness,y=mean,ymin=lower,ymax=upper,fill=Assemblage)) + geom_ribbon(alpha=.5) + geom_line() + theme_bw()+ labs(x="Phylogenetic distance to closest related species",y="Probability of Occurrence") + scale_fill_manual(values=c("grey80","grey60","black"),labels=c("Environment","Environment + Dispersal","Observed"))  
+figure4<-ggplot(data=specdf[specdf$Assemblage %in% c("Env","Env + Dispersal","Observed"),],aes(x=Relatedness,y=mean)) + geom_ribbon(alpha=.5,aes(ymin=lower,ymax=upper,fill=Assemblage)) + geom_line(aes(fill=Assemblage)) + theme_bw()+ labs(x="Phylogenetic distance to closest related species",y="Probability of Occurrence") + scale_fill_manual(values=c("grey80","grey60","black"),labels=c("Environment","Environment + Dispersal","Observed"))
 figure4
 ggsave("Figure4Overlay.jpg",height=5,width=7,dpi=400)
+
+figure4 + geom_point(data=sdat[[2]],aes(x=Phylo.Relatedness,y=P_A),alpha=0.01)
+ggsave("Figure4OverlayPoints.jpg",height=5,width=7,dpi=400)
+
 ```
 
 #Simulated trajectories
@@ -911,6 +915,16 @@ for(x in 1:length(specS)){
 }
 
 do.call("grid.arrange", c(pl, ncol=5))
+
+#Save them individually if needed svg and jpg
+
+for(x in 1:length(specS)){
+  #Species
+  sp<-unique(sdat[[2]]$Species)[x]
+  p<-alpha_plot(specCast[[x]],sp)
+  filenam<-paste("SpeciesPlots/",sp,".svg")
+  ggsave(filenam,height=5,width=6)
+}
 ```
 
 ```{r}
