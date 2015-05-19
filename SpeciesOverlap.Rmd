@@ -43,7 +43,7 @@ library(R2jags)
 library(stringr)
 library(dplyr)
 library(scales)
-
+library(lme4)
 opts_chunk$set(warning=FALSE,message=FALSE)
 opts_chunk$set(cache=TRUE, cache.path = 'SpeciesOverlap_cache/', fig.path='figure/',fig.width=10,echo=TRUE)
 
@@ -542,19 +542,17 @@ Define a function that takes in species, presence/absence and distance to the cl
 
 ```{r singlemodel,echo=TRUE,eval=TRUE}
 
-GLMM<-function(dat,sim=F){
-mod<-glmer(data=dat,formula = as.factor(P_A) ~ 1 + poly(Phylo.Relatedness,2,raw=TRUE) + (1 + poly(Phylo.Relatedness,2,raw=TRUE)|Species), family = "binomial")
+GLMM<-function(dat){
+mod<-glmer(data=dat,formula = as.factor(P_A) ~ 1 + poly(Phylo.Relatedness,2,raw=TRUE) + (1|Species), family = "binomial")
 return(mod)
 }
 ```
 
 ##Fit GLMM function for each assemblage type
 
-Run 7 models in parallel.
-
 ```{r run jags,results='hide',eval=T}
 parall<-lapply(sdat,function(x){
-  out<-GLMM(sdat[[x]])
+  out<-GLMM(x)
 })
 ```
 
@@ -635,7 +633,7 @@ mpred$Type[mpred$Type == T]<-"Observed"
 mpred$Type[!mpred$Type == "Observed"]<-"Simulation"
 
 #simulated
-psim<-ggplot() + geom_line(data=mpred[mpred$Type == "Simulation" & mpred$line=="Mean",],aes(x=x,y=y)) + geom_line(data=mpred[mpred$Type == "Simulation" & mpred$line=="Lower",],aes(x=x,y=y),linetype="dashed") + geom_line(data=mpred[mpred$Type == "Simulation" & mpred$line=="Upper",],aes(x=x,y=y),linetype="dashed") + facet_wrap(~Assemblage) + theme_bw() + labs(x="Phylogenetic distance to the closest related species",y="Probability of occurrence")
+psim<-ggplot() + geom_line(data=mpred[mpred$Type == "Simulation" & mpred$line=="Mean",],aes(x=x,y=y)) + geom_line(data=mpred[mpred$Type == "Simulation" & mpred$line=="Lower",],aes(x=x,y=y),linetype="dashed") + geom_line(data=mpred[mpred$Type == "Simulation" & mpred$line=="Upper",],aes(x=x,y=y),linetype="dashed") + facet_wrap(~Assemblage,scales="free") + theme_bw() + labs(x="Phylogenetic distance to the closest related species",y="Probability of occurrence")
 
 pobs<-ggplot() + geom_line(data=mpred[mpred$Type == "Observed" & mpred$line=="Mean",],aes(x=x,y=y)) + geom_line(data=mpred[mpred$Type == "Observed" & mpred$line=="Lower",],aes(x=x,y=y),linetype="dashed") + geom_line(data=mpred[mpred$Type == "Observed" & mpred$line=="Upper",],aes(x=x,y=y),linetype="dashed") + facet_wrap(~Assemblage) + theme_bw() + labs(x="Phylogenetic distance to the closest related species",y="Probability of occurrence")
 
