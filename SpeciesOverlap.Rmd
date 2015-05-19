@@ -525,7 +525,7 @@ for (x in 1:length(plotlist)){
 do.call(grid.arrange,plotlist)
 ```
 
-#Bayesian Analysis of Co-occurrence
+#Mixed Model Analysis of Co-occurrence
 
 ## Model Formulation
 
@@ -536,306 +536,120 @@ $$ \alpha_{Species[i]} \sim N(intercept,sigmaIntercept)$$
 $$ \beta_{Species[i]} \sim N(linear,sigmaSlope)$$
 $$ \gamma_{Species[i]} \sim N(polynomial,sigmaSlope2)$$
 
-This correspondings to the winbugs models:
-```{r}
-print.noquote(readLines(paste(gitpath,"Bayesian/BPhylo.R",sep="/")))
-```
-
-##Define bayes model function
+##Define model function
 
 Define a function that takes in species, presence/absence and distance to the closest related species for each type of assemblage, and returns the posterior estimates of X and X^2.
 
 ```{r singlemodel,echo=TRUE,eval=TRUE}
 
-Bayes<-function(presence,distance,species,Iteration,runs,burn,hier){
-#needs libraries specified to run in parallel
-library(ggplot2)
-library(R2jags)
-library(reshape2)
-library(stringr)
-
-if(hier){
-  source(paste(gitpath,"Bayesian/BPhylo.R",sep="/"))
-  
-    #make species a factor
-species<-as.factor(species)
-
-#Input Data
-Dat <- list(
-  y=as.numeric(presence),
-  dist=distance,
-  Species=as.numeric(species),
-  s=nlevels(species))
-
-  #Intials
-  InitStage <- function() {list(alpha=rep(1,Dat$s),beta=rep(1,Dat$s),gamma=rep(1,Dat$s),intercept=1,tauIntercept=0,linear=1,tauSlope=0,tauSlope2=0,polynomial=1,Imu=1,ITau=0)}
-
-  #Parameters to track
-  ParsStage <- c("intercept","linear","sigmaSlope","sigmaIntercept","polynomial","sigmaSlope2","alpha","beta","gamma")
-  
-  #name of jags model
-  mf<-"BPhylo.jags"
+GLMM<-function(dat,sim=F){
+mod<-glmer(data=dat,formula = as.factor(P_A) ~ 1 + poly(Phylo.Relatedness,2,raw=TRUE) + (1 + poly(Phylo.Relatedness,2,raw=TRUE)|Species), family = "binomial")
+return(mod)
 }
-
-if(!hier){
-  source(paste(gitpath,"Bayesian/BPhyloSim.R",sep="/"))
-  
-    #make species a factor
-species<-as.factor(species)
-
-#Input Data
-Dat <- list(
-  y=as.numeric(presence),
-  dist=distance,
-  Species=as.numeric(species),
-  s=nlevels(species),
-  Iteration=Iteration,
-  Iterations=max(Iteration))
-
-  #Intials
-  InitStage <- function() {list(alpha=rep(1,Dat$s),beta=rep(1,Dat$s),gamma=rep(1,Dat$s),intercept=1,tauIntercept=0,linear=1,tauSlope=0,tauSlope2=0,polynomial=1)}
-
-  #Parameters to track
-  ParsStage <- c("intercept","linear","sigmaSlope","sigmaIntercept","polynomial","sigmaSlope2","alpha","beta","gamma")
-  
-  #name of jags model
-  mf<-"BPhyloSim.jags"
-}
-
-#MCMC options
-ni <- runs  # number of draws from the posterior
-nt <- 25    #thinning rate
-nb <- burn  # number to discard for burn-in
-nc <- 2  # number of chains
-
-
-#Jags
-print(mf)
-
-m = jags(
-         n.chains=nc,
-         model.file=mf,
-         working.directory=getwd(),
-         data=Dat,
-         parameters.to.save=ParsStage,
-         n.thin=nt,
-         n.iter=ni,
-         n.burnin=nb,
-         DIC=T)
-
-
-return(m)}
 ```
 
-
-##Bayes function for each assemblage type
+##Fit GLMM function for each assemblage type
 
 Run 7 models in parallel.
 
 ```{r run jags,results='hide',eval=T}
-
-#There is no reason everyone needs the same number of runs
-#Draws for each model
-runsl<-rep(1000,1000,1000,1000,1000,1000,1000)
-
-#Which model we want to draw , heir=T is for full model
-modhier<-c(rep(T,3),rep(F,4))
-
-cl<-snow::makeCluster(7,"SOCK")
-doSNOW::registerDoSNOW(cl)
-
-parall<-foreach(x=1:length(sdat),.errorhandling="pass") %dopar% {
-  y<-sdat[[x]]
-  out<-Bayes(presence=y$P_A,distance=y$Phylo.Relatedness,species=y$Species,Iteration=y$Iteration,runs =runsl[x],burn=((runsl[x]/25)-2000),hier=modhier[x])
-  return(out)
-}
-stopCluster(cl)
-
-#save.image(paste(droppath,"Thesis\\Pred_Realized\\Assemblages\\Threshold0.05\\Results\\","PredictedRealized_Revision.RData",sep=""))
-
-```
-
-##Extend the observed model
-
-This model takes alot longer to converge than the others, needs to be updated and run seperately. 
-
-```{r update,eval=FALSE}
-recompile(parall[[3]])
-add<-10000
-parall[[3]] <- update(parall[[3]],n.iter=add)
-runsl[3]<-runsl[3]+add
-```
-
-###reformat jags output
-```{r,cache=FALSE}
-#Remove Burnin
-parburn<-list()
-for (x in 1:length(parall)){
-pars<-melt(parall[[x]]$BUGSoutput$sims.array)
-colnames(pars)<-c("Draw","Chain","parameter","estimate")
-#pars<-pars[!pars$Draw %in% 1:((runsl[x]-3000)/2),]
-  parburn[[x]]<-pars
-}
-```
-
-Combine predicted and observed outputs:
-
-```{r combine par,cache=FALSE}
-#name each list
-for(i in 1:length(parburn)){
-  parburn[[i]]$L1<-names(sdat)[i]
-}
-   
-parmelt<-rbind_all(parburn)
-
-#add in observed predicted and eventually simulated labels
-parmelt[parmelt$L1 %in% names(sdat)[4:7],"Assemblage"]<-"Simulation"
-
-parmelt[parmelt$L1 %in% c("Env","Env + Dispersal"),"Assemblage"]<-"Predicted"
-
-parmelt[parmelt$L1 %in% "Observed","Assemblage"]<-"Observed"
-
-#split into species level and hierarchical
-spec<-parmelt[str_detect(parmelt$parameter,"alpha|beta|gamma"), ]
-parmelts<-parmelt[!str_detect(parmelt$parameter,"alpha|beta|gamma|deviance"), ]
-
-```
-
-##View Chains
-
-```{r,fig.height=10,fig.width=14,cache=FALSE}  
-ggplot(droplevels(parmelts),aes(x=Draw,y=estimate,col=as.factor(Chain))) + geom_line() + facet_wrap(L1~parameter,scales="free") + theme_bw() + labs(col="Chain")
-```
-
-## Bayesian estimates figure
-
-```{r,fig.height=15,cache=FALSE} 
-setwd(paste(droppath,"Thesis\\Pred_Realized\\Assemblages\\Threshold0.05\\Results",sep=""))
-      
-#calculate CI interval
-finaltab<-dplyr::group_by(parmelts,L1,Assemblage,parameter) %>% dplyr::summarize(mean=round(mean(estimate),2),upper=round(quantile(estimate,0.975),2),lower=round(quantile(estimate,0.025),2)) 
-
-parmeltP<-parmelts[parmelts$parameter %in% c("linear","polynomial"),]
-
-#calculate CI interval
-finaltabP<-dplyr::group_by(parmeltP,L1,Assemblage,parameter) %>% dplyr::summarize(mean=round(mean(estimate),2),upper=round(quantile(estimate,0.975),2),lower=round(quantile(estimate,0.025),2)) 
-
-#plot simulated
-simulated<-ggplot(data=parmeltP[parmeltP$Assemblage %in% "Simulation",],aes(x=estimate,fill=parameter)) + facet_wrap(~L1,scale="free_y") + geom_histogram() + theme_bw() + ggtitle("Simulated") + scale_fill_discrete(guide="none") + labs(x="")  + scale_fill_manual(values=c("grey60","grey10"))
-
-#CI intervals
-simulated<-simulated + geom_vline(data=finaltabP[finaltabP$Assemblage %in% "Simulation",],aes(xintercept=mean,group=parameter),linetype="dashed",col="black",size=1) + geom_vline(data=finaltabP[finaltabP$Assemblage %in% "Simulation",],aes(xintercept=upper,group=parameter),linetype="dashed",col="grey20",size=.5) + geom_vline(data=finaltabP[finaltabP$Assemblage %in% "Simulation",],aes(xintercept=lower,group=parameter),linetype="dashed",col="grey20",size=.5)
-
-predicted<-ggplot(data=parmeltP[parmeltP$Assemblage %in% "Predicted",],aes(x=estimate,fill=parameter)) + facet_wrap(~L1,scale="free_y") + geom_histogram() + theme_bw() + ggtitle("Predicted")+ scale_fill_discrete(guide="none") + labs(x="")+ scale_fill_manual(values=c("grey60","grey10"))
-
-#CI intervals
-predicted<-predicted + geom_vline(data=finaltabP[finaltabP$Assemblage %in% "Predicted",],aes(xintercept=mean,group=parameter),linetype="dashed",col="black",size=1) + geom_vline(data=finaltabP[finaltabP$Assemblage %in% "Predicted",],aes(xintercept=upper,group=parameter),linetype="dashed",col="grey20",size=.5) + geom_vline(data=finaltabP[finaltabP$Assemblage %in% "Predicted",],aes(xintercept=lower,group=parameter),linetype="dashed",col="grey20",size=.5)
-
-observed<-ggplot(data=parmeltP[parmeltP$Assemblage %in% "Observed",],aes(x=estimate,fill=parameter)) + facet_wrap(~L1,scale="free_y") + geom_histogram() + theme_bw() + ggtitle("Observed")+ scale_fill_manual(values=c("grey60","grey10"))
-
-#CI intervals
-observed<-observed + geom_vline(data=finaltabP[finaltabP$Assemblage %in% "Observed",],aes(xintercept=mean,group=parameter),linetype="dashed",col="black",size=1) + geom_vline(data=finaltabP[finaltabP$Assemblage %in% "Observed",],aes(xintercept=lower,group=parameter),linetype="dashed",col="grey20",size=.5) + geom_vline(data=finaltabP[finaltabP$Assemblage %in% "Observed",],aes(xintercept=upper,group=parameter),linetype="dashed",col="grey20",size=.5)
-
-grid.arrange(simulated,predicted,observed,nrow=3)
-```
-
-Write figure to file
-
-```{r,echo=FALSE,results='hide',cache=FALSE}
-jpeg("PosteriorAll.jpeg",res=1000,height=9,width=10,units="in")
-grid.arrange(simulated,predicted,observed,nrow=3)
-dev.off()  
-```
-
-##Compare across assemblages
-
-```{r,size=8,fig.width=17,cache=FALSE}
-
-kable(as.data.frame(finaltab))  
-
-write.csv(finaltab,"ParameterEstimates.csv")
-
-ggplot(finaltab,aes(x=L1,col=Assemblage,shape=parameter),size=3) + geom_pointrange(aes(y=mean,ymax=upper,ymin=lower),size=1.5) + theme_bw() + facet_wrap(~parameter,scale="free")
-
-```
-
-##Plot trajectories.
-
-```{r view slope species,fig.height=6,cache=FALSE}
-
-gdf<-parmelts
-
-gdcast<-dcast(gdf,...~parameter,value.var="estimate")
-
-trajsplit<-split(gdcast,gdcast$L1)
-
-trajsplit<-lapply(trajsplit,function(x){
-  x[sample(1:nrow(x),1000,replace=F),]
+parall<-lapply(sdat,function(x){
+  out<-GLMM(sdat[[x]])
 })
+```
 
+The next goal is to extract the fixed effects from the GLMM and visualize them.
+
+```{r}
+formatfixed<-function(x){
+
+#fixed estimates
+f<-fixef(x)
+out<-melt(data.frame(Intercept=f[1],Linear=f[[2]],Polynomial=f[[3]]))
+out$Var2<-"Mean"
+
+#Find confidence intervals of fixed effects (assuming distribution...)
+conf<-confint.merMod(x,method = "Wald")
+rownames(conf)<-c("Intercept","Linear","Polynomial")
+colnames(conf)<-c("Lower","Upper")
+conf<-melt(conf)
+
+#match column names
+colnames(out)<-c("Var1","value","Var2")
+
+#bind mean and confidence intervals
+out<-rbind(out,conf)
+return(out)
+}
+```
+
+```{r}
+#get fixed effects
+fixf<-lapply(parall,formatfixed)
+```
+
+Plot fixed effects against underlying data
+
+```{r}
 #define trajectory function
 trajF<-function(intercept,linear,polynomial,x){
    p<-inv.logit(intercept + linear * x  + polynomial * x^2)
    return(p)
 }
 
-specCast<-list()
-
-for(x in 1:length(trajsplit)){
-  a<-trajsplit[[x]]
-  dat<-sdat[[which(names(sdat) %in% names(trajsplit)[x])]]
+predframe<-list()
+for (x in 1:length(parall)){
+  #correct level of effects
+  f<-fixf[[x]]
   
-  est<-list()
-  for(p in 1:nrow(a)){
+  #split by estimate
+  sf<-split(f,f$Var2)
   
-    est[[p]]<-data.frame(Relatedness=dat$Phylo.Relatedness,y=trajF(a[p,]$intercept,a[p,]$linear,a[p,]$polynomial,dat$Phylo.Relatedness))
-    
-    }
-  est<-rbind_all(est)
-  mtraj<-group_by(est,Relatedness) %>% summarise(mean=mean(y),upper=quantile(y,0.975),lower=quantile(y,0.025))
+  sfvalue<-lapply(sf,function(y){
+    y=trajF(y$value[1],y$value[2],y$value[3],sdat[[x]]$Phylo.Relatedness)
+    data.frame(x=sdat[[x]]$Phylo.Relatedness,y)
+  })
   
-  specCast[[x]]<-mtraj
+  #bind 
+  sfvalue<-melt(sfvalue,id.vars=c("x","y"))
+  
+  sfvalue$P_A<-sdat[[x]]$P_A
+  
+  colnames(sfvalue)<-c("x","y","line","P_A")
+  predframe[[x]]<-sfvalue
+  
   }
-
-names(specCast)<-names(trajsplit)
-
-#name and reduce
-for(x in 1:length(specCast)){
-  specCast[[x]]$Assemblage<-names(specCast)[x]
-}
-
-specdf<-rbind_all(specCast)
-
-#define another facet
-#add in observed predicted and eventually simulated labels
-
-
-specdf[specdf$Assemblage %in% c("Env","Env + Dispersal","Observed"),"Type"]<-"Observed and Predicted"
-
-
-#overlay together
-ggplot(data=specdf[specdf$Assemblage %in% c("Env","Env + Dispersal","Observed"),],aes(x=Relatedness,y=mean,ymin=lower,ymax=upper,fill=Assemblage)) + geom_ribbon(alpha=.5) + geom_line() + theme_bw()+ labs(x="Phylogenetic distance to closest related species",y="Probability of Occurrence") + scale_fill_manual(values=c("grey80","grey60","black"),labels=c("Environment","Environment + Dispersal","Observed"))  
-
-ggsave("Figure4Overlay.jpg",height=5,width=7,dpi=400)
+names(predframe)<-names(sdat)
 ```
 
-#Simulated trajectories
-```{r,fig.width=11,cache=FALSE}
-#overlay together
+```{r,fig.height=10,fig.width=14,cache=FALSE}  
+#plot predicted values
+mpred<-melt(predframe,id.vars=colnames(predframe[[1]]))
 
-#rename levels
-specdf$AssemblageL<-factor(specdf$Assemblage)
-#levels(specdf$AssemblageL)<-c("Environment","Environment + Dispersal","Lottery","Niche Conservatism","Niche Conservatism + Competition","Observed")
+#order the factors
+mpred$Assemblage<-factor(mpred$L1,levels=names(sdat)[c(2,1,3,4,5,6,7)])
 
+#assign names
+mpred$Type<-mpred$Assemblage %in% names(sdat)[1:3]
+mpred$Type[mpred$Type == T]<-"Observed"
+mpred$Type[!mpred$Type == "Observed"]<-"Simulation"
 
-#add some blank data to zoom out on lottery, its not readable.
+#simulated
+psim<-ggplot() + geom_line(data=mpred[mpred$Type == "Simulation" & mpred$line=="Mean",],aes(x=x,y=y)) + geom_line(data=mpred[mpred$Type == "Simulation" & mpred$line=="Lower",],aes(x=x,y=y),linetype="dashed") + geom_line(data=mpred[mpred$Type == "Simulation" & mpred$line=="Upper",],aes(x=x,y=y),linetype="dashed") + facet_wrap(~Assemblage) + theme_bw() + labs(x="Phylogenetic distance to the closest related species",y="Probability of occurrence")
 
-dummy<-data.frame(Relatedness=.9,mean=c(.4,.25),AssemblageL="No Signal & No Repulsion",ymin=c(.05,.2),ymax=c(.4,.2))
+pobs<-ggplot() + geom_line(data=mpred[mpred$Type == "Observed" & mpred$line=="Mean",],aes(x=x,y=y)) + geom_line(data=mpred[mpred$Type == "Observed" & mpred$line=="Lower",],aes(x=x,y=y),linetype="dashed") + geom_line(data=mpred[mpred$Type == "Observed" & mpred$line=="Upper",],aes(x=x,y=y),linetype="dashed") + facet_wrap(~Assemblage) + theme_bw() + labs(x="Phylogenetic distance to the closest related species",y="Probability of occurrence")
 
-ggplot(data=specdf[!specdf$Assemblage %in% c("Env","Env + Dispersal","Observed"),],aes(x=Relatedness,y=mean))+ geom_ribbon(alpha=.5,aes(ymin=lower,ymax=upper)) + geom_line() + theme_bw()+ labs(x="Phylogenetic distance to closest related species",y="Probability of Occurrence") + scale_fill_manual(guide='none') + facet_wrap(~AssemblageL) + geom_blank(data=dummy,aes(ymin=ymin,ymax=ymax))
-
-ggsave("Figure3Overlay.jpg",height=6,width=7,dpi=600,units="in")
+grid.arrange(psim,pobs)
 ```
+
+Write figure to file
+
+```{r,echo=FALSE,results='hide',cache=FALSE}
+jpeg("MixedEffects.svg",res=600,height=9,width=10,units="in")
+grid.arrange(psim,pobs)
+dev.off()  
+```
+
 
 ```{r}
 #save.image(paste(droppath,"Thesis\\Pred_Realized\\Assemblages\\Threshold0.05\\Results\\","PredictedRealized_Revis.RData",sep=""))
