@@ -937,9 +937,16 @@ for(x in 1:length(specS)){
 ```
 
 ```{r}
-#Plot the top curves.
-topactors<-head(gdf,10)$Species
-do.call("grid.arrange", c(pl[names(pl)%in%topactors], ncol=3))
+#Plot the curves by species clades membership
+names(specCast)<-names(pl)
+byclade<-melt(specCast,id.vars=colnames(specCast[[1]]))
+byclade<-merge(byclade,clades,by.x="L1",by.y="double.")
+
+ggplot(byclade,aes(x=x,y=mean,group=L1)) + geom_line(col="black",alpha=0.2) + theme_bw() + labs(x="Phylogenetic distance to the closest related species",y="Probability of occurrence")  + facet_wrap(~Clade,scale="free")
+ggsave("CladeMembership.jpeg",height=7,width=7,dpi=300)
+
+ggplot(byclade,aes(x=x,y=mean,group=L1)) + geom_ribbon(aes(ymin=lower,ymax=upper),alpha=.1)+ theme_bw() + labs(x="Phylogenetic distance to the closest related species",y="Probability of occurrence") + facet_wrap(~Clade,scales="free")
+
 ```
 
 ```{r}
