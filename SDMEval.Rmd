@@ -125,7 +125,7 @@ source(paste(gitpath,"SpeciesOverlapSourceFunctions.R",sep=""))
 modr<-lapply(niche,raster,values=TRUE)
 
 #Get the number of records per site, atleast 10 presences. 
-records_site<-names(which(apply(siteXspp.raster,1,sum,na.rm=TRUE) > 10))
+records_site<-names(which(apply(siteXspp.raster,1,sum,na.rm=TRUE) > 5))
 modlist<-modr[names(modr) %in% records_site]
 
 #Lets go get the presence data on hummingbird distributions
