@@ -942,10 +942,70 @@ byclade<-merge(byclade,clades,by.x="L1",by.y="double.")
 
 ggplot(byclade,aes(x=x,y=mean,group=L1)) + geom_line(col="black",alpha=0.2) + theme_bw() + labs(x="Phylogenetic distance to the closest related species",y="Probability of occurrence")  + facet_wrap(~Clade,scale="free")
 ggsave("CladeMembership.jpeg",height=7,width=7,dpi=300)
+```
 
-ggplot(byclade,aes(x=x,y=mean,group=L1)) + geom_ribbon(aes(ymin=lower,ymax=upper),alpha=.1)+ theme_bw() + labs(x="Phylogenetic distance to the closest related species",y="Probability of occurrence") + facet_wrap(~Clade,scales="free")
+##Approximate Bayesian figure
+```{r}
+#parameter category
+parmelt$param<-as.factor(str_match(parmelt$parameter,"\\w+"))
+parmelt$ind<-as.numeric(str_extract(parmelt$parameter,pattern="\\d+"))
+
+#species index
+#get mean values for all positions
+tdf<-group_by(parmelt,L1,param,ind) %>% filter(Assemblage %in% c("Observed","Simulation")) %>%  filter(str_detect(param,c("beta","alpha","gamma"))) %>% summarize(mean=mean(estimate))
+
+#cast to view all parameters
+abc<-dcast(tdf,... ~ param)
+
+#label rows
+rownames(abc)<-paste(abc$L1,abc$ind)
+prinabc<-prcomp(abc[,-c(1:2)],scale=T)
+
+#information about the pca matrix
+assemblage<-str_extract(rownames(abc),"\\D+")
+pcaspecies<-str_extract(rownames(abc),"\\d+")
+
+#assemblage data
+pcadat<-data.frame(Assemblage=assemblage,Species=as.character(pcaspecies),x=prinabc$x[,1],y=prinabc$x[,2],Scenerio=abc$L1)
+pcadat$Species<-as.character(pcadat$Species)
+
+#get a unique row number if we need to sort later
+pcadat$ID<-1:nrow(pcadat)
+
+#get species index
+pcadat[pcadat$Assemblage %in% "Observed ","Species"]<-unique(sdat[[2]]$Species)
+
+#turn off labels for simulated species
+pcadat[!pcadat$Assemblage %in% "Observed ","Species"]<-NA
+
+clades$lab<-paste(str_extract(clades$Genus,"\\w"),".",sep="",clades$Species)
+
+#merge clades
+pcadat<-merge(pcadat,clades,by.x="Species",by.y="double.",all.x=T,sort=F)
+
+#just get first intial for
+#merge patagona, mt gems and topazes
+levels(pcadat$Clade)[levels(pcadat$Clade) %in% c("Patagona","Topazes","MtGem","Bee")]<-"Patagona/Topazes/MtGem/Bee"
+
+#ensure we have the proper order
+pcadat<-pcadat[order(pcadat$ID),]
+
+#order the labels
+abc$L1<-factor(abc$L1,levels=unique(abc$L1)[c(3,1,2,4,5)])
+
+#i had to make up a new function
+df<-prinabc$x
+d <- prinabc$sdev
+v <- prinabc$rotation
+  
+mybiplot(df,d,v,scale=0,groups =abc$L1,fac=pcadat$Clade,labels=pcadat$lab,var.axes=F) + labs(col="Scenerio")
+
+ggsave("Speciesbiplot.jpeg",dpi=300,height=15,width=15)
+ggsave("Speciesbiplot.svg",dpi=300,height=15,width=15)
 
 ```
+
+
 
 ```{r}
 save.image(paste(droppath,"Thesis\\Pred_Realized\\Assemblages\\Threshold0.05\\Results\\","PredictedRealized_Revis.RData",sep=""))
