@@ -942,7 +942,7 @@ cts<-group_by(pt,L1,Phylo.Relatedness,P_A) %>% summarise(Assemblages=length(Phyl
 #merge back to points
 pts<-merge(pt,cts)
 p<-ggplot(ex,aes(x=x,y=mean)) + geom_line(col="black") + geom_line(aes(y=upper),col="gray",linetype="dashed") + geom_line(aes(y=lower),col="gray",linetype="dashed")+ theme_bw() + labs(x="",y="") + facet_wrap(~L1,nrow=1)
-p<-p + geom_jitter(data=pts,aes(x=Phylo.Relatedness,y=P_A,size=Assemblages,alpha=Assemblages),position = position_jitter(width = .005,height=0)) + scale_size_continuous(range=c(2,4)) + scale_alpha(range=c(0.4,0.7))
+p<-p + geom_point(data=pts,aes(x=Phylo.Relatedness,y=P_A,size=Assemblages,alpha=Assemblages)) + scale_size_continuous(range=c(2,4)) + scale_alpha(range=c(0.4,0.7)) + labs(x="Phylogenetic distance to the closest related species in an assemblage",y="Probability of occurrence")
 p
 ggsave("SpeciesExample.jpg",dpi=300,height=3,width=10)
 ggsave("SpeciesExample.svg",dpi=300,height=3,width=10)
