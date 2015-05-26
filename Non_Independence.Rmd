@@ -170,8 +170,7 @@ What is our observed relationship between probability of presence and phylogenet
 
 ###GLM
 
-```{r model fit,fig.height=4,fig.width=4,cache=TRUE,eval=TRUE}
- 
+```{r model fit,fig.height=4,fig.width=4,cache=TRUE,eval=TRUE} 
 
 #glm observed
 mod<-glm(data=siteXspp,formula = as.factor(P_A) ~ poly(Phylo.Relatedness,2,raw=TRUE), family = "binomial") 
@@ -207,7 +206,7 @@ coef.dat<-melt(list(GLM=observed,GLMM=observed.glmer,Bayesian=observed.bayes))
 
 quants<-group_by(dat,variable) %>% summarize(lower=quantile(value,0.025),upper=quantile(value,0.975))
 
-ggplot(dat,aes(x=value)) + geom_histogram() + facet_wrap(~variable,scales="free") + theme_bw() geom_vline(data=coef.dat,aes(xintercept=value,col=L1),linetype='dashed',size=1.1,show_guide = T) + geom_vline(data=quants,aes(xintercept=lower),col='black',size=.7)+ geom_vline(data=quants,aes(xintercept=upper),col='black',size=.7) + labs(col="Modeling Approach") 
+ggplot(dat,aes(x=value)) + geom_histogram() + facet_wrap(~variable,scales="free") + theme_bw() + geom_vline(data=coef.dat,aes(xintercept=value,col=L1),linetype='dashed',size=1.1,show_guide = T) + geom_vline(data=quants,aes(xintercept=lower),col='black',size=.7)+ geom_vline(data=quants,aes(xintercept=upper),col='black',size=.7) + labs(col="Modeling Approach") 
   
 ```
 
