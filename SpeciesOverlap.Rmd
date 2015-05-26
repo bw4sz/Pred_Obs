@@ -816,7 +816,7 @@ figure4<-ggplot(data=specdf[specdf$Assemblage %in% c("Env","Env + Dispersal","Ob
 figure4
 ggsave("Figure4Overlay.jpg",height=5,width=7,dpi=400)
 
-figure4 + geom_point(data=sdat[[2]],aes(x=Phylo.Relatedness,y=P_A),alpha=0.01)
+figure4 + geom_point(data=sdat[[2]],aes(x=Phylo.Relatedness,y=P_A),alpha=0.1)
 ggsave("Figure4OverlayPoints.jpg",height=5,width=7,dpi=400)
 
 ```
@@ -864,26 +864,9 @@ for (x in 1:length(specS)){
   specS[[x]]$Species<-unique(sdat[[2]]$Species)[x]
 }
 
-#plot gamma slopes
+
 specSdf<-rbind_all(specS)
 specSdf$param<-as.factor(str_match(specSdf$parameter,"\\w+"))
-
-gdf<-group_by(specSdf,Species) %>% filter(str_detect(parameter,"beta")) %>%summarize(Lower=quantile(estimate,0.025),Upper=quantile(estimate,0.975),mean=mean(estimate))
-
-ord<-gdf%>% arrange(desc(mean))
-
-gdf$Species<-factor(gdf$Species,levels=ord$Species)
-
-#merge with clades
-gdf<-merge(gdf,clades[,!colnames(clades) %in% "Species"],by.x="Species",by.y="double.")
-
-#split into two panels?
-gdf<-gdf[order(gdf$mean,decreasing = T),]
-gdf$panel<-cut(1:nrow(gdf),2,c(1,2))
-
-ggplot(gdf,aes(x=Species,col=Clade)) + geom_linerange(aes(ymin=Lower,ymax=Upper)) + geom_point(aes(y=mean)) + theme_bw() + theme(axis.text.x = element_text(angle = 65, hjust = 1)) + ylab("Linear Coefficient") + facet_wrap(~panel,scales="free_x",ncol=1)
-ggsave("PolynomialEstimates.svg",dpi=300,height=7,width=8)
-ggsave("PolynomialEstimates.jpeg",dpi=300,height=7,width=8)
 ```
 
 ###plot trajectories
@@ -909,8 +892,15 @@ specCast<-lapply(specS,function(y){
   mtraj<-group_by(traj,x) %>% summarise(mean=mean(y),upper=quantile(y,0.975,na.rm=T),lower=quantile(y,0.025,na.rm=T))
 })
 
-alpha_plot<-function(alpha,sp){
-  ggplot(alpha,aes(x=x,y=mean)) + geom_line(col="red",linetype="dashed") + geom_line(aes(y=upper),col="blue",linetype="dashed") + geom_line(aes(y=lower),col="blue",linetype="dashed")+ theme_bw() + labs(x="",y="") + ggtitle(sp)
+alpha_plot<-function(d,sp,pts=F){
+
+a<-PA_m2[PA_m2$Species %in% sp & PA_m2$P_R=="PA_Binary",]
+pt<-a[,c("Phylo.Relatedness","P_A")]
+
+p<-ggplot(d,aes(x=x,y=mean)) + geom_line(col="red",linetype="dashed") + geom_line(aes(y=upper),col="blue",linetype="dashed") + geom_line(aes(y=lower),col="blue",linetype="dashed")+ theme_bw() + labs(x="",y="") + ggtitle(sp) 
+
+if(pts){
+p<-p + geom_jitter(data=pt,aes(x=Phylo.Relatedness,y=P_A),alpha=.1,size=4,position = position_jitter(width = .005,height=0))}
   }
 
 pl<-list()
@@ -924,14 +914,38 @@ names(pl)<-unique(sdat[[2]]$Species)
 do.call("grid.arrange", c(pl, ncol=5))
 
 #Save them individually if needed svg and jpg
-for(x in 1:length(specS)){
+for(x in 1:length(specCast)){
   #Species
   sp<-unique(sdat[[2]]$Species)[x]
-  p<-alpha_plot(specCast[[x]],sp)
+  p<-alpha_plot(specCast[[x]],sp,pts=T)
   filenam<-paste("SpeciesPlots/",sp,".svg")
   ggsave(filenam,height=5,width=6)
 }
 
+#example figure
+names(specCast)<-unique(sdat[[2]]$Species)
+ex<-melt(specCast,c("x","mean","upper","lower"))
+
+#just grab a few species       
+keep<-c("Eriocnemis.vestita","Chaetocercus.mulsant","Heliangelus.exortis","Coeligena.lutetiae","Thalurania.furcata")
+
+ex<-ex[ex$L1 %in% keep,]
+
+#plot
+a<-PA_m2[PA_m2$Species %in% ex$L1 & PA_m2$P_R=="PA_Binary",]
+pt<-a[,c("Phylo.Relatedness","P_A","Species")]
+colnames(pt)<-c("Phylo.Relatedness","P_A","L1")
+
+#size by counts
+cts<-group_by(pt,L1,Phylo.Relatedness,P_A) %>% summarise(Assemblages=length(Phylo.Relatedness))
+
+#merge back to points
+pts<-merge(pt,cts)
+p<-ggplot(ex,aes(x=x,y=mean)) + geom_line(col="black") + geom_line(aes(y=upper),col="gray",linetype="dashed") + geom_line(aes(y=lower),col="gray",linetype="dashed")+ theme_bw() + labs(x="",y="") + facet_wrap(~L1,nrow=1)
+p<-p + geom_point(data=pts,aes(x=Phylo.Relatedness,y=P_A,size=Assemblages,alpha=Assemblages)) + scale_size_continuous(range=c(2,4)) + scale_alpha(range=c(0.4,0.7)) + labs(x="Phylogenetic distance to the closest related species in an assemblage",y="Probability of occurrence")
+p
+ggsave("SpeciesExample.jpg",dpi=300,height=3,width=10)
+ggsave("SpeciesExample.svg",dpi=300,height=3,width=10)
 ```
 
 ```{r}
@@ -942,10 +956,8 @@ byclade<-merge(byclade,clades,by.x="L1",by.y="double.")
 
 ggplot(byclade,aes(x=x,y=mean,group=L1)) + geom_line(col="black",alpha=0.2) + theme_bw() + labs(x="Phylogenetic distance to the closest related species",y="Probability of occurrence")  + facet_wrap(~Clade,scale="free")
 ggsave("CladeMembership.jpeg",height=7,width=7,dpi=300)
-
-ggplot(byclade,aes(x=x,y=mean,group=L1)) + geom_ribbon(aes(ymin=lower,ymax=upper),alpha=.1)+ theme_bw() + labs(x="Phylogenetic distance to the closest related species",y="Probability of occurrence") + facet_wrap(~Clade,scales="free")
-
 ```
+
 
 ```{r}
 save.image(paste(droppath,"Thesis\\Pred_Realized\\Assemblages\\Threshold0.05\\Results\\","PredictedRealized_Revis.RData",sep=""))
