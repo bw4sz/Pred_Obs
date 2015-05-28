@@ -38,8 +38,8 @@ library(stringr)
 opts_chunk$set(warning=FALSE,message=FALSE)
 opts_chunk$set(cache=TRUE, cache.path = 'BayesPhylo_cache/', fig.path='figure/',fig.width=14,echo=FALSE)
 
-runs=20000
-burns=18000
+runs=10000
+burns=7800
 ```
 
 
@@ -51,7 +51,7 @@ droppath<-"C:/Users/Ben/Dropbox/"
 gitpath<-"C:/Users/Ben/Documents/Pred_Obs/"
 
 #Load image if desired
-load(paste(droppath,"Thesis/Pred_Realized/Assemblages/Threshold0.05/Results/PredictedRealized.RData",sep=""))
+load(paste(droppath,"Thesis/Pred_Realized/Assemblages/Threshold0.05/Results/PredictedRealized_Revis.RData",sep=""))
 
 #start with just the present sites
 #head(PA_m2)
@@ -211,7 +211,7 @@ InitStage <- function() {list(alpha=rep(0.1,Dat$s),beta=.1,gamma=.1)}
 ParsStage <- c("alpha","beta","gamma","intercept","sigmaIntercept")
 
 #MCMC options
-ni <- 40000  # number of draws from the posterior
+ni <- 20000  # number of draws from the posterior
 nt <- 1    #thinning rate
 nb <- 0  # number to discard for burn-in
 nc <- 2  # number of chains
@@ -234,7 +234,7 @@ mSingleS <- jags(inits = InitStage,
 #Remove Burnin
 parsSingleS<-melt(mSingleS$BUGSoutput$sims.array)
 colnames(parsSingleS)<-c("Draw","Chain","parameter","estimate")
-parsSingleS<-parsSingleS[!parsSingleS$Draw %in% 1:35000,]
+parsSingleS<-parsSingleS[!parsSingleS$Draw %in% 1:((ni/nt)-1000),]
 
 #seperate alpha,betas,gamma
 allparsSingleS<-parsSingleS
@@ -273,11 +273,12 @@ save.image("BayesPhylo.Rdata")
 specSingleS$parameter<-droplevels(specSingleS$parameter)
 
 #merge with original table
-di<-data.frame(parameter=levels(specSingleS$parameter),Species=levels(dat$Species))
+specSingleS$index<-as.numeric(str_extract(specSingleS$parameter,"\\d+"))
+di<-data.frame(index=1:nlevels(dat$Species),Species=levels(dat$Species))
 
-specSingleS<-merge(specSingleS,di,by="parameter")
+specSingleS<-merge(specSingleS,di,by="index")
 
-ggplot(specSingleS,aes(x=Species,y=estimate)) + geom_violin(fill="dark grey") + coord_flip()  + theme_bw()
+#ggplot(specSingleS,aes(x=Species,y=estimate)) + geom_violin(fill="dark grey") + coord_flip()  + theme_bw()
 ```
 
 ##Plot species models
@@ -288,9 +289,7 @@ dpars<-dcast(allparsSingleS,...~parameter)
 samp<-dpars[sample(1:nrow(dpars),1000),]
 
 alpha_plot<-function(alpha,sp){
-  
-  #sample 1000 values
-  
+    
   traj<-list()
   for(x in 1:nrow(samp)){
     s<-samp[x,]
@@ -352,14 +351,14 @@ Dat <- list(
   Species=as.numeric(dat$Species),
   s=nlevels(dat$Species))
 
-InitStage <- function() {list(alpha=rep(0.1,Dat$s),beta=rep(0.1,Dat$s),gamma=rep(0.1,Dat$s),intercept=0.001,tauIntercept=0.001,slope=0.1,tauSlope=0.001,tauSlope2=0.001,slope2=0.1)}
+InitStage <- function() {list(alpha=rep(0.1,Dat$s),beta=rep(0.1,Dat$s),gamma=rep(0.1,Dat$s),intercept=0.001,tauIntercept=0.001,tauSlope=0.001,tauSlope2=0.001)}
 
 #Parameters to track
-ParsStage <- c("intercept","slope","sigmaSlope","sigmaIntercept","slope2","sigmaSlope2","alpha","beta","gamma")
+ParsStage <- c("intercept","linear","polynomial","sigmaSlope","sigmaIntercept","sigmaSlope2","alpha","beta","gamma")
 
 #MCMC options
-ni <- 30000  # number of draws from the 
-nt <- 5    #thinning rate
+ni <- 50000  # number of draws from the 
+nt <- 2   #thinning rate
 nb <- 0  # number to discard for burn-in
 nc <- 2  # number of chains
 
@@ -381,7 +380,7 @@ m = jags(inits = InitStage,
 #Remove Burnin
 parsUS<-melt(m$BUGSoutput$sims.array)
 colnames(parsUS)<-c("Draw","Chain","parameter","estimate")
-parsUS<-parsUS[!parsUS$Draw %in% 1:5000,]
+parsUS<-parsUS[!parsUS$Draw %in% 1:((ni/nt)-2000),]
 
 #seperate alpha,betas,gamma
 spec<-parsUS[str_detect(string=parsUS$parameter,pattern=c("beta|alpha|gamma")),]
@@ -447,7 +446,7 @@ for (x in 1:length(specS)){
 
 specSdf<-rbind_all(specS)
 
-gdf<-group_by(specSdf,Species) %>% sample_n(1000) %>% filter(str_detect(parameter,"beta")) 
+gdf<-group_by(specSdf,Species) %>% filter(str_detect(parameter,"beta")) 
 ord<-gdf %>% summarize(meanE=mean(estimate)) %>% arrange(meanE)
 
 gdf$Species<-factor(gdf$Species,levels=ord$Species)
@@ -459,8 +458,7 @@ datS<-split(dat,dat$Species)
 
 specCast<-lapply(specS,function(y){
   dpars<-dcast(y,...~parameter,value.var="estimate")
-  samp<-dpars[sample(1:nrow(dpars),1000),]  
-  colnames(samp)<-c("Draw","Chain","ind","Species","alpha","beta","gamma")
+  samp<-dpars
   
   #species trajectories
   traj<-list()
@@ -475,7 +473,7 @@ specCast<-lapply(specS,function(y){
   traj<-rbind_all(traj)
   
   #summarise mean and interval
-  mtraj<-group_by(traj,x) %>% summarise(mean=mean(y),upper=quantile(y,0.975),lower=quantile(y,0.025))
+  mtraj<-group_by(traj,x) %>% summarise(mean=mean(y,na.rm=T),upper=quantile(y,0.975,na.rm=T),lower=quantile(y,0.025,na.rm=T))
 })
 
 
