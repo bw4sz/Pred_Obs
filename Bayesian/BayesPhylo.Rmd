@@ -357,7 +357,7 @@ InitStage <- function() {list(alpha=rep(0.1,Dat$s),beta=rep(0.1,Dat$s),gamma=rep
 ParsStage <- c("intercept","linear","polynomial","sigmaSlope","sigmaIntercept","sigmaSlope2","alpha","beta","gamma")
 
 #MCMC options
-ni <- 50000  # number of draws from the 
+ni <- 100000  # number of draws from the 
 nt <- 2   #thinning rate
 nb <- 0  # number to discard for burn-in
 nc <- 2  # number of chains
@@ -457,7 +457,7 @@ ggplot(gdf,aes(x=Species,y=estimate)) + geom_violin(fill="grey30") + theme_bw() 
 datS<-split(dat,dat$Species)
 
 specCast<-lapply(specS,function(y){
-  dpars<-dcast(y,...~parameter,value.var="estimate")
+  dpars<-dcast(y[,-3],...~par,value.var="estimate")
   samp<-dpars
   
   #species trajectories
