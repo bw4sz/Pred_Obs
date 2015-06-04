@@ -357,8 +357,8 @@ InitStage <- function() {list(alpha=rep(0.1,Dat$s),beta=rep(0.1,Dat$s),gamma=rep
 ParsStage <- c("intercept","linear","polynomial","sigmaSlope","sigmaIntercept","sigmaSlope2","alpha","beta","gamma")
 
 #MCMC options
-ni <- 100000  # number of draws from the 
-nt <- 2   #thinning rate
+ni <- 1000000  # number of draws from the 
+nt <- 25   #thinning rate
 nb <- 0  # number to discard for burn-in
 nc <- 2  # number of chains
 
