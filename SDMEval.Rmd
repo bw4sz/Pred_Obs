@@ -1,8 +1,8 @@
 ---
-title: "Appendix C: SDM Evaluations"
+title: 'Appendix C: SDM Evaluations'
 author: "Ben Weinstein"
 date: "Friday, November 14, 2014"
-output: html_document
+output: pdf_document
 ---
 
 ```{r,warning=FALSE,message=FALSE}
@@ -115,7 +115,7 @@ ggplot(mvar, aes(x=Species,y=Bioclim,fill=value)) + geom_tile() + scale_fill_gra
 * Also calcuate the mean habitat suitability for each threshold
 
 ```{r}
-load(paste(droppath,"Thesis/Pred_Realized/Assemblages/Threshold0.1/Results/PredictedRealized.RData",sep=""))
+load(paste(droppath,"C:/Users/Ben/DropboxThesis/Pred_Realized/Assemblages/Threshold0.1/Results/PredictedRealized_.RData",sep=""))
 ```
 
 ```{r}

@@ -1,0 +1,184 @@
+---
+title: "Time to Sympatry"
+author: "Ben Weinstein"
+date: "August 17, 2015"
+output: html_document
+---
+
+#Read in libraries and hummingbird data
+
+```{r,warning=FALSE,message=FALSE}
+#Load required libraries
+library(reshape2)
+require(ggplot2)
+library(picante)
+library(dismo)
+library(ape)
+library(doSNOW)
+library(phytools)
+library(foreach)
+library(maptools)
+library(rasterVis)
+library(knitr)
+library(vegan)
+library(gridExtra)
+library(phytools)
+library(stringr)
+library(dplyr)
+library(scales)
+
+opts_chunk$set(warning=FALSE,message=FALSE)
+opts_chunk$set(cache=TRUE, cache.path = 'SpeciesOverlap_cache/', fig.path='figure/',fig.width=10,echo=TRUE)
+
+#Set git path
+gitpath<-"C:/Users/Ben/Documents/Pred_Obs/"
+droppath<-"C:/Users/Ben/Dropbox/"
+
+setwd(gitpath)
+```
+
+The analysis takes in:
+
+* Phylogenetic Tree in newick format
+
+* Sites matrix with long lat
+
+* Species Assemblages corresponding to the sites matrix
+
+```{r import data}
+#Bring in Phylogenetic Data
+trx<-read.tree(paste(gitpath,"InputData\\hum294.tre",sep=""))
+
+#format tips
+new<-str_extract(trx$tip.label,"(\\w+).(\\w+)")
+#get duplicates
+trx<-drop.tip(trx,trx$tip.label[duplicated(new)])
+
+#name tips.
+trx$tip.label<-str_extract(trx$tip.label,"(\\w+).(\\w+)")
+
+ctrx<-cophenetic(trx)
+
+#Bring in the assemblages, cleaned from JP
+Sites<-read.csv(paste(gitpath,"InputData//Sites.csv",sep=""),row.names=1)
+
+####bring in Clade data
+clades<-read.csv(paste(gitpath,"InputData//CladeList.txt",sep=""),header=FALSE)[,-1]
+colnames(clades)<-c("Clade","Genus","Species","double","English")
+clades<-clades[,1:5]
+
+#Change the syntax on clades so it matches output, replace . with space
+clades$double.<-sub(" ",".",clades$double)
+
+#Bring in spatial data for the sites
+#Extract env information for each site
+Sites.sp<-SpatialPointsDataFrame(Sites[,c("LongDecDeg","LatDecDeg")],Sites)
+
+#site by species lists
+siteXspp<-t(read.csv(paste(gitpath,"InputData//siteXspp.csv",sep=""),row.names=1))
+```
+
+Following Pigot's 2013 paper [here](http://www.researchgate.net/profile/Alex_Pigot/publication/233899889_Species_interactions_constrain_geographic_range_expansion_over_evolutionary_time/links/0912f50d031ba1c026000000.pdf), we can create reasonable expectation for the degree of sympatry versus time since speciation. 
+
+We will modify this to look at co-occurrence of sister pairs as a function of time since speciation.
+
+## Find sister pairs
+
+```{r}
+plotTree(trx,fsize=.1)
+
+sisters<-sapply(trx$tip.label,function(x){
+  getSisters(trx,mode="label",node=x)})
+
+names(sisters)<-trx$tip.label
+sisters<-melt(sisters)
+colnames(sisters)<-c("Sister","Node")
+```
+
+## Time since divergence for sister pairs
+
+```{r}
+sisters$Time<-NULL
+for (x in 1:nrow(sisters)){
+  row<-sisters[x,]
+  distp<-ctrx[rownames(ctrx) %in% row[[1]],colnames(ctrx) %in% row[[2]]]
+  if(length(distp)==0){
+    sisters[x,"Time"]<-NA
+    next}
+  sisters[x,"Time"]<-distp
+}
+```
+
+## Co-occurrence Rates
+
+How many times do sister pairs co-occur?
+
+```{r}
+sisters$Co<-NA
+for (x in 1:nrow(sisters)){
+  row<-sisters[x,]
+  pairs<-siteXspp[rownames(siteXspp) %in% c(row[[1]],row[[2]]),]
+  
+  #If we are missing a species from the list, skip
+  if(length(pairs)==248) {next}
+  co_occur<-sum(apply(pairs,2,sum)==2)
+  sisters[x,"Co"]<-co_occur
+}
+```
+
+## Co-occurrence and Time since Divergence
+
+Abundance based
+
+This may be sensitive to sampling.
+
+```{r}
+ggplot(sisters,aes(x=Time,y=Co)) + geom_point() + theme_bw() + geom_smooth()
+```
+
+Probability of co-occurrence of sister pairs as a function of time since divergence, getting closer to the model proposed by Pigot.
+
+```{r}
+sisters$PCo<-(sisters$Co>0) * 1
+ggplot(sisters,aes(x=Time,y=PCo)) + geom_point() + theme_bw() + geom_smooth(method="glm",family="binomial")
+```
+
+This seems quite sensitive to the shape of the phylogeny. If we ignore just the furthest tip (co-occurrence among deep splitting topazes), what happens?
+
+```{r}
+sisters$PCo<-(sisters$Co>0) * 1
+ggplot(sisters,aes(x=Time,y=PCo)) + geom_point() + theme_bw() + geom_smooth(method="glm",family="binomial") + xlim(0,.4)
+```
+
+Pigot casts the relationship as the proportion of species in sympatry. For this we need to bin time intervals, let's round time since divergence to two decimal places.
+
+```{r}
+#round to two decimal places
+sisters$RTime<-round(sisters$Time)
+```
+
+For each time interval, what % of species are sympatric?
+
+In the 2013 paper, Pigot combines time intervals with less than 4 species
+
+```{r}
+
+#remove species for which we have no information
+sis<-sisters[!is.na(sisters$PCo),]
+#remove na for divergence time
+sis<-sis[!is.na(sis$Time),]
+
+#how many sister pairs do we have left?
+nrow(sis)
+
+pigot<-sis %>% group_by(RTime) %>% summarize(n=n(),pairs=sum(PCo,na.rm=T)) %>% mutate(p=pairs/n)
+
+
+ggplot(pigot,aes(x=RTime,y=p,size=n)) + geom_point(alpha=.5) + geom_smooth(method="glm",family="binomial") + ylab("% Pairs Sympatric") + xlab("Time Since Speciation")
+```
+
+Is this robust to remove the deepest sister lineages?
+
+```{r}
+ggplot(pigot,aes(x=RTime,y=p,size=n)) + geom_point(alpha=.5) + geom_smooth(method="lm") + ylab("% Pairs Sympatric") + xlab("Time Since Speciation") + xlim(0,15)
+```
