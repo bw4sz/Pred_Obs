@@ -16,11 +16,11 @@ library(lme4)
 library(ape)
 library(doSNOW)
 library(phytools)
-library(foreach)
 library(maptools)
-library(rasterVis)
+library(survival)
+library(flexsurv)
 library(knitr)
-library(vegan)
+library(raster)
 library(gridExtra)
 library(phytools)
 library(stringr)
@@ -77,6 +77,13 @@ Sites.sp<-SpatialPointsDataFrame(Sites[,c("LongDecDeg","LatDecDeg")],Sites)
 #site by species lists that was aggregate for the SDM dataset in SpeciesOverlap.RmD
 siteXspp<-read.csv("C:/Users/Ben/Dropbox/Thesis/Pred_Realized/Assemblages//SiteXsppraster.csv",row.names=1)
 
+##Elev raster
+elev.ca<-raster("InputData/EcuadorRaster.grd")
+
+#raster template for cell numbers
+r<-raster("InputData/RasterTemplate.grd")
+
+
 ```
 
 Following Pigot's 2013 paper [here](http://www.researchgate.net/profile/Alex_Pigot/publication/233899889_Species_interactions_constrain_geographic_range_expansion_over_evolutionary_time/links/0912f50d031ba1c026000000.pdf), we can create reasonable expectation for the degree of sympatry versus time since speciation. 
@@ -108,6 +115,9 @@ for (x in 1:nrow(sisters)){
     next}
   sisters[x,"Time"]<-distp
 }
+
+#remove duplicates
+sisters<-sisters[!duplicated(sisters$Time),]
 ```
 
 ## Co-occurrence Rates
@@ -130,28 +140,21 @@ for (x in 1:nrow(sisters)){
 
 ## Co-occurrence and Time since Divergence
 
-
-This may be sensitive to sampling.
-
-```{r}
-ggplot(sisters,aes(x=Time,y=Co)) + geom_point() + theme_bw() + geom_smooth(method="lm")
-```
-
 Probability of co-occurrence of sister pairs as a function of time since divergence, getting closer to the model proposed by Pigot.
 
 ```{r}
 sisters$PCo<-(sisters$Co>0) * 1
-ggplot(sisters,aes(x=Time,y=PCo)) + geom_point() + theme_bw() + geom_smooth(method="glm",family="binomial")
+ggplot(sisters,aes(x=Time,y=PCo)) + geom_point() + theme_bw() + geom_smooth(method="glm",family="binomial") + labs(x="Time since divergence between sister taxa",y="Probability of co-occurrence")
 ```
 
 This seems quite sensitive to the shape of the phylogeny. If we ignore just the furthest tip (co-occurrence among deep splitting topazes), what happens?
 
 ```{r}
 sisters$PCo<-(sisters$Co>0) * 1
-ggplot(sisters,aes(x=Time,y=PCo)) + geom_point() + theme_bw() + geom_smooth(method="glm",family="binomial") + xlim(0,15)
+ggplot(sisters,aes(x=Time,y=PCo)) + geom_point() + theme_bw() + geom_smooth(method="glm",family="binomial") + xlim(0,15) + labs(x="Time since divergence between sister taxa",y="Probability of co-occurrence")
 ```
 
-Pigot casts the relationship as the proportion of species in sympatry. For this we need to bin time intervals, let's round time since divergence to two decimal places.
+In the Pigot 2013 Ecology Letters paper, the relationship is plotted as the proportion of species in sympatry. For this we need to bin time intervals, let's round time since divergence to two decimal places.
 
 ```{r}
 #round to two decimal places
@@ -173,13 +176,14 @@ nrow(sis)
 
 pigot<-sis %>% group_by(RTime) %>% summarize(n=n(),pairs=sum(PCo,na.rm=T)) %>% mutate(p=pairs/n)
 
-ggplot(pigot,aes(x=RTime,y=p,size=n)) + geom_point(alpha=.5) + geom_smooth(method="glm",family="binomial") + ylab("% Pairs Sympatric") + xlab("Time Since Speciation")
+ggplot(pigot,aes(x=RTime,y=p,size=n)) + geom_point(alpha=.5) + geom_smooth(method="glm",family="binomial") + ylab("% Pairs Sympatric") + xlab("Time since divergence between sister taxa")
+
 ```
 
 Is this robust to remove the deepest sister lineages?
 
 ```{r}
-ggplot(pigot,aes(x=RTime,y=p,size=n)) + geom_point(alpha=.5) + geom_smooth(method="lm") + ylab("% Pairs Sympatric") + xlab("Time Since Speciation")
+ggplot(pigot,aes(x=RTime,y=p,size=n)) + geom_point(alpha=.5) + geom_smooth(method="lm") + ylab("% Pairs Sympatric") + xlab("Time since divergence between sister taxa")
 ```
 
 Cut the sister lineages into class based on time since speciation
@@ -193,9 +197,9 @@ ggplot(pigot,aes(x=RTime_cut,y=p,size=n)) + geom_point(alpha=.5) + geom_smooth(m
 
 ```
 
-Time since divergence and cost distance.
+#Time since divergence and cost distance.
 
-Geographic weighted cost distance.
+Geographic weighted cost distance. If dispersal limitation was an important factor, we would expect recently diverged taxa to be seperated by large geographic barriers compared to deeper splits.
 
 ```{r}
 #read in cost matrix between all sites from SpeciesOverlap.Rmd
@@ -228,49 +232,144 @@ for (x in 1:nrow(sis)){
   presB<- colnames(pairs)[which(pairs[B,]==1)]  
   
   #Presence locations for species A and species B in cost distance matrix
-  spdist<-cp[presA,presB]
+  spdist<-cp[presA, presB,drop=F]
   
+  #minimum distance
+  #The easist way to preserve naming is to maintain the matrix structure, but set all non min values to NA
+    for (g in 1:nrow(spdist)){
+      min.col<-min(spdist[g,])
+      #colnames to set to NA
+      nacol<-as.numeric(which(spdist[g,] > min.col))
+      spdist[g,nacol]<-NA
+    }
+  
+ 
   #create a dataframe
-  df<-data.frame(To=A,From=B,Time=sis[x,"Time"],melt(as.matrix(spdist)))
+  df<-data.frame(To=A,From=B,Time=sis[x,"Time"],melt(spdist))
   
   #need to convert cells to characters
   df$Var1<-as.character(df$Var1)
   df$Var2<-as.character(df$Var2)
   
   costsis[[x]]<-df
-  
 }
 
 #bind all dataframes together
 costdf<-rbind_all(costsis)
 colnames(costdf)<-c("To","From","Time","CellTo","CellFrom","CostDistance")
-  
+
+#remove the NAs
+costdf<-costdf[!is.na(costdf$CostDistance),]  
 ```
 
-Plot
+What does this look like? Take a couple example species.
 
 ```{r}
+#turn to a numeric value
+costdf$CellTo<-as.numeric(str_extract(costdf$CellTo,"\\d+"))
+costdf$CellFrom<-as.numeric(str_extract(costdf$CellFrom,"\\d+"))
 
 #remove infinites (islands or holes in DEM)
 costdf<-costdf[is.finite(costdf$CostDistance),]
-ggplot(costdf,aes(x=Time,y=CostDistance)) + geom_point() + geom_smooth(method="lm") + theme_bw() + xlab("Time since divergence between Sister Taxa")
-```
 
-Where are the species pairs in there?
-```{r}
 #label pairs
 costdf$pairs<-as.factor(as.numeric(as.factor(paste(costdf$To,costdf$From))))
-ggplot(costdf,aes(x=Time,y=CostDistance,col=pairs)) + geom_point() + geom_smooth(method="lm",aes(group=1)) + theme_bw() + xlab("Time since divergence between sister taxa") + scale_color_discrete(guide="none") + ylab("Environmentally Weighted Geographic Distance")
+
+sampl<-costdf[costdf$pairs==1,]
+```
+
+
+```{r example cost path,eval=T}
+makePlot<-function(sampl){
+  
+  paths<-foreach(x=1:nrow(sampl),.packages=c("raster","gdistance","stringr"),.errorhandling = 'pass',.export=c("elev.ca","r")) %dopar% {
+    orig<-xyFromCell(r,cell=sampl$CellTo[x],spatial=T)
+    dest<-xyFromCell(r,cell=sampl$CellFrom[x],spatial=T)
+    
+    if(sampl$CellTo[x]==sampl$CellFrom[x]){return(NA)}
+    
+    #What elevation is the origin
+    elev_origin<-extract(elev.ca,orig)[[1]]
+    if(is.na(elev_origin)){ elev_origin<-0}
+    
+    #Get the difference between the origin elevation and every cell in the raster
+    elev_diff<-abs(elev_origin-elev.ca)
+    
+    #create a the transition matrix where permeability is high where elev difference is low
+    trans_diff<-transition(elev_diff,function(x) 1/mean(x),8)
+    
+    #Diagonal Cell Correction, diagonals are father away than adjacent cells. 
+    slope <- geoCorrection(trans_diff)
+  
+    #shortest path
+    l<-shortestPath(slope,orig,dest,output="SpatialLines")
+    return(l)
+  }
+  
+  #plot raster and lines
+  orig<-xyFromCell(r,cell=sampl$CellTo,spatial=T)
+  dest<-xyFromCell(r,cell=sampl$CellFrom,spatial=T)
+  
+  op <- par(mar=rep(.01, 4))
+  plot(elev.ca,axes=F,legend=F,box=F,ext=extent(rbind.SpatialPoints(orig,dest))*2)
+  par(op)
+  
+  points(orig,col="red",cex=2.5,pch=20)
+  points(dest,col="blue",cex=1.5,pch=20)
+  
+  
+  for(x in 1:length(paths)){
+    lines(paths[[x]])
+  }
+  
+  #write to file
+  filnam<-paste("CostFigures/",str_replace_all(paste(unique(sampl$To),unique(sampl$From),sep="_"),"\\.+",""),".svg",sep="")
+  
+  svg(filnam)
+  op <- par(mar=rep(.01, 4))
+  plot(elev.ca,axes=F,legend=F,box=F,ext=extent(rbind.SpatialPoints(orig,dest))*1.5)
+  par(op)
+  
+  points(orig,col="red",cex=1.5,pch=20)
+  points(dest,col="blue",cex=1.5,pch=20)
+  
+  for(x in 1:length(paths)){
+    lines(paths[[x]])
+  }
+  
+  dev.off()
+}
+
+```
+
+Run for each sister pair
+
+```{r}
+splitdf<-split(costdf,costdf$pairs)
+
+  cl<-makeCluster(2,"SOCK")
+  registerDoSNOW(cl)
+  
+lapply(splitdf,makePlot)
+
+    stopCluster(cl)
+
+```
+
+Label each sister pair to see the spread.
+
+```{r}
+ggplot(costdf,aes(x=Time,y=CostDistance,col=pairs)) + geom_point() + geom_smooth(method="glm",aes(group=1),family="poisson") + theme_bw() + xlab("Time since divergence between sister taxa") + scale_color_discrete(guide="none") + ylab("Environmentally Weighted Geographic Distance") 
 ```
 
 This is caused by the co-occurrence of topazes - plot both lines
 
 ```{r}
 #label pairs
-ggplot(costdf,aes(x=Time,y=CostDistance,col=pairs)) + geom_point() + geom_smooth(method="lm",aes(group=1)) + theme_bw() + xlab("Time since divergence between sister taxa (myr)") + scale_color_discrete(guide="none") + ylab("Environmentally Weighted Geographic Distance") + geom_smooth(data=costdf[costdf$Time<20,],aes(group=1),linetype="dashed",method="lm",col="black",size=1.1)
+ggplot(costdf,aes(x=Time,y=CostDistance,col=pairs)) + geom_point() + geom_smooth(method="glm",aes(group=1),family="poisson") + theme_bw() + xlab("Time since divergence between sister taxa (myr)") + scale_color_discrete(guide="none") + ylab("Environmentally Weighted Geographic Distance") + geom_smooth(data=costdf[costdf$Time<20,],aes(group=1),linetype="dashed",method="glm",family="poisson",col="black",size=1.1)
 ```
 
-That negative relationship doesn't appear meaningful. Fit a quick regression line with a random effect for species pair.
+Is that negative relationship is meaningful - Fit a regression line with a random effect for species pair.
 
 ```{r}
 mod<-lmer(data=costdf,CostDistance~Time + (1|pairs))
@@ -284,6 +383,16 @@ coefs$p.z <- 2 * (1 - pnorm(abs(coefs$t.value)))
 coefs
 ```
 
-Time since divergence between taxa is not a useful predictor for the cost distance between species sites. If dispersal limitation through a time lag was a important factor shaping co-occurrence, we would expect to see the weight of the sympatry. 
+Time since divergence between taxa is weakly useful predictor for the cost distance between species sites. If dispersal limitation through a time lag was a important factor shaping co-occurrence, we would expect to see the weight of the sympatry to be stronger, because it could be the spread of points.
 
-Repeat for all pairs of taxa - not just sister pairs.
+How would the relationship look just with the mean cost distance between sister pairs?
+
+```{r}
+meanC<-costdf %>% group_by(pairs,Time) %>% summarise(cp=mean(CostDistance))
+
+#label pairs
+ggplot(meanC,aes(x=Time,y=cp)) + geom_point(size=4,alpha=.8,shape=1) + scale_shape_discrete(solid=F)+ geom_smooth(method="lm",aes(group=1)) + theme_bw() + xlab("Time since divergence between sister taxa (myr)") + scale_color_discrete(guide="none") + ylab("Average cost distance between localities") + geom_smooth(data=meanC[meanC$Time<10,],method="lm",aes(group=1),linetype="dashed",col="black") 
+ggsave("CostDivergence.svg",height=5,width=7)
+ggsave("CostDivergence.jpeg",height=5,width=7,dpi=600)
+
+```

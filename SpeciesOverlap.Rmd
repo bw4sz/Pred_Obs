@@ -192,7 +192,7 @@ completeI<-cong[names(which(apply(cong,1,sum)==4)),]
 
 ##View Niche models
 
-```{r,fig.height=26}
+```{r,fig.height=60}
 #load models to file, makes it more transferable than keeping them on disk
 modr<-lapply(niche,raster,values=TRUE)
 
@@ -203,7 +203,7 @@ modlist<-modr[names(modr) %in% records_site]
 print(paste(length(modlist),"Species in the analysis"))
 
 #plot a few rasters
-plot(stack(modlist),maxnl=100,nr=length(modlist)/5)
+plot(stack(modlist),nc=2)
 ```
 
 #Cost Path Analysis
@@ -286,7 +286,7 @@ dest<-cellSitesXY[90,]
   
   #What elevation is the origin
   elev_origin<-extract(elev.ca,orig)[[1]]
-  if(is.na(elev_origin)) elev_origin<-0
+  if(is.na(elev_origin)){ elev_origin<-0}
   
   #Get the difference between the origin elevation and every cell in the raster
   elev_diff<-abs(elev_origin-elev.ca)
@@ -305,6 +305,19 @@ plot(elev_diff,xaxt="n",yaxt="n",main="Example Least Cost Distance")
 points(orig,col="red",cex=1.5,pch=20)
 points(dest,col="blue",cex=1.5,pch=20)
 lines(l)
+```
+
+Geographic distance between sites
+
+```{r}
+geodist<-pointDistance(cellSitesXY,lonlat=T)
+colnames(geodist)<-colnames(CostPathMatrix)
+rownames(geodist)<-rownames(CostPathMatrix)
+mg<-melt(geodist)
+cg<-melt(as.matrix(CostPathMatrix))
+df<-merge(mg,cg,by=c("Var1","Var2"))
+colnames(df)<-c("To","From","Euclid","Cost")
+ggplot(df,aes(x=log(Euclid),y=Cost))+ geom_point() + geom_abline(linetype="dashed") + xlim(9,22) + ylim(9,22) + labs(x="Log geographic distance between sites", y="Log cost distance between Sites") 
 ```
 
 ### Create list of assemblages in observed and predicted assemblages
