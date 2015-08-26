@@ -122,7 +122,7 @@ envfolder<-"C:\\Users\\Ben\\Dropbox\\Thesis\\Pred_Realized\\EnvLayers"
 savefolder<-"C:/Users/Ben/Dropbox/Thesis/Pred_Realized/NicheModels/"
 ```
 
-Run distribution models (may need to be done offline)
+Run distribution models (may need to be done offline, can take awhile)
 
 ```{r Niche Models,eval=FALSE}
 SDM_SP(cell_size,inLocalities,envfolder,savefolder)
@@ -190,9 +190,11 @@ cong<-as.data.frame.array(table(congruence))
 completeI<-cong[names(which(apply(cong,1,sum)==4)),]
 ```
 
-##View Niche models
+##Bring in Niche models
 
-```{r,fig.height=60}
+For each species, view the distribution maps and the point localities overtop
+
+```{r,fig.height=6,width=7}
 #load models to file, makes it more transferable than keeping them on disk
 modr<-lapply(niche,raster,values=TRUE)
 
@@ -202,8 +204,35 @@ modlist<-modr[names(modr) %in% records_site]
 
 print(paste(length(modlist),"Species in the analysis"))
 
-#plot a few rasters
-plot(stack(modlist),nc=2)
+#plot raster with presence points and localities
+#bring in raw localities
+ #Lets go get the presence data on hummingbird distributions
+  Niche_locals<-read.csv(paste(gitpath,"InputData\\MASTER_POINTLOCALITYarcmap_review.csv",sep=""))
+  
+  #Just take the columns you want. 
+  PAdat<-Niche_locals[,colnames (Niche_locals) %in% c("RECORD_ID","SPECIES","COUNTRY","LOCALITY","LATDECDEG","LONGDECDEG","Decision","SpatialCheck","MapDecision")]
+  
+  #clean localities, we checked them against published range records and visually inspected them
+  PAdat<-PAdat[!PAdat$LONGDECDEG==-6,]
+  loc_clean<-PAdat[!PAdat$MapDecision=="REJECT",]
+  
+for(nlayers(modlist)){
+  nm<-modlist[[1]]
+  plot(nm,axes=F,legend=T,box=F)
+  speciesname<-paste(str_match(names(nm),"(\\w+)\\.(\\w+)_Total")[,2:3],collapse=" ")
+  
+  #get localities for that species
+  #match formating for species names
+  sp.loc<-loc_clean[loc_clean$SPECIES %in%  gsub("\\."," ",as.character(unique(speciesname))),]
+  sp.loc<-sp.loc[!duplicated(sp.loc[,-1]),]
+  #make into a spatial object
+  sp.loc<-SpatialPointsDataFrame(sp.loc[,c("LONGDECDEG","LATDECDEG")],sp.loc)
+  #plot 
+  points(sp.loc)
+  title(speciesname)
+  text(paste("n =",length(sp.loc)),x=-76.44562,y=12.40141)
+}
+
 ```
 
 #Cost Path Analysis
