@@ -317,6 +317,15 @@ makePlot<-function(sampl){
   points(orig,col="red",cex=2.5,pch=20)
   points(dest,col="blue",cex=1.5,pch=20)
   
+  #add a point legend
+  l <- legend( "topright"
+         , inset = c(0.01,0.01) 
+         , cex = .8
+         , bty = "n"
+         , legend = c(unique(sampl$To), unique(sampl$From))
+         , pt.bg = c("red","blue")
+         , pch = 21
+)
   
   for(x in 1:length(paths)){
     lines(paths[[x]])
