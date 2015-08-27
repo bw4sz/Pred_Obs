@@ -149,7 +149,6 @@ This seems quite sensitive to the shape of the phylogeny. If we ignore just the 
 
 ```{r}
 sisters$PCo<-(sisters$Co>0) * 1
-ggplot(sisters,aes(x=Time,y=PCo)) + geom_point() + theme_bw() + geom_smooth(method="glm",family="binomial") + xlim(0,15) + labs(x="Time since divergence between sister taxa",y="Probability of co-occurrence")
 ```
 
 In the Pigot 2013 Ecology Letters paper, the relationship is plotted as the proportion of species in sympatry. For this we need to bin time intervals, let's round time since divergence to two decimal places.
@@ -174,14 +173,6 @@ nrow(sis)
 
 pigot<-sis %>% group_by(RTime) %>% summarize(n=n(),pairs=sum(PCo,na.rm=T)) %>% mutate(p=pairs/n)
 
-ggplot(pigot,aes(x=RTime,y=p,size=n)) + geom_point(alpha=.5) + geom_smooth(method="glm",family="binomial") + ylab("% Pairs Sympatric") + xlab("Time since divergence between sister taxa")
-
-```
-
-Is this robust to remove the deepest sister lineages?
-
-```{r}
-ggplot(pigot,aes(x=RTime,y=p,size=n)) + geom_point(alpha=.5) + geom_smooth(method="lm") + ylab("% Pairs Sympatric") + xlab("Time since divergence between sister taxa")
 ```
 
 Cut the sister lineages into class based on time since speciation
@@ -211,6 +202,7 @@ rownames(cp)<-colnames(siteXspp)
 colnames(cp)<-colnames(siteXspp)
 ```
 
+##View cost paths between sister taxa
 For each species pair, get the cost distance between sites, with cost of co-occurrence being 0. 
 
 ```{r}
@@ -260,7 +252,7 @@ colnames(costdf)<-c("To","From","Time","CellTo","CellFrom","CostDistance")
 costdf<-costdf[!is.na(costdf$CostDistance),]  
 ```
 
-What does this look like? Take a couple example species.
+###Plots
 
 ```{r}
 #turn to a numeric value
@@ -337,8 +329,8 @@ makePlot<-function(sampl){
   plot(elev.ca,axes=F,legend=F,box=F,ext=extent(rbind.SpatialPoints(orig,dest))*2.5,col=grey.colors(1000))
   par(op)
   
-  points(orig,col="black",cex=2.3,pch=20)
-  points(dest,col="black",cex=1.5,pch=17)
+  points(orig,col="black",cex=2.3,pch=1)
+  points(dest,col="black",cex=1.5,pch=2)
   
   #add a point legend
   l <- legend( "top"
@@ -347,7 +339,7 @@ makePlot<-function(sampl){
          , bty = "n"
          , legend = c(unique(sampl$To), unique(sampl$From))
          , col = c("black","black")
-         , pch = c(20,17)
+         , pch = c(1,2)
 )
   for(x in 1:length(paths)){
     lines(paths[[x]])
@@ -358,7 +350,7 @@ makePlot<-function(sampl){
 
 ```
 
-Run for each sister pair
+Run for each sister pair.
 
 ```{r,fig.height=5,fig.width=6,fig.align="center"}
 splitdf<-split(costdf,costdf$pairs)
@@ -372,7 +364,7 @@ lapply(splitdf,makePlot)
 
 ```
 
-Label each sister pair to see the spread.
+Color each sister pair to see the spread.
 
 ```{r}
 ggplot(costdf,aes(x=Time,y=CostDistance,col=pairs)) + geom_point() + geom_smooth(method="glm",aes(group=1),family="poisson") + theme_bw() + xlab("Time since divergence between sister taxa") + scale_color_discrete(guide="none") + ylab("Environmentally Weighted Geographic Distance") 
@@ -444,7 +436,6 @@ coefs
 
 Ignoring the deepest lineages. 
 
-
 ```{r}
 mod<-lm(data=meanC[meanC$Time < 10,],cp~Time)
 summary(mod)
@@ -456,3 +447,4 @@ coefs <- data.frame(coef(summary(mod)))
 coefs$p.z <- 2 * (1 - pnorm(abs(coefs$t.value)))
 coefs
 ```
+

@@ -73,10 +73,10 @@
 </g>
 </g>
 <g clip-path="url(#clip3)" clip-rule="nonzero">
-<path style="fill-rule:nonzero;fill:rgb(0%,0%,0%);fill-opacity:1;stroke-width:0.75;stroke-linecap:round;stroke-linejoin:round;stroke:rgb(0%,0%,0%);stroke-opacity:1;stroke-miterlimit:10;" d="M 269.402344 152.308594 C 269.402344 157.828125 261.121094 157.828125 261.121094 152.308594 C 261.121094 146.785156 269.402344 146.785156 269.402344 152.308594 "/>
-<path style=" stroke:none;fill-rule:nonzero;fill:rgb(0%,0%,0%);fill-opacity:1;" d="M 177.214844 347.492188 L 182.667969 356.941406 L 171.757813 356.941406 Z M 177.214844 347.492188 "/>
-<path style="fill-rule:nonzero;fill:rgb(0%,0%,0%);fill-opacity:1;stroke-width:0.75;stroke-linecap:round;stroke-linejoin:round;stroke:rgb(0%,0%,0%);stroke-opacity:1;stroke-miterlimit:10;" d="M 177.148438 15.761719 C 177.148438 17.683594 174.265625 17.683594 174.265625 15.761719 C 174.265625 13.84375 177.148438 13.84375 177.148438 15.761719 "/>
-<path style=" stroke:none;fill-rule:nonzero;fill:rgb(0%,0%,0%);fill-opacity:1;" d="M 175.707031 28.023438 L 178.617188 33.0625 L 172.796875 33.0625 Z M 175.707031 28.023438 "/>
+<path style="fill:none;stroke-width:0.75;stroke-linecap:round;stroke-linejoin:round;stroke:rgb(0%,0%,0%);stroke-opacity:1;stroke-miterlimit:10;" d="M 271.472656 152.308594 C 271.472656 155.738281 268.691406 158.515625 265.261719 158.515625 C 261.832031 158.515625 259.050781 155.738281 259.050781 152.308594 C 259.050781 148.878906 261.832031 146.097656 265.261719 146.097656 C 268.691406 146.097656 271.472656 148.878906 271.472656 152.308594 "/>
+<path style="fill:none;stroke-width:0.75;stroke-linecap:round;stroke-linejoin:round;stroke:rgb(0%,0%,0%);stroke-opacity:1;stroke-miterlimit:10;" d="M 177.214844 347.492188 L 182.667969 356.941406 L 171.757813 356.941406 L 177.214844 347.492188 "/>
+<path style="fill:none;stroke-width:0.75;stroke-linecap:round;stroke-linejoin:round;stroke:rgb(0%,0%,0%);stroke-opacity:1;stroke-miterlimit:10;" d="M 177.867188 15.761719 C 177.867188 18.644531 173.546875 18.644531 173.546875 15.761719 C 173.546875 12.882813 177.867188 12.882813 177.867188 15.761719 "/>
+<path style="fill:none;stroke-width:0.75;stroke-linecap:round;stroke-linejoin:round;stroke:rgb(0%,0%,0%);stroke-opacity:1;stroke-miterlimit:10;" d="M 175.707031 28.023438 L 178.617188 33.0625 L 172.796875 33.0625 L 175.707031 28.023438 "/>
 <g style="fill:rgb(0%,0%,0%);fill-opacity:1;">
   <use xlink:href="#glyph0-0" x="184.917969" y="19.199219"/>
   <use xlink:href="#glyph0-1" x="190.257031" y="19.199219"/>
