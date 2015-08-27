@@ -326,11 +326,11 @@ makePlot<-function(sampl){
   
   svg(filnam)
   op <- par(mar=rep(.01, 4))
-  plot(elev.ca,axes=F,legend=F,box=F,ext=extent(rbind.SpatialPoints(orig,dest))*2.5,col=grey.colors(1000))
+  plot(elev.ca,axes=F,legend=F,box=F,ext=extent(rbind.SpatialPoints(orig,dest))*2.5,col=grey.colors(100))
   par(op)
   
-  points(orig,col="black",cex=2.3,pch=1)
-  points(dest,col="black",cex=1.5,pch=2)
+  points(orig,col="black",cex=2,pch=1)
+  points(dest,col="black",cex=1,pch=17)
   
   #add a point legend
   l <- legend( "top"
@@ -339,10 +339,10 @@ makePlot<-function(sampl){
          , bty = "n"
          , legend = c(unique(sampl$To), unique(sampl$From))
          , col = c("black","black")
-         , pch = c(1,2)
+         , pch = c(1,17)
 )
   for(x in 1:length(paths)){
-    lines(paths[[x]])
+    lines(paths[[x]],lwd=2)
   }
   
   invisible(out<-dev.off())
