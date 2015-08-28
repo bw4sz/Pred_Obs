@@ -192,8 +192,6 @@ completeI<-cong[names(which(apply(cong,1,sum)==4)),]
 
 ##Bring in Niche models
 
-For each species, view the distribution maps and the point localities overtop
-
 ```{r,fig.height=6,width=7}
 #load models to file, makes it more transferable than keeping them on disk
 modr<-lapply(niche,raster,values=TRUE)
@@ -203,36 +201,6 @@ records_site<-names(which(apply(siteXspp.raster,1,sum,na.rm=TRUE) > 5))
 modlist<-modr[names(modr) %in% records_site]
 
 print(paste(length(modlist),"Species in the analysis"))
-
-#plot raster with presence points and localities
-#bring in raw localities
- #Lets go get the presence data on hummingbird distributions
-  Niche_locals<-read.csv(paste(gitpath,"InputData\\MASTER_POINTLOCALITYarcmap_review.csv",sep=""))
-  
-  #Just take the columns you want. 
-  PAdat<-Niche_locals[,colnames (Niche_locals) %in% c("RECORD_ID","SPECIES","COUNTRY","LOCALITY","LATDECDEG","LONGDECDEG","Decision","SpatialCheck","MapDecision")]
-  
-  #clean localities, we checked them against published range records and visually inspected them
-  PAdat<-PAdat[!PAdat$LONGDECDEG==-6,]
-  loc_clean<-PAdat[!PAdat$MapDecision=="REJECT",]
-  
-for(nlayers(modlist)){
-  nm<-modlist[[1]]
-  plot(nm,axes=F,legend=T,box=F)
-  speciesname<-paste(str_match(names(nm),"(\\w+)\\.(\\w+)_Total")[,2:3],collapse=" ")
-  
-  #get localities for that species
-  #match formating for species names
-  sp.loc<-loc_clean[loc_clean$SPECIES %in%  gsub("\\."," ",as.character(unique(speciesname))),]
-  sp.loc<-sp.loc[!duplicated(sp.loc[,-1]),]
-  #make into a spatial object
-  sp.loc<-SpatialPointsDataFrame(sp.loc[,c("LONGDECDEG","LATDECDEG")],sp.loc)
-  #plot 
-  points(sp.loc)
-  title(speciesname)
-  text(paste("n =",length(sp.loc)),x=-76.44562,y=12.40141)
-}
-
 ```
 
 #Cost Path Analysis
@@ -369,11 +337,13 @@ costThresh<-apply(siteXspp.raster,1,function(y){
   sites<-names(y[y==1])
   #get pairwise combination of sites
   siteCombo<-expand.grid(sites,sites)
-  outH<-apply(siteCombo,1,function(x){
-    CostPathMatrix[x["Var1"],x["Var2"]]
-  })
-  #remove infinite values
-  outH<-outH[is.finite(outH)]
+  outH<-as.matrix(CostPathMatrix[sites,sites])
+  
+  #Diagonal is NA, site to itself
+  diag(outH)<-NA
+  
+  #for each site what is the minimum cost distance
+  outH<-apply(outH,1,min,na.rm=T)
   #return largest distance for the species, this will be the cost path threshold
   return(max(outH))})
 ```
@@ -505,6 +475,75 @@ write.csv(PA_m2,"InputData/SpeciesData.csv",row.names=F)
 #PA_m2<-read.csv("InputData/SpeciesData.csv")
 ```
 
+#View Niche models, predictions of presence and absences, and point locality data
+
+Black points = Point Localities used to create the niche models
+Red points = True presence assemblage lists
+Blue Triangles = predicted assemblage lists
+
+```{r}
+#plot raster with presence points and localities
+#bring in raw localities
+ #Lets go get the presence data on hummingbird distributions
+  Niche_locals<-read.csv(paste(gitpath,"InputData\\MASTER_POINTLOCALITYarcmap_review.csv",sep=""))
+  
+  #Just take the columns you want. 
+  PAdat<-Niche_locals[,colnames (Niche_locals) %in% c("RECORD_ID","SPECIES","COUNTRY","LOCALITY","LATDECDEG","LONGDECDEG","Decision","SpatialCheck","MapDecision")]
+  
+  #clean localities, we checked them against published range records and visually inspected them
+  PAdat<-PAdat[!PAdat$LONGDECDEG==-6,]
+  loc_clean<-PAdat[!PAdat$MapDecision=="REJECT",]
+  
+  #Plot true points, localities, niche models and species assemblages
+for(x in 1:nlayers(modlist)){
+  nm<-modlist[[x]]
+  speciesname<-paste(str_match(names(nm),"(\\w+)\\.(\\w+)_Total")[,2:3],collapse=" ")
+  
+  #get localities for that species
+  #match formating for species names
+  sp.loc<-loc_clean[loc_clean$SPECIES %in%  gsub("\\."," ",as.character(unique(speciesname))),]
+  sp.loc<-sp.loc[!duplicated(sp.loc[,-1]),]
+  #make into a spatial object
+  sp.loc<-SpatialPointsDataFrame(sp.loc[,c("LONGDECDEG","LATDECDEG")],sp.loc)
+
+  #localities
+  s<-siteXspp.raster[rownames(siteXspp.raster) %in% gsub(speciesname,pattern=" ",replacement="\\."),]
+  #true presence points
+  ptsTrue<-xyFromCell(object=nm, cell=as.numeric(names(s[s==1])),spatial=T)
+  
+  #predicted presence points -> environment
+  ppEnv<-PA_m2[PA_m2$Species==gsub(speciesname,pattern=" ",replacement="\\.") & PA_m2$P_R=="P_Apred" & PA_m2$P_A==1 & PA_m2$Hyp=="Env","Locality"]
+  
+  ptsEnv<-xyFromCell(object=nm, cell=ppEnv$Locality,spatial=T)
+  
+  #predicted presence points, which are not in the dispersal
+  ppDisp<-PA_m2[PA_m2$Species==gsub(speciesname,pattern=" ",replacement="\\.") & PA_m2$P_R=="P_Apred" & PA_m2$P_A==1 & PA_m2$Hyp=="Env_Dispersal","Locality"]
+  noDD<-ppDisp[!ppDisp$Locality %in% ppEnv$Locality]
+  
+  
+  #plot niche model and results
+  op <- par(mar=rep(.01, 4))
+  plot(nm,axes=F,legend=T,box=F,ext=extent(ptsEnv)*1.1)
+  par(op)
+  points(ptsTrue,col='red',pch=16)
+
+  points(ptsEnv,col='blue',pch=2,cex=1)
+  points(sp.loc,cex=.6,pch=16)
+  title(paste(speciesname,paste("n =",length(sp.loc)),sep=" "))
+  
+  #If all env points are in dispersal, ignore
+  #If there no points, skip
+
+  if(!length(noDD$Locality)==0){
+      ptsDisp<-xyFromCell(object=nm, cell=noDD$Locality,spatial=T)
+  points(ptsDisp,pch=17,col="blue")
+  }
+
+}
+
+```
+
+  
 ##Combine simulation, predicted and observed assemblages.
 
 Read in simulated data - see Simulations.Rmd
