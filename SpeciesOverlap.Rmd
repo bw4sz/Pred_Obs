@@ -916,7 +916,7 @@ specdf[specdf$Assemblage %in% c("Env","Env + Dispersal","Observed"),"Type"]<-"Ob
 
 
 #overlay together
-figure4<-ggplot(data=specdf[specdf$Assemblage %in% c("Env","Env + Dispersal","Observed"),],aes(x=Relatedness,y=mean)) + geom_ribbon(alpha=.5,aes(ymin=lower,ymax=upper,fill=Assemblage)) + geom_line(aes(fill=Assemblage)) + theme_bw()+ labs(x="Phylogenetic distance to closest related species",y="Probability of Occurrence") + scale_fill_manual(values=c("grey80","grey60","black"),labels=c("Environment","Environment + Dispersal","Observed")) + theme(legend.position="bottom")
+figure4<-ggplot(data=specdf[specdf$Assemblage %in% c("Env","Env + Dispersal","Observed"),],aes(x=Relatedness,y=mean)) + geom_ribbon(alpha=.5,aes(ymin=lower,ymax=upper,fill=Assemblage)) + geom_line(aes(fill=Assemblage)) + theme_bw()+ labs(x="Phylogenetic distance to closest related species",y="Probability of Occurrence") + scale_fill_manual(values=c("grey90","grey50","black"),labels=c("Environment","Environment + Dispersal","Observed")) + theme(legend.position="bottom")
 figure4
 ggsave("Figure4Overlay.jpg",height=5,width=7,dpi=400)
 
@@ -1025,6 +1025,7 @@ for(x in 1:length(specCast)){
   p<-alpha_plot(specCast[[x]],sp,pts=T)
   filenam<-paste("SpeciesPlots/",sp,".svg")
   ggsave(filenam,height=5,width=6)
+  invisible(dev.off())
 }
 
 #example figure

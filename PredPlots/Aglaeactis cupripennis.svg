@@ -95,6 +95,9 @@
 <clipPath id="clip5">
   <path d="M 59.039063 59.039063 L 474.757813 59.039063 L 474.757813 431.558594 L 59.039063 431.558594 Z M 59.039063 59.039063 "/>
 </clipPath>
+<clipPath id="clip6">
+  <path d="M 59.039063 59.039063 L 474.757813 59.039063 L 474.757813 431.558594 L 59.039063 431.558594 Z M 59.039063 59.039063 "/>
+</clipPath>
 </defs>
 <g id="surface12">
 <rect x="0" y="0" width="504" height="504" style="fill:rgb(100%,100%,100%);fill-opacity:1;stroke:none;"/>
@@ -369,6 +372,12 @@
   <use xlink:href="#glyph1-9" x="263.077344" y="34.675781"/>
   <use xlink:href="#glyph1-15" x="267.078125" y="34.675781"/>
   <use xlink:href="#glyph1-16" x="275.086719" y="34.675781"/>
+</g>
+<g clip-path="url(#clip6)" clip-rule="nonzero">
+<path style=" stroke:none;fill-rule:nonzero;fill:rgb(0%,0%,100%);fill-opacity:1;" d="M 223.011719 210.554688 L 226.648438 216.851563 L 219.375 216.851563 Z M 223.011719 210.554688 "/>
+<path style=" stroke:none;fill-rule:nonzero;fill:rgb(0%,0%,100%);fill-opacity:1;" d="M 247.832031 221.195313 L 251.46875 227.496094 L 244.195313 227.496094 Z M 247.832031 221.195313 "/>
+<path style=" stroke:none;fill-rule:nonzero;fill:rgb(0%,0%,100%);fill-opacity:1;" d="M 336.480469 40.285156 L 340.117188 46.585938 L 332.84375 46.585938 Z M 336.480469 40.285156 "/>
+<path style=" stroke:none;fill-rule:nonzero;fill:rgb(0%,0%,100%);fill-opacity:1;" d="M 336.480469 50.929688 L 340.117188 57.226563 L 332.84375 57.226563 Z M 336.480469 50.929688 "/>
 </g>
 </g>
 </svg>
