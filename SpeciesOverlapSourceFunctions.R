@@ -99,24 +99,18 @@ pred_realized<-function(mod,thresh.suit,dispersal,PA_phylo,plots,loc_clean=loc_c
     cthres<-costThresh[names(mod)]
     
     #get the distance from every obs site to every pred site
-    pred_p<-levels(species.data[species.data$P_Apred==1,"Locality"])
-    obs_p<-levels(species.data[species.data$PA_Binary==1,"Locality"])
+    pred_p<-species.data[species.data$P_Apred==1,"Locality"]
+    obs_p<-species.data[species.data$PA_Binary==1,"Locality"]
     
-    #Min distance from any obs site to a pred site
-    minSite<-sapply(pred_p,function(y){
-      combs<-expand.grid(y,obs_p)
-      #remove to cell to itself
-      combs<-combs[!combs$Var2 %in% combs$Var1,]  
-      outP<-apply(combs,1,function(x){
-        CostPathMatrix[x["Var1"],x["Var2"]]
-      })
-      if(length(outP) < 2){return(min(outP[is.finite(outP)]))}
-      return(min(outP[is.finite(outP)])
-      )
-    })
+    spdist<-as.matrix(CostPathMatrix[rownames(CostPathMatrix) %in% pred_p,colnames(CostPathMatrix) %in% obs_p])
+  
+    #set inf to 0, those are sites to itself
+    spdist[!is.finite(spdist)]<-0
+    
+    mindist<-apply(spdist,1,min)
     
     #Which predicted sites are outside the threshold
-    toRemove<-minSite[minSite > cthres]
+    toRemove<-mindist[mindist > cthres]
     
     #Turn any predicted presence and absences that are outside the threshold
     species.data[species.data$Locality %in% names(toRemove),"P_Apred"]<-0

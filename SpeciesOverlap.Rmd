@@ -54,7 +54,7 @@ droppath<-"C:/Users/Ben/Dropbox/"
 setwd(gitpath)
 
 #Load image if desired
-load(paste(droppath,"Thesis\\Pred_Realized\\Assemblages\\Threshold0.05\\Results\\","PredictedRealized_Revis.RData",sep=""))
+#load(paste(droppath,"Thesis\\Pred_Realized\\Assemblages\\Threshold0.05\\Results\\","PredictedRealized_Revis.RData",sep=""))
 
 ```
 
@@ -156,10 +156,10 @@ res(site.raster)<-cell_size
 raster.localities<-rasterize(y=site.raster,SpatialPoints(Sites.sp),fun=function(x,...) length(x))
 
 #Which cell is each site in?
-cellSites<-raster::extract(raster.localities,Sites.sp,cell=T)
+cellSites<-raster::extract(raster.localities,Sites.sp,cellnumbers=T)
 
 #Split cell
-head(cellSites<-data.frame(Sites.sp,cellSites)[,-c(4,8,9,10,11,12,14)])
+head(cellSites<-data.frame(Sites.sp,cellSites)[,])
 splitCellSites<-split(cellSites,factor(cellSites$cells))
 
 #How many duplicate communities are there, ie. number of assemblages per cell
@@ -226,7 +226,7 @@ elev.ca<-aggregate(elev.c,2)
 ##Find shortest cost path between all sites
 
 ```{r compute cost,eval=FALSE}
-cl<-makeCluster(14,"SOCK")
+cl<-makeCluster(15,"SOCK")
 registerDoSNOW(cl)
 costPath.list<-foreach(x = 1:length(cellSitesXY)) %dopar% {
   require(raster)
@@ -336,8 +336,7 @@ Assemblages in predicted suitable environments were considered unavailable for s
 costThresh<-apply(siteXspp.raster,1,function(y){
   sites<-names(y[y==1])
   #get pairwise combination of sites
-  siteCombo<-expand.grid(sites,sites)
-  outH<-as.matrix(CostPathMatrix[sites,sites])
+  outH<-as.matrix(CostPathMatrix[rownames(CostPathMatrix) %in% sites,colnames(CostPathMatrix) %in% sites])
   
   #Diagonal is NA, site to itself
   diag(outH)<-NA
@@ -345,7 +344,9 @@ costThresh<-apply(siteXspp.raster,1,function(y){
   #for each site what is the minimum cost distance
   outH<-apply(outH,1,min,na.rm=T)
   #return largest distance for the species, this will be the cost path threshold
-  return(max(outH))})
+  ct<-as.numeric(quantile(outH,.95))
+  return(ct)
+  })
 ```
 
 # Predicted presence and absence
@@ -461,7 +462,7 @@ return(PA_m2)
 
 ```
 
-Sensitivity analysis shows that suitabilty threshold of 80% is a reasonable value, compute predicted and realized distributions. The function is specified as 1-threshold/100.
+Sensitivity analysis shows that suitabilty threshold of 95% is a reasonable value, compute predicted and realized distributions. The function is specified as 1-threshold/100.
 
 ```{r pred assemb,eval=TRUE}
 #Plotting gives summary graphs
@@ -471,15 +472,16 @@ PA_m2<-predAssemblages(thresh=.05,plots=TRUE)
 Save image in case we need to start here.
 
 ```{r}
-write.csv(PA_m2,"InputData/SpeciesData.csv",row.names=F)
+write.csv(PA_m2,paste(gitpath,"InputData/SpeciesData.csv",sep=""),row.names=F)
 #PA_m2<-read.csv("InputData/SpeciesData.csv")
 ```
 
 #View Niche models, predictions of presence and absences, and point locality data
 
-Black points = Point Localities used to create the niche models
-Red points = True presence assemblage lists
-Blue Triangles = predicted assemblage lists
+**Black points = Point Localities used to create the niche models**
+**Red points = True presence assemblage lists**
+**Empty Blue Triangles = predicted assemblage list based on environmental suitabilitys**
+**Filled Blue Triangles = predicted assemblage list based on environmental suitability, but outside of dispersal distance**
 
 ```{r}
 #plot raster with presence points and localities
@@ -495,8 +497,10 @@ Blue Triangles = predicted assemblage lists
   loc_clean<-PAdat[!PAdat$MapDecision=="REJECT",]
   
   #Plot true points, localities, niche models and species assemblages
-for(x in 1:nlayers(modlist)){
-  nm<-modlist[[x]]
+  
+  #make a function
+predPlot<-function(x,plots=F){  
+nm<-modlist[[x]]
   speciesname<-paste(str_match(names(nm),"(\\w+)\\.(\\w+)_Total")[,2:3],collapse=" ")
   
   #get localities for that species
@@ -511,35 +515,54 @@ for(x in 1:nlayers(modlist)){
   #true presence points
   ptsTrue<-xyFromCell(object=nm, cell=as.numeric(names(s[s==1])),spatial=T)
   
+  #extent of true points
+  e<-extent(ptsTrue)*2
+  
   #predicted presence points -> environment
-  ppEnv<-PA_m2[PA_m2$Species==gsub(speciesname,pattern=" ",replacement="\\.") & PA_m2$P_R=="P_Apred" & PA_m2$P_A==1 & PA_m2$Hyp=="Env","Locality"]
+  ppEnv<-PA_m2[PA_m2$Species==gsub(speciesname,pattern=" ",replacement="\\.") & PA_m2$P_R=="P_Apred" & PA_m2$P_A==1 & PA_m2$Hyp=="Env",]
   
-  ptsEnv<-xyFromCell(object=nm, cell=ppEnv$Locality,spatial=T)
-  
+  if(nrow(ppEnv) > 0) {
+    
+  ptsEnv<-SpatialPoints(cbind(ppEnv$LongDecDeg,ppEnv$LatDecDeg))  
   #predicted presence points, which are not in the dispersal
-  ppDisp<-PA_m2[PA_m2$Species==gsub(speciesname,pattern=" ",replacement="\\.") & PA_m2$P_R=="P_Apred" & PA_m2$P_A==1 & PA_m2$Hyp=="Env_Dispersal","Locality"]
-  noDD<-ppDisp[!ppDisp$Locality %in% ppEnv$Locality]
+  ppDisp<-PA_m2[PA_m2$Species==gsub(speciesname,pattern=" ",replacement="\\.") & PA_m2$P_R=="P_Apred" & PA_m2$P_A==1 & PA_m2$Hyp=="Env_Dispersal",]
+  noDD<-ppEnv[!ppEnv$Locality %in% ppDisp$Locality,]
   
-  
+  #redefine extent based on predicted points
+  e<-extent(ptsEnv)*1.2
+  }
   #plot niche model and results
+  #if plot
+  if(plots){svg(paste(gitpath,"PredPlots/",speciesname,".svg",sep=""))}
+  
   op <- par(mar=rep(.01, 4))
-  plot(nm,axes=F,legend=T,box=F,ext=extent(ptsEnv)*1.1)
+  plot(nm,axes=F,legend=T,box=F,ext=e)
   par(op)
   points(ptsTrue,col='red',pch=16)
-
-  points(ptsEnv,col='blue',pch=2,cex=1)
+  
+  #plot predicted points, if they exists  
+  if(nrow(ppEnv) > 0) { points(ptsEnv,col='blue',pch=2,cex=1)}
+  
   points(sp.loc,cex=.6,pch=16)
-  title(paste(speciesname,paste("n =",length(sp.loc)),sep=" "))
+  title(paste(speciesname,paste("n =",length(sp.loc)),sep=" "),adj=.1)
   
   #If all env points are in dispersal, ignore
-  #If there no points, skip
+  #If there no points, skip (bit ugly, but needed if does not exist)
 
-  if(!length(noDD$Locality)==0){
-      ptsDisp<-xyFromCell(object=nm, cell=noDD$Locality,spatial=T)
-  points(ptsDisp,pch=17,col="blue")
+  if(exists("noDD")){
+    if(length(noDD$Locality) > 0){
+      ptsDisp<-SpatialPoints(cbind(noDD$LongDecDeg,noDD$LatDecDeg))
+      points(ptsDisp,pch=17,col="blue")
+    }
   }
-
+  if(plots){dev.off()}
 }
+
+#run for all species 
+for(x in 1:length(modlist)){
+  predPlot(x)
+  predPlot(x,plots=T)
+  }
 
 ```
 
@@ -683,8 +706,8 @@ Dat <- list(
 
 #MCMC options
 ni <- runs  # number of draws from the posterior
-nt <- 25    #thinning rate
-nb <- burn  # number to discard for burn-in
+nt <- runs*.001    #thinning rate
+nb <- runs * .75  # number to discard for burn-in
 nc <- 2  # number of chains
 
 
@@ -715,7 +738,7 @@ Run 7 models in parallel.
 
 #There is no reason everyone needs the same number of runs
 #Draws for each model
-runsl<-rep(10000,100000,10000,10000,10000,10000,10000)
+runsl<-rep(10000,50000,10000,10000,10000,10000,10000)
 
 #Which model we want to draw , heir=T is for full model
 modhier<-c(rep(T,7))
@@ -982,6 +1005,7 @@ p<-ggplot(d,aes(x=x,y=mean)) + geom_line(col="red",linetype="dashed") + geom_lin
 
 if(pts){
 p<-p + geom_jitter(data=pt,aes(x=Phylo.Relatedness,y=P_A),alpha=.1,size=4,position = position_jitter(width = .005,height=0))}
+return(p)
   }
 
 pl<-list()

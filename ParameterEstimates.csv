@@ -1,43 +1,43 @@
 "","L1","Assemblage","parameter","mean","upper","lower"
-"1","Env","Predicted","intercept",-0.08,0.39,-0.55
-"2","Env","Predicted","linear",2.78,4.63,0.88
-"3","Env","Predicted","polynomial",-7.67,-5.31,-9.96
-"4","Env","Predicted","sigmaIntercept",1.72,2.2,1.28
-"5","Env","Predicted","sigmaSlope",5.85,7.72,4.11
-"6","Env","Predicted","sigmaSlope2",7.82,10.03,5.74
-"7","Env + Dispersal","Predicted","intercept",-0.06,0.42,-0.55
-"8","Env + Dispersal","Predicted","linear",2.79,4.7,0.84
-"9","Env + Dispersal","Predicted","polynomial",-7.67,-5.34,-9.97
-"10","Env + Dispersal","Predicted","sigmaIntercept",1.73,2.25,1.28
-"11","Env + Dispersal","Predicted","sigmaSlope",5.88,7.85,4.14
-"12","Env + Dispersal","Predicted","sigmaSlope2",7.9,10.31,5.78
-"13","No Signal & No Repulsion","Simulation","intercept",0.21,0.36,0.07
-"14","No Signal & No Repulsion","Simulation","linear",-0.54,0.79,-1.86
-"15","No Signal & No Repulsion","Simulation","polynomial",1.93,4.74,-0.8
-"16","No Signal & No Repulsion","Simulation","sigmaIntercept",0.28,0.41,0.18
-"17","No Signal & No Repulsion","Simulation","sigmaSlope",2.61,4.04,1.77
-"18","No Signal & No Repulsion","Simulation","sigmaSlope2",5.23,7.84,3.53
-"19","No Signal & Strong Repulsion","Simulation","intercept",-3.18,-3.02,-3.33
-"20","No Signal & Strong Repulsion","Simulation","linear",4.82,5.26,4.41
-"21","No Signal & Strong Repulsion","Simulation","polynomial",-2.59,-2.27,-2.92
-"22","No Signal & Strong Repulsion","Simulation","sigmaIntercept",0.25,0.36,0.16
-"23","No Signal & Strong Repulsion","Simulation","sigmaSlope",0.13,0.28,0.03
-"24","No Signal & Strong Repulsion","Simulation","sigmaSlope2",0.08,0.19,0.02
-"25","Observed","Observed","intercept",-2.28,-1.87,-2.69
-"26","Observed","Observed","linear",6.65,8.18,4.92
-"27","Observed","Observed","polynomial",-11.6,-9.5,-13.7
-"28","Observed","Observed","sigmaIntercept",1.12,1.39,0.88
-"29","Observed","Observed","sigmaSlope",0.61,1.94,0.03
-"30","Observed","Observed","sigmaSlope2",3.69,4.89,2.65
+"1","Env","Predicted","intercept",-0.08,0.4,-0.56
+"2","Env","Predicted","linear",2.87,4.85,0.91
+"3","Env","Predicted","polynomial",-7.74,-5.46,-9.96
+"4","Env","Predicted","sigmaIntercept",1.72,2.28,1.26
+"5","Env","Predicted","sigmaSlope",5.86,7.82,4.14
+"6","Env","Predicted","sigmaSlope2",7.9,10.12,5.87
+"7","Env + Dispersal","Predicted","intercept",-0.12,0.4,-0.63
+"8","Env + Dispersal","Predicted","linear",2.95,4.94,0.94
+"9","Env + Dispersal","Predicted","polynomial",-7.79,-5.49,-10.21
+"10","Env + Dispersal","Predicted","sigmaIntercept",1.74,2.27,1.31
+"11","Env + Dispersal","Predicted","sigmaSlope",5.98,7.94,4.28
+"12","Env + Dispersal","Predicted","sigmaSlope2",7.92,10.25,5.98
+"13","No Signal & No Repulsion","Simulation","intercept",0.22,0.35,0.07
+"14","No Signal & No Repulsion","Simulation","linear",-0.55,0.78,-1.92
+"15","No Signal & No Repulsion","Simulation","polynomial",1.92,4.66,-0.63
+"16","No Signal & No Repulsion","Simulation","sigmaIntercept",0.27,0.41,0.18
+"17","No Signal & No Repulsion","Simulation","sigmaSlope",2.6,3.77,1.77
+"18","No Signal & No Repulsion","Simulation","sigmaSlope2",5.19,7.85,3.46
+"19","No Signal & Strong Repulsion","Simulation","intercept",-3.18,-3.03,-3.35
+"20","No Signal & Strong Repulsion","Simulation","linear",4.84,5.25,4.45
+"21","No Signal & Strong Repulsion","Simulation","polynomial",-2.6,-2.29,-2.91
+"22","No Signal & Strong Repulsion","Simulation","sigmaIntercept",0.25,0.37,0.16
+"23","No Signal & Strong Repulsion","Simulation","sigmaSlope",0.13,0.26,0.03
+"24","No Signal & Strong Repulsion","Simulation","sigmaSlope2",0.09,0.2,0.02
+"25","Observed","Observed","intercept",-2.27,-1.81,-2.71
+"26","Observed","Observed","linear",6.57,8.03,4.72
+"27","Observed","Observed","polynomial",-11.47,-9.14,-13.42
+"28","Observed","Observed","sigmaIntercept",1.11,1.39,0.89
+"29","Observed","Observed","sigmaSlope",0.67,2.14,0.03
+"30","Observed","Observed","sigmaSlope2",3.56,4.67,2.65
 "31","Strong Signal & No Repulsion","Simulation","intercept",1.43,1.53,1.32
-"32","Strong Signal & No Repulsion","Simulation","linear",-9.02,-8.21,-9.84
-"33","Strong Signal & No Repulsion","Simulation","polynomial",5.63,6.42,4.79
-"34","Strong Signal & No Repulsion","Simulation","sigmaIntercept",0.2,0.29,0.14
-"35","Strong Signal & No Repulsion","Simulation","sigmaSlope",1.55,2.38,1.02
-"36","Strong Signal & No Repulsion","Simulation","sigmaSlope2",1.52,2.31,1.04
-"37","Strong Signal & Strong Repulsion","Simulation","intercept",-2.36,-2.24,-2.48
-"38","Strong Signal & Strong Repulsion","Simulation","linear",6.36,6.84,5.89
-"39","Strong Signal & Strong Repulsion","Simulation","polynomial",-6.85,-6.48,-7.2
-"40","Strong Signal & Strong Repulsion","Simulation","sigmaIntercept",0.18,0.29,0.1
-"41","Strong Signal & Strong Repulsion","Simulation","sigmaSlope",0.5,0.97,0.25
-"42","Strong Signal & Strong Repulsion","Simulation","sigmaSlope2",0.23,0.69,0.03
+"32","Strong Signal & No Repulsion","Simulation","linear",-9,-8.17,-9.81
+"33","Strong Signal & No Repulsion","Simulation","polynomial",5.62,6.39,4.8
+"34","Strong Signal & No Repulsion","Simulation","sigmaIntercept",0.2,0.3,0.14
+"35","Strong Signal & No Repulsion","Simulation","sigmaSlope",1.57,2.42,1.04
+"36","Strong Signal & No Repulsion","Simulation","sigmaSlope2",1.53,2.31,1.01
+"37","Strong Signal & Strong Repulsion","Simulation","intercept",-2.35,-2.22,-2.48
+"38","Strong Signal & Strong Repulsion","Simulation","linear",6.31,6.76,5.87
+"39","Strong Signal & Strong Repulsion","Simulation","polynomial",-6.81,-6.46,-7.19
+"40","Strong Signal & Strong Repulsion","Simulation","sigmaIntercept",0.19,0.3,0.1
+"41","Strong Signal & Strong Repulsion","Simulation","sigmaSlope",0.5,1,0.25
+"42","Strong Signal & Strong Repulsion","Simulation","sigmaSlope2",0.23,0.73,0.03
