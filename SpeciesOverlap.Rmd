@@ -45,7 +45,7 @@ library(dplyr)
 library(scales)
 
 opts_chunk$set(warning=FALSE,message=FALSE)
-opts_chunk$set(cache=TRUE, cache.path = 'SpeciesOverlap_cache/', fig.path='figure/',fig.width=10,echo=TRUE)
+opts_chunk$set(cache=FALSE, fig.path='figure/',fig.width=10,echo=TRUE)
 
 #Set git path
 gitpath<-"C:/Users/Ben/Documents/Pred_Obs/"
@@ -682,7 +682,7 @@ Dat <- list(
 if(!hier){
   source(paste(gitpath,"Bayesian/BPhyloSim.R",sep="/"))
   
-    #make species a factor
+#make species a factor
 species<-as.factor(species)
 
 #Input Data
@@ -761,13 +761,6 @@ stopCluster(cl)
 
 This model takes alot longer to converge than the others, needs to be updated and run seperately. 
 
-```{r update,eval=FALSE}
-recompile(parall[[3]])
-add<-10000
-parall[[3]] <- update(parall[[3]],n.iter=add)
-runsl[3]<-runsl[3]+add
-```
-
 ###reformat jags output
 ```{r,cache=FALSE}
 #Remove Burnin
@@ -775,7 +768,6 @@ parburn<-list()
 for (x in 1:length(parall)){
 pars<-melt(parall[[x]]$BUGSoutput$sims.array)
 colnames(pars)<-c("Draw","Chain","parameter","estimate")
-#pars<-pars[!pars$Draw %in% 1:((runsl[x]-3000)/2),]
   parburn[[x]]<-pars
 }
 ```
@@ -1023,9 +1015,8 @@ for(x in 1:length(specCast)){
   #Species
   sp<-unique(sdat[[2]]$Species)[x]
   p<-alpha_plot(specCast[[x]],sp,pts=T)
-  filenam<-paste("SpeciesPlots/",sp,".svg")
+  filenam<-paste(gitpath,"SpeciesPlots/",sp,".svg",sep="")
   ggsave(filenam,height=5,width=6)
-  invisible(dev.off())
 }
 
 #example figure
@@ -1036,8 +1027,10 @@ ex<-melt(specCast,c("x","mean","upper","lower"))
 keep<-c("Eriocnemis.vestita","Chaetocercus.mulsant","Heliangelus.exortis","Coeligena.lutetiae","Thalurania.furcata")
 
 ex<-ex[ex$L1 %in% keep,]
+```
 
-#plot
+###plot example species
+```{r}
 a<-PA_m2[PA_m2$Species %in% ex$L1 & PA_m2$P_R=="PA_Binary",]
 pt<-a[,c("Phylo.Relatedness","P_A","Species")]
 colnames(pt)<-c("Phylo.Relatedness","P_A","L1")
