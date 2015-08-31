@@ -738,7 +738,7 @@ Run 7 models in parallel.
 
 #There is no reason everyone needs the same number of runs
 #Draws for each model
-runsl<-rep(10000,100000,10000,10000,10000,10000,10000)
+runsl<-rep(10000,2000000,10000,10000,10000,10000,10000)
 
 #Which model we want to draw , heir=T is for full model
 modhier<-c(rep(T,7))
