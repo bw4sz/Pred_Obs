@@ -462,7 +462,7 @@ return(PA_m2)
 
 ```
 
-Sensitivity analysis shows that suitabilty threshold of 95% is a reasonable value, compute predicted and realized distributions. The function is specified as 1-threshold/100.
+Sensitivity analysis shows that suitability threshold of 95% is a reasonable value, compute predicted and realized distributions. The function is specified as 1-threshold/100.
 
 ```{r pred assemb,eval=TRUE}
 #Plotting gives summary graphs
@@ -577,7 +577,7 @@ simall<-read.csv("C:/Users/Ben/Documents/Pred_Obs/Bayesian/simdats.csv",row.name
 simall$P_R<-"Simulation"
 ```
 
-Bind data to one dataframe.
+Bind data to one data frame.
 
 ```{r}
 
@@ -611,7 +611,7 @@ sapply(sdat,nrow)
 
 #Compare to generalized linear models
 
-While these are constrained to have the same intercept and slope for each species, they provide a reasonable check on whether the bayesian estimates are giving logical values.
+While these are constrained to have the same intercept and slope for each species, they provide a reasonable check on whether the Bayesian estimates are giving logical values.
 
 ```{r,fig.height=10}
 plotlist<-lapply(sdat,function(x){
@@ -638,7 +638,7 @@ $$ \alpha_{Species[i]} \sim N(intercept,sigmaIntercept)$$
 $$ \beta_{Species[i]} \sim N(linear,sigmaSlope)$$
 $$ \gamma_{Species[i]} \sim N(polynomial,sigmaSlope2)$$
 
-This correspondings to the winbugs models:
+This corresponding to the winbugs models:
 ```{r}
 print.noquote(readLines(paste(gitpath,"Bayesian/BPhylo.R",sep="/")))
 ```
@@ -759,7 +759,7 @@ stopCluster(cl)
 
 ##Extend the observed model
 
-This model takes alot longer to converge than the others, needs to be updated and run seperately. 
+This model takes a lot longer to converge than the others, needs to be updated and run separately. 
 
 ###reformat jags output
 ```{r,cache=FALSE}

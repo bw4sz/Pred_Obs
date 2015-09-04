@@ -108,11 +108,11 @@ ggplot(mvar, aes(x=Species,y=Bioclim,fill=value)) + geom_tile() + scale_fill_gra
 
 #Sensitivity and specificity
 
-* Evalaute threshold of habitat suitability which translates the niche model results into predicted assemblages.
+* Evaluate threshold of habitat suitability which translates the niche model results into predicted assemblages.
 
 * Calculate true positives (TP), true negatives (TN), false positives (fP), and false negatives (fn), as well as sensitivity (TP/TP+FN) and specificity (TN/TN+FP) using our observed assemblages compared to the predicted assemblages
 
-* Also calcuate the mean habitat suitability for each threshold
+* Also calculate the mean habitat suitability for each threshold
 
 ```{r}
 load(paste(droppath,"C:/Users/Ben/DropboxThesis/Pred_Realized/Assemblages/Threshold0.1/Results/PredictedRealized_.RData",sep=""))
@@ -158,7 +158,7 @@ ssmelt<-melt(ss,id.var="Threshold")
 ggplot(ssmelt,aes(x=as.factor(Threshold),y=value,col=variable)) + geom_line(aes(group=1),col="black") + facet_wrap(~variable,scales="free") + geom_point(size=3) + theme_bw() + labs(x="Threshold"                                                                                                                                                                          )
 ```
 
-Because we are most interested in predicted suitable habitat, not species occupancy, what we want to do is maximize the number of true positives and true negatives, while minimizing the number of false negatives. The worst thing for the accuracy of the model would be alot of species occuring in predicted unsuitable habitat.
+Because we are most interested in predicted suitable habitat, not species occupancy, what we want to do is maximize the number of true positives and true negatives, while minimizing the number of false negatives. The worst thing for the accuracy of the model would be a lot of species occurring in predicted unsuitable habitat.
 
 ```{r}
 ggplot(ss,aes(y=TP,x=TN,col=as.factor(Threshold))) + geom_point(aes(size=FN)) + geom_line(aes(group=1),col="black") + theme_bw()  + labs(col="Suitability Quantile Threshold")

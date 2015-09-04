@@ -188,7 +188,7 @@ ggplot(pigot,aes(x=RTime_cut,y=p,size=n)) + geom_point(alpha=.5) + geom_smooth(m
 
 #Time since divergence and cost distance.
 
-Geographic weighted cost distance. If dispersal limitation was an important factor, we would expect recently diverged taxa to be seperated by large geographic barriers compared to deeper splits.
+Geographic weighted cost distance. If dispersal limitation was an important factor, we would expect recently diverged taxa to be separated by large geographic barriers compared to deeper splits.
 
 ```{r}
 #read in cost matrix between all sites from SpeciesOverlap.Rmd

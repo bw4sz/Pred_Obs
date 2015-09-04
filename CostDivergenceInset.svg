@@ -26,7 +26,7 @@
         <dc:format>image/svg+xml</dc:format>
         <dc:type
            rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
-        <dc:title></dc:title>
+        <dc:title />
       </cc:Work>
     </rdf:RDF>
   </metadata>
@@ -43,13 +43,13 @@
      inkscape:window-height="746"
      id="namedview4655"
      showgrid="false"
-     inkscape:zoom="0.92222222"
-     inkscape:cx="100.34797"
-     inkscape:cy="257.12532"
-     inkscape:window-x="-32000"
-     inkscape:window-y="-32000"
-     inkscape:window-maximized="0"
-     inkscape:current-layer="svg4184"
+     inkscape:zoom="1.28731"
+     inkscape:cx="315"
+     inkscape:cy="225"
+     inkscape:window-x="-8"
+     inkscape:window-y="-8"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="surface294"
      showguides="true"
      inkscape:guide-bbox="true" />
   <defs
@@ -1120,6 +1120,40 @@
          x="119.29035"
          y="132.38936" />
     </clipPath>
+    <clipPath
+       clipPathUnits="userSpaceOnUse"
+       id="clipPath3663">
+      <rect
+         style="color:#000000;fill:none;stroke:#000000;stroke-width:0.53542072;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0;marker:none;visibility:visible;display:inline;overflow:visible;enable-background:accumulate"
+         id="rect3665"
+         width="187.35242"
+         height="252.99683"
+         x="119.04797"
+         y="170.02286"
+         ry="0" />
+    </clipPath>
+    <clipPath
+       clipPathUnits="userSpaceOnUse"
+       id="clipPath3669">
+      <rect
+         style="color:#000000;fill:none;stroke:#000000;stroke-width:0.51653713;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0;marker:none;visibility:visible;display:inline;overflow:visible;enable-background:accumulate"
+         id="rect3671"
+         width="169.70328"
+         height="255.63232"
+         x="120.40559"
+         y="170.02287" />
+    </clipPath>
+    <clipPath
+       clipPathUnits="userSpaceOnUse"
+       id="clipPath3675">
+      <rect
+         style="color:#000000;fill:none;stroke:#000000;stroke-width:0.39742979;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0;marker:none;visibility:visible;display:inline;overflow:visible;enable-background:accumulate"
+         id="rect3677"
+         width="158.10025"
+         height="292.65875"
+         x="127.05002"
+         y="134.61778" />
+    </clipPath>
   </defs>
   <g
      id="surface294">
@@ -2167,23 +2201,23 @@
     <text
        xml:space="preserve"
        style="font-size:32px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;text-align:center;line-height:125%;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;font-family:Arial;-inkscape-font-specification:Arial"
-       x="180.61928"
-       y="195.14101"
+       x="160.1114"
+       y="195.76245"
        id="text5569"
        sodipodi:linespacing="125%"><tspan
          sodipodi:role="line"
-         x="181.72865"
-         y="195.14101"
+         x="161.22078"
+         y="195.76245"
          style="font-size:8px"
          id="tspan5611">Lesbia nuna - </tspan><tspan
          sodipodi:role="line"
-         x="180.61928"
-         y="205.14101"
+         x="160.1114"
+         y="205.76245"
          style="font-size:8px"
          id="tspan3585">Lesbia victoriae</tspan></text>
     <path
-       style="color:#000000;fill:none;stroke:#000000;stroke-width:0.15254696;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0;marker:none;marker-end:url(#Arrow1Lend);visibility:visible;display:inline;overflow:visible;enable-background:accumulate"
-       d="m 163.26139,209.49751 -13.55983,-0.0198"
+       style="color:#000000;fill:none;stroke:#000000;stroke-width:0.19933981;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0;marker:none;marker-end:url(#Arrow1Lend);visibility:visible;display:inline;overflow:visible;enable-background:accumulate"
+       d="m 167.74704,212.60412 24.0777,-0.019"
        id="path5567"
        inkscape:connector-curvature="0"
        sodipodi:nodetypes="cc" />
@@ -2206,8 +2240,8 @@
          id="tspan5603"> - Phaethornis guy</tspan></text>
     <g
        id="surface177"
-       transform="matrix(0.63288986,0,0,0.54575266,291.83724,-56.512142)"
-       clip-path="url(#clipPath4846)">
+       transform="matrix(0.6957817,0,0,0.57760465,288.81844,-61.421437)"
+       clip-path="url(#clipPath3675)">
       <rect
          id="rect4431"
          style="fill:#ffffff;fill-opacity:1;stroke:none"
@@ -2899,8 +2933,8 @@
      sodipodi:nodetypes="csc" />
   <g
      id="surface161"
-     transform="matrix(0.45443118,0,0,0.44214437,4.9387346,133.19132)"
-     clip-path="url(#clipPath4002-4)">
+     transform="matrix(0.53464989,0,0,0.57858618,128.08947,74.927487)"
+     clip-path="url(#clipPath3669)">
     <rect
        id="rect3634"
        style="fill:#ffffff;fill-opacity:1;stroke:none"
