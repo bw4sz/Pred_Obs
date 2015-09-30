@@ -833,7 +833,7 @@ Bayes <-function(presence,species,Iteration,runs,burn,hier) {
 ```{r run jags,results='hide',eval=T}
 
 #Draws for each model
-runsl<-rep(20000,20000,20000,20000,20000,20000,20000)
+runsl<-rep(2000,2000,2000,2000,2000,2000,2000)
 
 #legacy
 modhier<-c(rep(T,7))
@@ -852,17 +852,17 @@ stopCluster(cl)
 ##Deviance figures
 
 ```{r}
-ps<-sapply(1:length(parall)){
+ps<-sapply(1:length(parall),function(x){
   resid<-parall[[x]]$BUGSoutput$sims.list$deviance
   null<-parnull[[x]]$BUGSoutput$sims.list$deviance
   p<-1-(mean(resid)/mean(null))
   return(p)
-}
+})
 
-names(ps)<-names(parall)
-ps<-melt(ps)
+names(ps)<-names(sdat)
+ps<-  melt(ps)
 print(ps)
-
+write.csv(ps,"PsuedoR.csv")
 ```
 
 ###reformat jags output
