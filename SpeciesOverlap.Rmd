@@ -6,7 +6,6 @@ output:
   html_document:
     toc: true
 ---
-
 Abstract:
 
 Insights from comparing phylogenetic and trait community spacing has led to a renewed focus on whether interspecific competition shape species occurrence. Combining theories of niche conservatism and limiting similarity, species should co-occur more with closely related species up to a threshold of niche overlap, followed by a decrease in co-occurrence. To test this prediction, we first simulate assemblages with known assembly rules to validate our predicted pattern of probability of co-occurrence and phylogenetic relatedness. We then develop a hierarchical Bayesian approach to assess probability of co-occurrence as a function of distance to the closest related species in hummingbird assemblages from Northern South America. We then applied a realistic null model of co-occurrence using ensemble niche models and cost distance to create predicted assemblages based on overlapping environmental tolerances and dispersal limitation. We find that probability of co-occurrence increases with increasing relatedness, followed by a decrease in co-occurrence among very closely related species. These data match our predicted pattern based on simulations of niche conservatism and competition in shaping co-occurrence. Further, predicted assemblages based on environment and dispersal show a consistent increase with relatedness, with no decrease among closely related species. Taken together, our results suggest that both niche conservatism and competition act simultaneously to shape hummingbird assemblages. The presence of closely related species may prevent species from occupying potentially suitable habitat. Our approach provides a holistic statistical framework combining simulations, robust Bayesian inference and reasonable null models to infer the role of competition in shaping species assemblage. 
@@ -54,7 +53,7 @@ droppath<-"C:/Users/Ben/Dropbox/"
 setwd(gitpath)
 
 #Load image if desired
-load(paste(droppath,"Thesis\\Pred_Realized\\Assemblages\\Threshold0.05\\Results\\","PredictedRealized_Revis.RData",sep=""))
+#load(paste(droppath,"Thesis\\Pred_Realized\\Assemblages\\Threshold0.05\\Results\\","PredictedRealized_Revis.RData",sep=""))
 
 ```
 
@@ -116,7 +115,7 @@ Run ensemble niche models using biomod2 at a desired cell size.
 To make this run, you need to [download maxent](http://www.cs.princeton.edu/~schapire/maxent/) and place it in the folder you want to save the niche models: 
 
 ```{r}
-cell_size=.1
+cell_size=0.1
 inLocalities<-read.csv("InputData/MASTER_POINTLOCALITYarcmap_review.csv")
 envfolder<-"C:\\Users\\Ben\\Dropbox\\Thesis\\Pred_Realized\\EnvLayers"
 savefolder<-"C:/Users/Ben/Dropbox/Thesis/Pred_Realized/NicheModels/"
@@ -125,7 +124,7 @@ savefolder<-"C:/Users/Ben/Dropbox/Thesis/Pred_Realized/NicheModels/"
 Run distribution models (may need to be done offline, can take awhile)
 
 ```{r Niche Models,eval=FALSE}
-SDM_SP(cell_size,inLocalities,envfolder,savefolder)
+#SDM_SP(cell_size,inLocalities,envfolder,savefolder)
 ```
 
 ##Import predicted suitable habitat rasters

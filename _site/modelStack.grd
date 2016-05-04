@@ -1,0 +1,26 @@
+[general] 
+creator=R package 'raster' 
+created= 2014-03-24 10:50:01 
+[georeference] 
+nrows= 175 
+ncols= 122 
+xmin= -81.15 
+ymin= -5.53333333333335 
+xmax= -68.95 
+ymax= 11.9666666666667 
+projection= +proj=longlat +ellps=WGS84 +towgs84=0,0,0,0,0,0,0 +no_defs 
+[data] 
+datatype= FLT8S 
+byteorder= little 
+nbands= 122 
+bandorder= BIL 
+minvalue= 14:3:2:7:5:1:2:2:10:6:2:11:1:22:3:4:3:2:18:5:1:3:7:2:22:1:4:4:7:3:1:28:3:2:0:8:3:4:0:3:4:9:8:1:2:20:4:5:10:9:13:4:2:2:7:4:2:2:2:2:4:13:1:13:2:10:5:5:2:4:5:4:4:1:8:2:4:3:2:0:10:4:5:3:3:1:2:3:0:8:3:6:1:1:8:2:3:1:2:3:7:4:6:2:2:13:4:10:1:1:2:3:6:71:10:14:3:2:4:2:2:2 
+maxvalue= 788:774:613:556:542:881:400:457:672:460:711:536:386:695:463:388:597:282:648:511:674:531:446:850:536:656:385:419:470:450:457:712:615:474:748:645:514:575:520:482:497:874:522:710:522:433:721:434:669:447:550:618:543:500:594:542:416:400:516:506:656:659:847:662:503:667:503:621:850:678:467:571:378:819:845:818:644:452:457:626:556:630:774:610:628:694:322:39:631:696:561:555:838:546:706:824:603:762:915:581:692:613:548:906:817:817:610:823:660:310:528:478:655:226:602:805:872:868:663:652:498:554 
+nodatavalue= -1.7e+308 
+[legend] 
+legendtype=  
+values=  
+color=  
+[description] 
+layername= Adelomyia.melanogenys:Aglaeactis.cupripennis:Aglaiocercus.coelestis:Aglaiocercus.kingi:Amazilia.amabilis:Amazilia.amazilia:Amazilia.castaneiventris:Amazilia.cyanifrons:Amazilia.fimbriata:Amazilia.franciae:Amazilia.rosenbergi:Amazilia.saucerrottei:Amazilia.tobaci:Amazilia.tzacatl:Amazilia.versicolor:Amazilia.viridigaster:Androdon.aequatorialis:Anthocephala.floriceps:Anthracothorax.nigricollis:Boissonneaua.flavescens:Boissonneaua.jardini:Calliphlox.mitchellii:Campylopterus.falcatus:Campylopterus.largipennis:Chaetocercus.astreans:Chaetocercus.bombus:Chaetocercus.heliodor:Chaetocercus.jourdanii:Chaetocercus.mulsant:Chalcostigma.herrani:Chalcostigma.heteropogon:Chalybura.buffonii:Chalybura.urochrysia:Chlorestes.notata:Chlorostilbon.alice:Chlorostilbon.gibsoni:Chlorostilbon.melanorhynchus:Chlorostilbon.mellisugus:Chlorostilbon.olivaresi:Chlorostilbon.russatus:Chrysolampis.mosquitus:Chrysuronia.oenone:Coeligena.coeligena:Coeligena.iris:Coeligena.lutetiae:Coeligena.phalerata:Coeligena.torquata:Coeligena.wilsoni:Colibri.coruscans:Colibri.delphinae:Colibri.thalassinus:Damophila.julie:Discosura.conversii:Doryfera.johannae:Doryfera.ludovicae:Ensifera.ensifera:Eriocnemis.cupreoventris:Eriocnemis.derbyi:Eriocnemis.luciani:Eriocnemis.mosquera:Eriocnemis.vestita:Eutoxeres.aquila:Eutoxeres.condamini:Florisuga.mellivora:Glaucis.aeneus:Glaucis.hirsutus:Haplophaedia.aureliae:Heliangelus.exortis:Heliodoxa.aurescens:Heliodoxa.imperatrix:Heliodoxa.jacula:Heliodoxa.leadbeateri:Heliodoxa.rubinoides:Heliodoxa.schreibersii:Heliomaster.longirostris:Heliothryx.auritus:Heliothryx.barroti:Hylocharis.cyanus:Hylocharis.grayi:Hylocharis.sapphirina:Klais.guimeti:Lafresnaya.lafresnayi:Lepidopyga.goudoti:Lesbia.nuna:Lesbia.victoriae:Leucippus.fallax:Lophornis.chalybeus:Lophornis.stictolophus:Metallura.iracunda:Metallura.tyrianthina:Metallura.williami:Ocreatus.underwoodii:Oxypogon.guerinii:Patagona.gigas:Phaethornis.anthophilus:Phaethornis.atrimentalis:Phaethornis.augusti:Phaethornis.baroni:Phaethornis.bourcieri:Phaethornis.griseogularis:Phaethornis.guy:Phaethornis.hispidus:Phaethornis.longirostris:Phaethornis.malaris:Phaethornis.ruber:Phaethornis.striigularis:Phaethornis.syrmatophorus:Phaethornis.yaruqui:Polytmus.guainumbi:Polytmus.theresiae:Pterophanes.cyanopterus:Ramphomicron.microrhynchum:Schistes.geoffroyi:Sternoclyta.cyanopectus:Thalurania.colombica:Thalurania.fannyi:Thalurania.furcata:Threnetes.leucurus:Threnetes.ruckeri:Topaza.pyra:Urochroa.bougueri:Urosticte.ruficrissa 
+history=  

@@ -7,7 +7,7 @@
 
 #Wrap this into a function to be called from another script
 
-SDM_SP<-function(cell_size,inLocalities,envfolder,savefolder){
+SDM_SP<-function(cell_size,inLocalities,envfolder,savefolder,env='all'){
   
   #If you have already installed, let's start here.
   #Call the packages we are going to need in this tutorial
@@ -45,10 +45,17 @@ SDM_SP<-function(cell_size,inLocalities,envfolder,savefolder){
   #There is one errant record.
   PAdat<-PAdat[!PAdat$LONGDECDEG==-6,]
   
+  if(env=='all'){
   #Import environmental data from worldclim, three variables
   myExpl <- c(paste(envfolder,"bio_1.bil",sep="/"),
               paste(envfolder,"bio_12.bil",sep="/"),
               paste(envfolder,"bio_15.bil",sep="/"))
+  } else {
+    myExpl<-c()
+    for(x in 1:length(env)){
+      myExpl[[x]]<- paste(envfolder,"/",env[[1]],".bil",sep="")
+    }
+  }
   
   
   myExpl<-stack(myExpl)

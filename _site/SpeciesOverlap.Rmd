@@ -1,0 +1,1172 @@
+Abstract:
+
+Insights from comparing phylogenetic and trait community spacing has led to a renewed focus on whether interspecific competition shape species occurrence. Combining theories of niche conservatism and limiting similarity, species should co-occur more with closely related species up to a threshold of niche overlap, followed by a decrease in co-occurrence. To test this prediction, we first simulate assemblages with known assembly rules to validate our predicted pattern of probability of co-occurrence and phylogenetic relatedness. We then develop a hierarchical Bayesian approach to assess probability of co-occurrence as a function of distance to the closest related species in hummingbird assemblages from Northern South America. We then applied a realistic null model of co-occurrence using ensemble niche models and cost distance to create predicted assemblages based on overlapping environmental tolerances and dispersal limitation. We find that probability of co-occurrence increases with increasing relatedness, followed by a decrease in co-occurrence among very closely related species. These data match our predicted pattern based on simulations of niche conservatism and competition in shaping co-occurrence. Further, predicted assemblages based on environment and dispersal show a consistent increase with relatedness, with no decrease among closely related species. Taken together, our results suggest that both niche conservatism and competition act simultaneously to shape hummingbird assemblages. The presence of closely related species may prevent species from occupying potentially suitable habitat. Our approach provides a holistic statistical framework combining simulations, robust Bayesian inference and reasonable null models to infer the role of competition in shaping species assemblage. 
+
+#GitHub repository
+
+This entire analysis can be cloned from [here](https://github.com/bw4sz/Pred_Obs.git)
+
+Github repos have 100MB file limit, all files larger then that are hosted on dropbox:
+
+*[Elev file](https://www.dropbox.com/s/r67vzucsknrtvma/w001001.adf?dl=0)
+
+*[Env layers](https://www.dropbox.com/sh/fhywu4l2sx64zf6/AADruumyUX57rii3TwagE1tva?dl=0)
+
+#Read in libraries and hummingbird data
+
+```{r,warning=FALSE,message=FALSE}
+#Load required libraries
+library(reshape2)
+require(ggplot2)
+library(picante)
+library(dismo)
+library(ape)
+library(doSNOW)
+library(gdistance)
+library(foreach)
+library(boot)
+library(maptools)
+library(rasterVis)
+library(knitr)
+library(vegan)
+library(gridExtra)
+library(R2jags)
+library(stringr)
+library(dplyr)
+library(scales)
+
+opts_chunk$set(warning=FALSE,message=FALSE)
+opts_chunk$set(cache=FALSE, fig.path='figure/',fig.width=10,echo=TRUE)
+
+#Set git path
+gitpath<-"C:/Users/Ben/Documents/Pred_Obs/"
+droppath<-"C:/Users/Ben/Dropbox/"
+
+setwd(gitpath)
+
+#Load image if desired
+load(paste(droppath,"Thesis\\Pred_Realized\\Assemblages\\Threshold0.05\\Results\\","PredictedRealized_Revis.RData",sep=""))
+
+```
+
+The analysis takes in:
+
+* Phylogenetic Tree in newick format
+
+* Sites matrix with long lat
+
+* Species Assemblages corresponding to the sites matrix
+
+```{r import data}
+#Bring in Phylogenetic Data
+trx<-read.tree(paste(gitpath,"InputData\\hum294.tre",sep=""))
+
+#format tips
+new<-str_extract(trx$tip.label,"(\\w+).(\\w+)")
+#get duplicates
+trx<-drop.tip(trx,trx$tip.label[duplicated(new)])
+
+#name tips.
+trx$tip.label<-str_extract(trx$tip.label,"(\\w+).(\\w+)")
+
+ctrx<-cophenetic(trx)
+
+ctrx<-ctrx/max(ctrx)
+
+#Bring in the assemblages, cleaned from JP
+Sites<-read.csv(paste(gitpath,"InputData//Sites.csv",sep=""),row.names=1)
+
+####bring in Clade data
+clades<-read.csv(paste(gitpath,"InputData//CladeList.txt",sep=""),header=FALSE)[,-1]
+colnames(clades)<-c("Clade","Genus","Species","double","English")
+clades<-clades[,1:5]
+
+#Change the syntax on clades so it matches output, replace . with space
+clades$double.<-sub(" ",".",clades$double)
+
+#Bring in spatial data for the sites
+#Extract env information for each site
+Sites.sp<-SpatialPointsDataFrame(Sites[,c("LongDecDeg","LatDecDeg")],Sites)
+
+#site by species lists
+siteXspp<-t(read.csv(paste(gitpath,"InputData//siteXspp.csv",sep=""),row.names=1))
+```
+
+###Source Function Script
+
+These are helper functions to run distribution models and calculated relatedness and cost distance.
+
+```{r source functions}
+source(paste(gitpath,"SpeciesOverlapSourceFunctions.R",sep=""))
+source(paste(gitpath,"SDMupdated.R",sep=""))
+```
+
+#Niche Models
+
+Run ensemble niche models using biomod2 at a desired cell size.
+To make this run, you need to [download maxent](http://www.cs.princeton.edu/~schapire/maxent/) and place it in the folder you want to save the niche models: 
+
+```{r}
+cell_size=.1
+inLocalities<-read.csv("InputData/MASTER_POINTLOCALITYarcmap_review.csv")
+envfolder<-"C:\\Users\\Ben\\Dropbox\\Thesis\\Pred_Realized\\EnvLayers"
+savefolder<-"C:/Users/Ben/Dropbox/Thesis/Pred_Realized/NicheModels/"
+```
+
+Run distribution models (may need to be done offline, can take awhile)
+
+```{r Niche Models,eval=FALSE}
+SDM_SP(cell_size,inLocalities,envfolder,savefolder)
+```
+
+##Import predicted suitable habitat rasters
+
+```{r niche raster}
+#Bring in niche models from the script SDM.R, get the folder from cell size arguemnt
+
+#Biomod Consensus ensemble niche models
+niche<-list.files(paste(savefolder,cell_size,sep="/"),pattern="ensemble.gri",full.name=T,recursive=T)
+
+#Just from the current env predictions.
+niche<-niche[grep("current",niche,value=FALSE)]
+
+#Name the list of suitability models
+names(niche)<-lapply(niche,function(path){
+  split.1<-strsplit(path,"/")[[1]][10]
+})
+```
+
+###Merge assemblage lists with geographic distribution of niche models
+
+```{r}
+#Create Spatial Points object of the rownmaes
+site.raster<-raster(niche[[1]])
+res(site.raster)<-cell_size
+
+#Create PA matrix for the raster
+raster.localities<-rasterize(y=site.raster,SpatialPoints(Sites.sp),fun=function(x,...) length(x))
+
+#Which cell is each site in?
+cellSites<-raster::extract(raster.localities,Sites.sp,cellnumbers=T)
+
+#Split cell
+head(cellSites<-data.frame(Sites.sp,cellSites)[,])
+splitCellSites<-split(cellSites,factor(cellSites$cells))
+
+#How many duplicate communities are there, ie. number of assemblages per cell
+
+siteXspp.raster<-sapply(splitCellSites,function(x){
+  if(nrow(x)== 1) out<-siteXspp[,colnames(siteXspp) %in% x$Community]
+  if(nrow(x)>1 ) {
+    (out<-apply(siteXspp[,colnames(siteXspp) %in% x$Community],1,sum) > 0)*1
+  }
+  return(out)
+})
+
+#Get the xy lat long of the cells with sites in it
+cellSitesXY<-xyFromCell(raster.localities,as.numeric(colnames(siteXspp.raster)),spatial=TRUE)
+rownames(cellSitesXY@coords)<-colnames(siteXspp.raster)
+
+##Important to get a grasp on data overlap between the different sources
+congruence<-melt(list(Phylo=rownames(ctrx),Assemblage=rownames(siteXspp.raster),Suitability=names(niche),Clades=clades$double.))
+
+write.csv(table(congruence),paste(droppath,"Thesis/Pred_Realized/Assemblages//DataOverlap.csv",sep=""))
+
+#write siteXspp table
+write.csv(siteXspp.raster,paste(droppath,"Thesis/Pred_Realized/Assemblages//SiteXsppraster.csv",sep="/"))
+
+cong<-as.data.frame.array(table(congruence))
+
+#how many are complete
+completeI<-cong[names(which(apply(cong,1,sum)==4)),]
+```
+
+##Bring in Niche models
+
+```{r,fig.height=6,width=7}
+#load models to file, makes it more transferable than keeping them on disk
+modr<-lapply(niche,raster,values=TRUE)
+
+#Get the number of records per site, atleast 5 presences. 
+records_site<-names(which(apply(siteXspp.raster,1,sum,na.rm=TRUE) > 5))
+modlist<-modr[names(modr) %in% records_site]
+
+print(paste(length(modlist),"Species in the analysis"))
+```
+
+#Cost Path Analysis
+
+To provide a reasonable dispersal filter we compute cost distance between assemblages. Computing cost distances among locations requires construction of environmentally weighted cost surface based on change in elevation and calculation of a least-cost path between two locations.  We used the R package gDistance to calculate cost-distance (Etten 2011). Our cost distance is a function of difference in elevation. So high elevation species see low elevation areas as a barrier, and low elevation species see high elevation areas as a barrier.
+
+
+```{r Cost Path, eval=TRUE}
+
+#Import Friction layer, this can be changed later if we want a more fine grained 
+elevr<-raster(paste(droppath,"Thesis/Pred_Realized/etopo2\\w001001.adf",sep=""))
+
+#cut it generally by the extent of the points, less waste
+elev.c<-crop(elevr,extent(raster(niche[[1]]))*1.3)
+
+#only want above sealevel....
+elev.c[elev.c < 0]<-NA
+
+#For now aggregate elev raster to reduce complexity
+elev.ca<-aggregate(elev.c,2)
+```
+
+##Find shortest cost path between all sites
+
+```{r compute cost,eval=FALSE}
+cl<-makeCluster(15,"SOCK")
+registerDoSNOW(cl)
+costPath.list<-foreach(x = 1:length(cellSitesXY)) %dopar% {
+  require(raster)
+  require(gdistance)
+  #pick the original site. 
+  orig<-cellSitesXY[x,]
+  
+  #What elevation is the origin
+  elev_origin<-extract(elev.ca,orig)[[1]]
+  if(is.na(elev_origin)) elev_origin<-0
+  
+  #Get the difference between the origin elevation and every cell in the raster
+  elev_diff<-abs(elev_origin-elev.ca)
+  
+  #create a the transition matrix where permeability is high where elev difference is low
+  trans_diff<-transition(elev_diff,function(x) 1/mean(x),8)
+  
+  #Diagonal Cell Correction, diagonals are father away than adjacent cells. 
+  slope <- geoCorrection(trans_diff)
+  
+  #Remember this cost surface is only valid for this site as the origen, ie. we want to create just this column in the cost distance matrix
+  #Cost Distance
+  cdist<-costDistance(slope,orig,cellSitesXY)
+  #labelling is key here.
+  
+  return(list(cdist))}
+stopCluster(cl)
+
+#Format the cost path matrix
+m.costlist<-melt(costPath.list)
+CostPathMatrix<-log(dcast(m.costlist,Var1~Var2,value.var="value")[,-1])
+rownames(CostPathMatrix)<-colnames(siteXspp.raster)
+colnames(CostPathMatrix)<-colnames(siteXspp.raster)
+write.table(CostPathMatrix,paste(gitpath,sep="/","CostMatrix.txt"))
+```
+
+Or read in from file, CostPath take awhile to run.
+
+```{r read costmat}
+CostPathMatrix<-read.table(paste(gitpath,sep="/","CostMatrix.txt"),row.names=1)
+colnames(CostPathMatrix)<-rownames(CostPathMatrix)
+```
+
+###Example cost path distance
+
+Cost paths take into account frictional surfaces. We might imagine that species are more prone to dispersal within their habitat type. So in the example below, the original destination in red is a cloud forest locality and the final destination in blue is a lowland locality. A euclidean distance would have the bird cross the eastern Andean cordillera, where cost path creates a more realistic shortest distance, which is to stay within low friction space (white) and when it accounts higher frictional space (orange->green) to take a more direct path. 
+
+```{r example cost path}
+ #pick the original site. 
+  orig<-cellSitesXY[10,]
+
+#destination
+dest<-cellSitesXY[90,]
+  
+  #What elevation is the origin
+  elev_origin<-extract(elev.ca,orig)[[1]]
+  if(is.na(elev_origin)){ elev_origin<-0}
+  
+  #Get the difference between the origin elevation and every cell in the raster
+  elev_diff<-abs(elev_origin-elev.ca)
+  
+  #create a the transition matrix where permeability is high where elev difference is low
+  trans_diff<-transition(elev_diff,function(x) 1/mean(x),8)
+  
+  #Diagonal Cell Correction, diagonals are father away than adjacent cells. 
+  slope <- geoCorrection(trans_diff)
+
+#shortest path
+l<-shortestPath(slope,orig,dest,output="SpatialLines")
+
+
+plot(elev_diff,xaxt="n",yaxt="n",main="Example Least Cost Distance")
+points(orig,col="red",cex=1.5,pch=20)
+points(dest,col="blue",cex=1.5,pch=20)
+lines(l)
+```
+
+Geographic distance between sites
+
+```{r}
+geodist<-pointDistance(cellSitesXY,lonlat=T)
+colnames(geodist)<-colnames(CostPathMatrix)
+rownames(geodist)<-rownames(CostPathMatrix)
+mg<-melt(geodist)
+cg<-melt(as.matrix(CostPathMatrix))
+df<-merge(mg,cg,by=c("Var1","Var2"))
+colnames(df)<-c("To","From","Euclid","Cost")
+ggplot(df,aes(x=log(Euclid),y=Cost))+ geom_point() + geom_abline(linetype="dashed") + xlim(9,22) + ylim(9,22) + labs(x="Log geographic distance between sites", y="Log cost distance between Sites") 
+```
+
+### Create list of assemblages in observed and predicted assemblages
+
+```{r}
+#Create list of assemblages
+sp.lists<-apply(siteXspp.raster,2,function(x){
+  out<-names(x[which(x==1)])
+})
+```
+
+##Dispersal limits
+
+Assemblages in predicted suitable environments were considered unavailable for species presence if the cost distance to the nearest observed assemblage was larger than the greatest cost distance between any two observed assemblages for that species.
+
+```{r disthresh,eval=TRUE}
+
+#Get Costpath distribution for each species
+costThresh<-apply(siteXspp.raster,1,function(y){
+  sites<-names(y[y==1])
+  #get pairwise combination of sites
+  outH<-as.matrix(CostPathMatrix[rownames(CostPathMatrix) %in% sites,colnames(CostPathMatrix) %in% sites])
+  
+  #Diagonal is NA, site to itself
+  diag(outH)<-NA
+  
+  #for each site what is the minimum cost distance
+  outH<-apply(outH,1,min,na.rm=T)
+  #return largest distance for the species, this will be the cost path threshold
+  ct<-as.numeric(quantile(outH,.95))
+  return(ct)
+  })
+```
+
+# Predicted presence and absence
+Ensemble niche models return a probability value of suitability for each cell in a landscape. To define predicted suitable areas, we needed to turn this probability into a statement of predicted presence/absence. Due to differences in species prevalence, taking a fixed probability cutoff across all species will bias presence towards more common species (Liu et al. 2005). We therefore thresholded the models based on the distribution of suitability values from the observed localities (Pearson et al. 2004, Gutiérrez et al. 2014)
+
+### Distance to closest-related species for every species in every assemblage
+```{r relatedness}
+PA_phylo<-co_occur(melt(siteXspp.raster))
+```
+
+##Create predicted assemblages
+
+The *environment* assemblages are based on the results of the niche models, where species whose suitability is above a threshold are present. The same assemblages are used for the *environment + dispersal* assemblages, but a dispersal filter is added using the cost distance.
+
+```{r}
+predAssemblages<-function(thresh,plots=TRUE){
+
+  #Create output folders
+  fold<-paste(droppath,paste("Thesis/Pred_Realized/Assemblages/Threshold",thresh,sep=""),sep="")
+
+#Read in source function to draw predicted and realized assemblages and match relatedness
+
+dir.create(fold)
+dir.create(paste(fold,"Species",sep="/"))
+
+  #Lets go get the presence data on hummingbird distributions
+  Niche_locals<-read.csv(paste(gitpath,"InputData\\MASTER_POINTLOCALITYarcmap_review.csv",sep=""))
+  
+  #Just take the columns you want. 
+  PAdat<-Niche_locals[,colnames (Niche_locals) %in% c("RECORD_ID","SPECIES","COUNTRY","LOCALITY","LATDECDEG","LONGDECDEG","Decision","SpatialCheck","MapDecision")]
+  
+  #clean localities, we checked them against published range records and visually inspected them
+  PAdat<-PAdat[!PAdat$LONGDECDEG==-6,]
+  loc_clean<-PAdat[!PAdat$MapDecision=="REJECT",]
+
+#########################################################
+#Perform Predicted v Realized Function on all Niche Models
+#########################################################
+
+all_models<-lapply(modlist,function(x){
+    pred_realized(mod=x,thresh.suit=thresh,dispersal=FALSE,plots=FALSE,loc_clean=loc_clean,fold=fold)
+})
+
+if(plots){print("Species assembages: No dispersal filter")}
+
+#combine all datasets
+#This naming function would need to changed on other systems
+names(all_models)<-names(modlist)
+
+#Remove models that failed. 
+working_models<-all_models[!sapply(sapply(all_models,nrow),is.null)]
+failed_models<-all_models[sapply(sapply(all_models,nrow),is.null)]
+
+#melt and name list
+#remove any species that failed. 
+all.species.dataND<-melt(working_models,id.vars=c("Locality","P_A","Suitability","Species","LongDecDeg","LatDecDeg"))
+
+all_modelsDD<-lapply(modlist,function(x){
+    pred_realized(mod=x,thresh.suit=thresh,dispersal=TRUE,plots=FALSE,loc_clean=loc_clean,fold=fold)
+})
+
+if(plots){print("Species assemblages including dispersal filter")}
+
+#combine all datasets
+#This naming function would need to changed on other systems
+names(all_modelsDD)<-names(modlist)
+
+#Remove models that failed. 
+working_modelsD<-all_modelsDD[!sapply(sapply(all_modelsDD,nrow),is.null)]
+failed_modelsD<-all_modelsDD[sapply(sapply(all_modelsDD,nrow),is.null)]
+
+#melt and name list
+#remove any species that failed. 
+all.species.dataD<-melt(working_modelsD,c("Locality","P_A","Suitability","Species","LongDecDeg","LatDecDeg"))
+
+all.species.dataND$Hyp<-"Env"
+all.species.dataD$Hyp<-"Env_Dispersal"
+
+#Merge together as a list, name the hyps and melt
+all.species.data<-rbind_all(list(all.species.dataND,all.species.dataD))
+
+#drop duplicate name column
+all.species.data<-all.species.data[,!colnames(all.species.data) %in% "L1"]
+
+#Set working directory to output folder
+dir.create(paste(fold,"Results",sep="/"))
+setwd(paste(fold,"Results",sep="/"))
+
+#add in which clade each focal species is
+PA_mult2<-merge(all.species.data,clades[,-c(3,4,5)],by.x="Species",by.y="double.")
+
+#remove the "Present/Absent column" it needs to be 0,1
+PA_m2<-PA_mult2[,-3]
+
+#Name the columns
+colnames(PA_m2)[c(6,7)]<-c("P_R","P_A")
+
+#merge with phylogenetic distance
+PA_m2<-merge(PA_m2,PA_phylo[,-3],by=c("Species","Locality"))
+
+#Final data format
+PA_m2<-PA_m2[!(PA_m2$Hyp=="Env_Dispersal" & PA_m2$P_R=="PA_Binary"),]
+
+#take out values greater than 95% quartile
+phylo_out<-with(PA_m2,quantile(PA_m2[,"Phylo.Relatedness"],.95,na.rm=T))
+
+#remove outliers
+PA_m2$Phylo.Relatedness[PA_m2$Phylo.Relatedness > phylo_out]<-NA 
+
+#return data
+return(PA_m2)
+}
+
+```
+
+Sensitivity analysis shows that suitability threshold of 95% is a reasonable value, compute predicted and realized distributions. The function is specified as 1-threshold/100.
+
+```{r pred assemb,eval=TRUE}
+#Plotting gives summary graphs
+PA_m2<-predAssemblages(thresh=.05,plots=TRUE)   
+```
+
+Save image in case we need to start here.
+
+```{r}
+write.csv(PA_m2,paste(gitpath,"InputData/SpeciesData.csv",sep=""),row.names=F)
+#PA_m2<-read.csv("InputData/SpeciesData.csv")
+```
+
+#View Niche models, predictions of presence and absences, and point locality data
+
+**Black points = Point Localities used to create the niche models**
+**Red points = True presence assemblage lists**
+**Empty Blue Triangles = predicted assemblage list based on environmental suitabilitys**
+**Filled Blue Triangles = predicted assemblage list based on environmental suitability, but outside of dispersal distance**
+
+```{r}
+#plot raster with presence points and localities
+#bring in raw localities
+ #Lets go get the presence data on hummingbird distributions
+  Niche_locals<-read.csv(paste(gitpath,"InputData\\MASTER_POINTLOCALITYarcmap_review.csv",sep=""))
+  
+  #Just take the columns you want. 
+  PAdat<-Niche_locals[,colnames (Niche_locals) %in% c("RECORD_ID","SPECIES","COUNTRY","LOCALITY","LATDECDEG","LONGDECDEG","Decision","SpatialCheck","MapDecision")]
+  
+  #clean localities, we checked them against published range records and visually inspected them
+  PAdat<-PAdat[!PAdat$LONGDECDEG==-6,]
+  loc_clean<-PAdat[!PAdat$MapDecision=="REJECT",]
+  
+  #Plot true points, localities, niche models and species assemblages
+  
+  #make a function
+predPlot<-function(x,plots=F){  
+nm<-modlist[[x]]
+  speciesname<-paste(str_match(names(nm),"(\\w+)\\.(\\w+)_Total")[,2:3],collapse=" ")
+  
+  #get localities for that species
+  #match formating for species names
+  sp.loc<-loc_clean[loc_clean$SPECIES %in%  gsub("\\."," ",as.character(unique(speciesname))),]
+  sp.loc<-sp.loc[!duplicated(sp.loc[,-1]),]
+  #make into a spatial object
+  sp.loc<-SpatialPointsDataFrame(sp.loc[,c("LONGDECDEG","LATDECDEG")],sp.loc)
+
+  #localities
+  s<-siteXspp.raster[rownames(siteXspp.raster) %in% gsub(speciesname,pattern=" ",replacement="\\."),]
+  #true presence points
+  ptsTrue<-xyFromCell(object=nm, cell=as.numeric(names(s[s==1])),spatial=T)
+  
+  #extent of true points
+  e<-extent(ptsTrue)*2
+  
+  #predicted presence points -> environment
+  ppEnv<-PA_m2[PA_m2$Species==gsub(speciesname,pattern=" ",replacement="\\.") & PA_m2$P_R=="P_Apred" & PA_m2$P_A==1 & PA_m2$Hyp=="Env",]
+  
+  if(nrow(ppEnv) > 0) {
+    
+  ptsEnv<-SpatialPoints(cbind(ppEnv$LongDecDeg,ppEnv$LatDecDeg))  
+  #predicted presence points, which are not in the dispersal
+  ppDisp<-PA_m2[PA_m2$Species==gsub(speciesname,pattern=" ",replacement="\\.") & PA_m2$P_R=="P_Apred" & PA_m2$P_A==1 & PA_m2$Hyp=="Env_Dispersal",]
+  noDD<-ppEnv[!ppEnv$Locality %in% ppDisp$Locality,]
+  
+  #redefine extent based on predicted points
+  e<-extent(ptsEnv)*1.2
+  }
+  #plot niche model and results
+  #if plot
+  if(plots){svg(paste(gitpath,"PredPlots/",speciesname,".svg",sep=""))}
+  
+  op <- par(mar=rep(.01, 4))
+  plot(nm,axes=F,legend=T,box=F,ext=e,col=grey.colors(1000))
+  par(op)
+  points(ptsTrue,col='red',pch=16)
+  
+  #plot predicted points, if they exists  
+  if(nrow(ppEnv) > 0) { points(ptsEnv,col='blue',pch=2,cex=1)}
+  
+  points(sp.loc,cex=.6,pch=16)
+  title(paste(speciesname,paste("n =",length(sp.loc)),sep=" "),adj=.1)
+  
+  #If all env points are in dispersal, ignore
+  #If there no points, skip (bit ugly, but needed if does not exist)
+
+  if(exists("noDD")){
+    if(length(noDD$Locality) > 0){
+      ptsDisp<-SpatialPoints(cbind(noDD$LongDecDeg,noDD$LatDecDeg))
+      points(ptsDisp,pch=17,col="blue")
+    }
+  }
+  if(plots){dev.off()}
+}
+
+#run for all species 
+for(x in 1:length(modlist)){
+  predPlot(x)
+  predPlot(x,plots=T)
+  }
+
+```
+
+  
+##Combine simulation, predicted and observed assemblages.
+
+Read in simulated data - see Simulations.Rmd
+
+```{r}
+simall<-read.csv("C:/Users/Ben/Documents/Pred_Obs/Bayesian/simdats.csv",row.names=1)
+
+simall$P_R<-"Simulation"
+```
+
+Bind data to one data frame.
+
+```{r}
+
+#make formats the same
+PA_m2$Locality<-as.numeric(as.character(PA_m2$Locality))
+PA_m2$P_A<-as.integer(PA_m2$P_A)
+
+#bind with simulated data
+PA_m2<-rbind_all(list(PA_m2,simall))
+
+#fill in iteration for non simulations
+PA_m2$Iteration[is.na(PA_m2$Iteration)]<-1
+#split data into types of assemblages
+
+#drop Env + Dispersal for observed, its just a data subset
+sdat<-split(PA_m2,list(PA_m2$P_R,PA_m2$Hyp),drop=TRUE)
+
+names(sdat)<-c("Env","Observed","Env + Dispersal","No Signal & Strong Repulsion","Strong Signal & Strong Repulsion","No Signal & No Repulsion","Strong Signal & No Repulsion")
+
+# remove inf values
+sdat<-lapply(sdat,function(y){
+    y<-y[is.finite(y$Phylo.Relatedness),]
+})
+
+```
+
+On average, how many data points in each simulation and observed data?
+```{r}
+sapply(sdat,nrow)
+```
+
+#Compare to generalized linear models
+
+While these are constrained to have the same intercept and slope for each species, they provide a reasonable check on whether the Bayesian estimates are giving logical values.
+
+```{r,fig.height=10}
+plotlist<-lapply(sdat,function(x){
+p<-ggplot(x,aes(x=Phylo.Relatedness,y=P_A)) + geom_line(aes(group=Iteration),stat="smooth",method="glm",family="binomial",formula=y~poly(x,2),alpha=min(c(1,(1/max(x$Iteration)*10)))) + theme_bw() + labs("x=Distance to closest related species in an assemblage",y="Probability of presence") + ggtitle("") + scale_alpha(guide="none")
+return(p)
+})
+
+#title plots
+for (x in 1:length(plotlist)){
+  plotlist[[x]]<-plotlist[[x]]+ggtitle(names(plotlist)[x])
+}
+
+do.call(grid.arrange,plotlist)
+```
+
+#Bayesian Analysis of Co-occurrence
+
+## Model Formulation
+
+$$ Y_i \sim Bern(p_i) $$
+
+$$ logit(p_i) = \alpha_{Species[i]} + \beta_{Species[i]} *x + \gamma_{Species[i]} *x^2 $$
+$$ \alpha_{Species[i]} \sim N(intercept,sigmaIntercept)$$
+$$ \beta_{Species[i]} \sim N(linear,sigmaSlope)$$
+$$ \gamma_{Species[i]} \sim N(polynomial,sigmaSlope2)$$
+
+This corresponding to the winbugs models:
+```{r}
+print.noquote(readLines(paste(gitpath,"Bayesian/BPhylo.R",sep="/")))
+```
+
+##Define bayes model function
+
+Define a function that takes in species, presence/absence and distance to the closest related species for each type of assemblage, and returns the posterior estimates of X and X^2.
+
+```{r singlemodel,echo=TRUE,eval=TRUE}
+
+Bayes<-function(presence,distance,species,Iteration,runs,burn,hier){
+#needs libraries specified to run in parallel
+library(ggplot2)
+library(R2jags)
+library(reshape2)
+library(stringr)
+
+if(hier){
+  source(paste(gitpath,"Bayesian/BPhylo.R",sep="/"))
+  
+    #make species a factor
+species<-as.factor(species)
+
+#Input Data
+Dat <- list(
+  y=as.numeric(presence),
+  dist=distance,
+  Species=as.numeric(species),
+  s=nlevels(species))
+
+  #Intials
+  InitStage <- function() {list(alpha=rep(1,Dat$s),beta=rep(1,Dat$s),gamma=rep(1,Dat$s),intercept=1,tauIntercept=0,linear=1,tauSlope=0,tauSlope2=0,polynomial=1,Imu=1,ITau=0)}
+
+  #Parameters to track
+  ParsStage <- c("intercept","linear","sigmaSlope","sigmaIntercept","polynomial","sigmaSlope2","alpha","beta","gamma")
+  
+  #name of jags model
+  mf<-"BPhylo.jags"
+}
+
+if(!hier){
+  source(paste(gitpath,"Bayesian/BPhyloSim.R",sep="/"))
+  
+#make species a factor
+species<-as.factor(species)
+
+#Input Data
+Dat <- list(
+  y=as.numeric(presence),
+  dist=distance,
+  Species=as.numeric(species),
+  s=nlevels(species),
+  Iteration=Iteration,
+  Iterations=max(Iteration))
+
+  #Intials
+  InitStage <- function() {list(alpha=rep(1,Dat$s),beta=rep(1,Dat$s),gamma=rep(1,Dat$s),intercept=1,tauIntercept=0,linear=1,tauSlope=0,tauSlope2=0,polynomial=1)}
+
+  #Parameters to track
+  ParsStage <- c("intercept","linear","sigmaSlope","sigmaIntercept","polynomial","sigmaSlope2","alpha","beta","gamma")
+  
+  #name of jags model
+  mf<-"BPhyloSim.jags"
+}
+
+#MCMC options
+ni <- runs  # number of draws from the posterior
+nt <- runs*.001    #thinning rate
+nb <- runs * .75  # number to discard for burn-in
+nc <- 2  # number of chains
+
+
+#Jags
+print(mf)
+
+m = jags(
+         n.chains=nc,
+         model.file=mf,
+         working.directory=getwd(),
+         data=Dat,
+         parameters.to.save=ParsStage,
+         n.thin=nt,
+         n.iter=ni,
+         n.burnin=nb,
+         DIC=T)
+
+
+return(m)}
+```
+
+
+##Bayes function for each assemblage type
+
+Run 7 models in parallel.
+
+```{r run jags,results='hide',eval=T}
+
+#There is no reason everyone needs the same number of runs
+#Draws for each model
+runsl<-rep(10000,2000000,10000,10000,10000,10000,10000)
+
+#Which model we want to draw , heir=T is for full model
+modhier<-c(rep(T,7))
+
+cl<-snow::makeCluster(7,"SOCK")
+doSNOW::registerDoSNOW(cl)
+
+parall<-foreach(x=1:length(sdat),.errorhandling="pass") %dopar% {
+  y<-sdat[[x]]
+  out<-Bayes(presence=y$P_A,distance=y$Phylo.Relatedness,species=y$Species,Iteration=y$Iteration,runs =runsl[x],burn=((runsl[x]/25)-3000),hier=modhier[x])
+  return(out)
+}
+stopCluster(cl)
+
+#save.image(paste(droppath,"Thesis\\Pred_Realized\\Assemblages\\Threshold0.05\\Results\\","PredictedRealized_Revision.RData",sep=""))
+
+```
+
+##Calculate null deviance.
+
+In review, we were asked to provide a measure of Psuedo R^2. In general these measures can be tricky with hierarchical models because the variance is explictely modeled among groups and is therefore non-independent by design. However, as a measure of relative improvement from a null model a simple psudeo R^2 of 1- (residual deviance/null deviance) will be useful. For each of the models we computed a null deviance by fitting an intercept only model. We maintained the hierarchical structure to make the models comparable.
+
+Redefine model function
+
+##Define bayes model function
+
+Define a function that takes in species, presence/absence and distance to the closest related species for each type of assemblage, and returns the posterior estimates of X and X^2.
+
+```{r secondmodel,echo=TRUE,eval=TRUE}
+
+Bayes <-function(presence,species,Iteration,runs,burn,hier) {
+  #needs libraries specified to run in parallel
+  library(ggplot2)
+  library(R2jags)
+  library(reshape2)
+  library(stringr)
+  
+  source(paste(gitpath,"Bayesian/NullDeviance.R",sep = "/"))
+  
+  #make species a factor
+  species <- as.factor(species)
+  
+  #Input Data
+  Dat <- list(
+  y = as.numeric(presence),
+  Species = as.numeric(species),
+  s = nlevels(species)
+  )
+  
+  #Intials
+  InitStage <-
+  function() {
+  list(
+  alpha = rep(1,Dat$s),intercept = 1,tauIntercept = 0
+  )
+  }
+  
+  #Parameters to track
+  ParsStage <- c("intercept","alpha")
+  
+  #name of jags model
+  mf <- "NullD.jags"
+  
+  
+  #MCMC options
+  ni <- runs  # number of draws from the posterior
+  nt <- runs * .001    #thinning rate
+  nb <- runs * .75  # number to discard for burn-in
+  nc <- 2  # number of chains
+  
+  
+  #Jags
+  print(mf)
+  
+  m = jags(
+  n.chains = nc,
+  model.file = mf,
+  working.directory = getwd(),
+  data = Dat,
+  parameters.to.save = ParsStage,
+  n.thin = nt,
+  n.iter = ni,
+  n.burnin = nb,
+  DIC = T
+  )
+  
+  return(m)
+}
+```
+
+
+```{r run jags,results='hide',eval=T}
+
+#Draws for each model
+runsl<-rep(2000,2000,2000,2000,2000,2000,2000)
+
+#legacy
+modhier<-c(rep(T,7))
+
+cl<-snow::makeCluster(7,"SOCK")
+doSNOW::registerDoSNOW(cl)
+
+parnull<-foreach(x=1:length(sdat),.errorhandling="pass") %dopar% {
+  y<-sdat[[x]]
+  out<-Bayes(presence=y$P_A,species=y$Species,Iteration=y$Iteration,runs =runsl[x],burn=((runsl[x]/3)-40),hier=modhier[x])
+  return(out)
+}
+stopCluster(cl)
+```
+
+##Deviance figures
+
+```{r}
+ps<-sapply(1:length(parall),function(x){
+  resid<-parall[[x]]$BUGSoutput$sims.list$deviance
+  null<-parnull[[x]]$BUGSoutput$sims.list$deviance
+  p<-1-(mean(resid)/mean(null))
+  return(p)
+})
+
+names(ps)<-names(sdat)
+ps<-  melt(ps)
+print(ps)
+write.csv(ps,"PsuedoR.csv")
+```
+
+###reformat jags output
+```{r,cache=FALSE}
+#Remove Burnin
+parburn<-list()
+for (x in 1:length(parall)){
+pars<-melt(parall[[x]]$BUGSoutput$sims.array)
+colnames(pars)<-c("Draw","Chain","parameter","estimate")
+  parburn[[x]]<-pars
+}
+```
+
+Combine predicted and observed outputs:
+
+```{r combine par,cache=FALSE}
+#name each list
+for(i in 1:length(parburn)){
+  parburn[[i]]$L1<-names(sdat)[i]
+}
+   
+parmelt<-rbind_all(parburn)
+
+#add in observed predicted and eventually simulated labels
+parmelt[parmelt$L1 %in% names(sdat)[4:7],"Assemblage"]<-"Simulation"
+
+parmelt[parmelt$L1 %in% c("Env","Env + Dispersal"),"Assemblage"]<-"Predicted"
+
+parmelt[parmelt$L1 %in% "Observed","Assemblage"]<-"Observed"
+
+#split into species level and hierarchical
+spec<-parmelt[str_detect(parmelt$parameter,"alpha|beta|gamma"), ]
+parmelts<-parmelt[!str_detect(parmelt$parameter,"alpha|beta|gamma|deviance"), ]
+
+```
+
+##View Chains
+
+```{r,fig.height=10,fig.width=14,cache=FALSE}  
+ggplot(droplevels(parmelts),aes(x=Draw,y=estimate,col=as.factor(Chain))) + geom_line() + facet_wrap(L1~parameter,scales="free") + theme_bw() + labs(col="Chain")
+```
+
+## Bayesian estimates figure
+
+```{r,fig.height=15,cache=FALSE} 
+setwd(paste(droppath,"Thesis\\Pred_Realized\\Assemblages\\Threshold0.05\\Results",sep=""))
+      
+#calculate CI interval
+finaltab<-dplyr::group_by(parmelts,L1,Assemblage,parameter) %>% dplyr::summarize(mean=round(mean(estimate),2),upper=round(quantile(estimate,0.975),2),lower=round(quantile(estimate,0.025),2)) 
+
+parmeltP<-parmelts[parmelts$parameter %in% c("linear","polynomial"),]
+
+#calculate CI interval
+finaltabP<-dplyr::group_by(parmeltP,L1,Assemblage,parameter) %>% dplyr::summarize(mean=round(mean(estimate),2),upper=round(quantile(estimate,0.975),2),lower=round(quantile(estimate,0.025),2)) 
+
+#plot simulated
+simulated<-ggplot(data=parmeltP[parmeltP$Assemblage %in% "Simulation",],aes(x=estimate,fill=parameter)) + facet_wrap(~L1,scale="free_y") + geom_histogram() + theme_bw() + ggtitle("Simulated") + scale_fill_discrete(guide="none") + labs(x="")  + scale_fill_manual(values=c("grey60","grey10"))
+
+#CI intervals
+simulated<-simulated + geom_vline(data=finaltabP[finaltabP$Assemblage %in% "Simulation",],aes(xintercept=mean,group=parameter),linetype="dashed",col="black",size=1) + geom_vline(data=finaltabP[finaltabP$Assemblage %in% "Simulation",],aes(xintercept=upper,group=parameter),linetype="dashed",col="grey20",size=.5) + geom_vline(data=finaltabP[finaltabP$Assemblage %in% "Simulation",],aes(xintercept=lower,group=parameter),linetype="dashed",col="grey20",size=.5)
+
+predicted<-ggplot(data=parmeltP[parmeltP$Assemblage %in% "Predicted",],aes(x=estimate,fill=parameter)) + facet_wrap(~L1,scale="free_y") + geom_histogram() + theme_bw() + ggtitle("Predicted")+ scale_fill_discrete(guide="none") + labs(x="")+ scale_fill_manual(values=c("grey60","grey10"))
+
+#CI intervals
+predicted<-predicted + geom_vline(data=finaltabP[finaltabP$Assemblage %in% "Predicted",],aes(xintercept=mean,group=parameter),linetype="dashed",col="black",size=1) + geom_vline(data=finaltabP[finaltabP$Assemblage %in% "Predicted",],aes(xintercept=upper,group=parameter),linetype="dashed",col="grey20",size=.5) + geom_vline(data=finaltabP[finaltabP$Assemblage %in% "Predicted",],aes(xintercept=lower,group=parameter),linetype="dashed",col="grey20",size=.5)
+
+observed<-ggplot(data=parmeltP[parmeltP$Assemblage %in% "Observed",],aes(x=estimate,fill=parameter)) + facet_wrap(~L1,scale="free_y") + geom_histogram() + theme_bw() + ggtitle("Observed")+ scale_fill_manual(values=c("grey60","grey10"))
+
+#CI intervals
+observed<-observed + geom_vline(data=finaltabP[finaltabP$Assemblage %in% "Observed",],aes(xintercept=mean,group=parameter),linetype="dashed",col="black",size=1) + geom_vline(data=finaltabP[finaltabP$Assemblage %in% "Observed",],aes(xintercept=lower,group=parameter),linetype="dashed",col="grey20",size=.5) + geom_vline(data=finaltabP[finaltabP$Assemblage %in% "Observed",],aes(xintercept=upper,group=parameter),linetype="dashed",col="grey20",size=.5)
+
+grid.arrange(simulated,predicted,observed,nrow=3)
+```
+
+Write figure to file
+
+```{r,echo=FALSE,results='hide',cache=FALSE}
+jpeg("PosteriorAll.jpeg",res=1000,height=9,width=10,units="in")
+grid.arrange(simulated,predicted,observed,nrow=3)
+dev.off()  
+```
+
+##Compare across assemblages
+
+```{r,size=8,fig.width=17,cache=FALSE}
+
+kable(as.data.frame(finaltab))  
+
+write.csv(finaltab,"ParameterEstimates.csv")
+
+ggplot(finaltab,aes(x=L1,col=Assemblage,shape=parameter),size=3) + geom_pointrange(aes(y=mean,ymax=upper,ymin=lower),size=1.5) + theme_bw() + facet_wrap(~parameter,scale="free")
+
+```
+
+##Plot trajectories.
+
+```{r,fig.height=6,cache=FALSE}
+
+gdf<-parmelts
+
+gdcast<-dcast(gdf,...~parameter,value.var="estimate")
+
+trajsplit<-split(gdcast,gdcast$L1)
+
+trajsplit<-lapply(trajsplit,function(x){
+  x[sample(1:nrow(x),500,replace=F),]
+})
+
+#define trajectory function
+trajF<-function(intercept,linear,polynomial,x){
+   p<-inv.logit(intercept + linear * x  + polynomial * x^2)
+   return(p)
+}
+
+specCast<-list()
+
+for(x in 1:length(trajsplit)){
+  a<-trajsplit[[x]]
+  dat<-sdat[[which(names(sdat) %in% names(trajsplit)[x])]]
+  
+  est<-list()
+  for(p in 1:nrow(a)){
+  
+    est[[p]]<-data.frame(Relatedness=dat$Phylo.Relatedness,y=trajF(a[p,]$intercept,a[p,]$linear,a[p,]$polynomial,dat$Phylo.Relatedness))
+    
+    }
+  est<-rbind_all(est)
+  mtraj<-group_by(est,Relatedness) %>% summarise(mean=mean(y),upper=quantile(y,0.975),lower=quantile(y,0.025))
+  
+  specCast[[x]]<-mtraj
+  }
+
+names(specCast)<-names(trajsplit)
+
+#name and reduce
+for(x in 1:length(specCast)){
+  specCast[[x]]$Assemblage<-names(specCast)[x]
+}
+
+specdf<-rbind_all(specCast)
+
+#define another facet
+#add in observed predicted and eventually simulated labels
+
+
+specdf[specdf$Assemblage %in% c("Env","Env + Dispersal","Observed"),"Type"]<-"Observed and Predicted"
+
+
+#overlay together
+figure4<-ggplot(data=specdf[specdf$Assemblage %in% c("Env","Env + Dispersal","Observed"),],aes(x=Relatedness,y=mean)) + geom_ribbon(alpha=.5,aes(ymin=lower,ymax=upper,fill=Assemblage)) + geom_line(aes(fill=Assemblage)) + theme_bw()+ labs(x="Phylogenetic distance to closest related species",y="Probability of Occurrence") + scale_fill_manual(values=c("grey90","grey50","black"),labels=c("Environment","Environment + Dispersal","Observed")) + theme(legend.position="bottom")
+figure4
+ggsave("Figure4Overlay.jpg",height=5,width=7,dpi=400)
+
+figure4 + geom_point(data=sdat[[2]],aes(x=Phylo.Relatedness,y=P_A),alpha=0.1)
+ggsave("Figure4OverlayPoints.jpg",height=5,width=7,dpi=400)
+
+```
+
+#Simulated trajectories
+```{r,fig.width=11,cache=FALSE}
+#overlay together
+
+#rename levels
+specdf$AssemblageL<-factor(specdf$Assemblage)
+#levels(specdf$AssemblageL)<-c("Environment","Environment + Dispersal","Lottery","Niche Conservatism","Niche Conservatism + Competition","Observed")
+
+
+#add some blank data to zoom out on lottery, its not readable.
+
+figure3<-ggplot(data=specdf[!specdf$Assemblage %in% c("Env","Env + Dispersal","Observed"),],aes(x=Relatedness,y=mean))+ geom_ribbon(alpha=.5,aes(ymin=lower,ymax=upper)) + geom_line() + theme_bw()+ labs(x="Phylogenetic distance to closest related species",y="Probability of Occurrence") + scale_fill_manual(guide='none') + facet_wrap(~AssemblageL) + theme(legend.position="top")
+figure3
+ggsave("Figure3Overlay.jpg",height=6,width=7,dpi=600,units="in")
+```
+
+```{r}
+#plot both together
+svg("PanelFigure.svg",height=8,width=9)
+grid.arrange(figure3,figure4,heights=c(0.45,0.55))
+dev.off()
+
+jpeg("PanelFigure.jpeg",res=300,height=9,width=7,units="in")
+grid.arrange(figure3,figure4,heights=c(0.5,0.5))
+dev.off()
+```
+
+##Species level estimates
+
+```{r view slope species,fig.height=10}
+#just get observed data
+spec<-spec[spec$Assemblage %in% "Observed",]
+spec$ind<-str_extract(spec$parameter,pattern="\\d+")
+
+#split into species, needs to be numeric to be properly ordered?
+spec$ind<-as.numeric(spec$ind)
+
+specS<-split(spec,spec$ind)
+
+#match index with species names
+for (x in 1:length(specS)){
+  specS[[x]]$Species<-unique(sdat[[2]]$Species)[x]
+}
+
+
+specSdf<-rbind_all(specS)
+specSdf$param<-as.factor(str_match(specSdf$parameter,"\\w+"))
+```
+
+###plot trajectories
+```{r,fig.height=40}
+specCast<-lapply(specS,function(y){
+  samp<-dcast(y,...~parameter,value.var="estimate")
+  
+  #species trajectories
+  
+  #Get species relatedness subset
+  R<-unique(PA_m2[PA_m2$Species %in% unique(samp$Species) & PA_m2$P_R %in% "PA_Binary",]$Phylo.Relatedness)
+  
+  traj<-list()
+  for(x in 1:nrow(samp)){
+    s<-samp[x,]
+    #careful on the inline naming, but gets away from winbugs indexing.
+    p<-inv.logit(s[[7]] + s[[8]]*R+s[[9]] * R^2)
+    traj[[x]]<-data.frame(x=R,y=p,Iteration=x)
+    }
+  traj<-rbind_all(traj)
+  
+  #summarise mean and interval
+  mtraj<-group_by(traj,x) %>% summarise(mean=mean(y),upper=quantile(y,0.975,na.rm=T),lower=quantile(y,0.025,na.rm=T))
+})
+
+alpha_plot<-function(d,sp,pts=F){
+
+a<-PA_m2[PA_m2$Species %in% sp & PA_m2$P_R=="PA_Binary",]
+pt<-a[,c("Phylo.Relatedness","P_A")]
+
+p<-ggplot(d,aes(x=x,y=mean)) + geom_line(col="red",linetype="dashed") + geom_line(aes(y=upper),col="blue",linetype="dashed") + geom_line(aes(y=lower),col="blue",linetype="dashed")+ theme_bw() + labs(x="",y="") + ggtitle(sp) 
+
+if(pts){
+p<-p + geom_jitter(data=pt,aes(x=Phylo.Relatedness,y=P_A),alpha=.1,size=4,position = position_jitter(width = .005,height=0))}
+return(p)
+  }
+
+pl<-list()
+for(x in 1:length(specS)){
+  #Species
+  sp<-unique(sdat[[2]]$Species)[x]
+  pl[[x]]<-alpha_plot(specCast[[x]],sp)
+}
+
+names(pl)<-unique(sdat[[2]]$Species)
+do.call("grid.arrange", c(pl, ncol=5))
+
+#Save them individually if needed svg and jpg
+for(x in 1:length(specCast)){
+  #Species
+  sp<-unique(sdat[[2]]$Species)[x]
+  p<-alpha_plot(specCast[[x]],sp,pts=T)
+  filenam<-paste(gitpath,"SpeciesPlots/",sp,".svg",sep="")
+  ggsave(filenam,height=5,width=6)
+}
+
+#example figure
+names(specCast)<-unique(sdat[[2]]$Species)
+ex<-melt(specCast,c("x","mean","upper","lower"))
+
+# grab target species       
+spkeep<-c("Eriocnemis.vestita","Heliangelus.exortis","Coeligena.lutetiae","Thalurania.furcata","Adelomyia.melanogenys","Amazilia.tzacatl","Metallura.tyrianthina","Coeligena.torquata")
+keep<-data.frame(Type=c(rep("Increasing",4),rep("Declining",4)),Species=spkeep)
+ex<-droplevels(ex[ex$L1 %in% keep$Species,])
+```
+
+###plot example species
+
+
+```{r}
+a<-PA_m2[PA_m2$Species %in% ex$L1 & PA_m2$P_R=="PA_Binary",]
+pt<-a[,c("Phylo.Relatedness","P_A","Species")]
+colnames(pt)<-c("Phylo.Relatedness","P_A","L1")
+
+#size by counts
+cts<-group_by(pt,L1,Phylo.Relatedness,P_A) %>% summarise(Assemblages=length(Phylo.Relatedness))
+
+#merge back to points
+pts<-merge(pt,cts)
+
+#take out the periods
+ex$L1<-gsub(ex$L1,pattern="\\.",replacement=" ")
+pts$L1<-gsub(pts$L1,pattern="\\.",replacement=" ")
+
+#relevel
+ex$L1<-factor(ex$L1,levels=gsub(keep$Species,pattern="\\.",replacement=" "))
+
+p<-ggplot(ex,aes(x=x,y=mean)) + geom_line(col="black") + geom_line(aes(y=upper),col="gray",linetype="dashed") + geom_line(aes(y=lower),col="gray",linetype="dashed")+ theme_bw() + labs(x="",y="") + facet_wrap(~L1,nrow=2,ncol=4)
+p<-p + geom_point(data=pts,aes(x=Phylo.Relatedness,y=P_A,size=Assemblages,alpha=Assemblages)) + scale_size_continuous(range=c(2,4)) + scale_alpha(range=c(0.4,0.7)) + labs(x="Phylogenetic distance to the closest related species in an assemblage",y="Probability of occurrence")
+p
+ggsave("SpeciesExample.jpg",dpi=300,height=4,width=10)
+ggsave("SpeciesExample.svg",dpi=300,height=4,width=10)
+```
+
+```{r}
+#Plot the curves by species clades membership
+names(specCast)<-names(pl)
+byclade<-melt(specCast,id.vars=colnames(specCast[[1]]))
+byclade<-merge(byclade,clades,by.x="L1",by.y="double.")
+
+ggplot(byclade,aes(x=x,y=mean,group=L1)) + geom_line(col="black",alpha=0.2) + theme_bw() + labs(x="Phylogenetic distance to the closest related species",y="Probability of occurrence")  + facet_wrap(~Clade,scale="free")
+ggsave("CladeMembership.jpeg",height=7,width=7,dpi=300)
+```
+
+
+```{r}
+save.image(paste(droppath,"Thesis\\Pred_Realized\\Assemblages\\Threshold0.05\\Results\\","PredictedRealized_Revis.RData",sep=""))
+```
+
+
+

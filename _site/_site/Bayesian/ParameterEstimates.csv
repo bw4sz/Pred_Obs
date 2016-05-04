@@ -1,0 +1,11 @@
+"","L1","Assemblage","parameter","mean","upper","lower"
+"1","PA_Binary.Env","Observed","beta",-2.08819909761003,4.37045302374195,-8.63087135400003
+"2","PA_Binary.Env","Observed","gamma",1.95382122729712,14.4561084542452,-10.0277759706087
+"3","P_Apred.Env","Predicted","beta",4.29739594986342,9.83930300489408,-1.02235999326492
+"4","P_Apred.Env","Predicted","gamma",-7.80634993067709,2.73512728859489,-18.6007262668548
+"5","P_Apred.Env_Dispersal","Predicted","beta",4.92397522997777,10.4712153615133,-0.532171173685841
+"6","P_Apred.Env_Dispersal","Predicted","gamma",-9.12977678614375,1.62876645888158,-20.1557990418437
+"7","Simulated.Niche Conservatism","Simulation","beta",-12.7836234864546,-11.0146686682406,-14.6040963612796
+"8","Simulated.Niche Conservatism","Simulation","gamma",3.63401187421535,4.39931692640495,2.88164691668087
+"9","Simulated.Niche Conservatism and Competition","Simulation","beta",18.1193209707187,20.2297656618453,16.4983286638738
+"10","Simulated.Niche Conservatism and Competition","Simulation","gamma",-8.94935379997866,-8.08563714566547,-10.2843907445778

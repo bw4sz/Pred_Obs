@@ -1,0 +1,507 @@
+#Aim
+
+Insights from comparing phylogenetic and trait community spacing has led to a renewed focus on whether interspecific competition shape species occurrence. Combining theories of niche conservatism and limiting similarity, species should co-occur more with closely related species up to a threshold of niche overlap, followed by a decrease in co-occurrence. I developed a hierarchical Bayesian approach to assess probability of co-occurrence as a function of distance to the closest related species in hummingbird assemblages from Northern South America. I tested a fully constrained, varying intercepting and varying slope and intercept model.
+
+</br>
+
+#Bayesian Analysis of co-occurrence and relatedness.
+
+## General Model Formula
+$$ Y_i \sim Bern(p_i) $$
+
+$$ logit(p_i) = \alpha + \beta *x + \gamma *x^2 $$
+
+$$ \text{p is the probability of presence at a site}$$
+$$ \text{x= cophenetic distance to the most closely related species }$$
+
+```{r,echo=FALSE,warning=FALSE,message=FALSE}
+library(knitr)
+library(pez)
+library(ape)
+library(dplyr)
+library(ggplot2)
+library(reshape2)
+library(vegan)
+library(gridExtra)
+library(R2jags)
+library(boot)
+library(stringr)
+opts_chunk$set(warning=FALSE,message=FALSE)
+opts_chunk$set(cache=TRUE, cache.path = 'BayesPhylo_cache/', fig.path='figure/',fig.width=14,echo=FALSE)
+
+runs=10000
+burns=7800
+```
+
+
+```{r load_data}
+#Set dropbox path
+droppath<-"C:/Users/Ben/Dropbox/"
+
+#Set git path
+gitpath<-"C:/Users/Ben/Documents/Pred_Obs/"
+
+#Load image if desired
+load(paste(droppath,"Thesis/Pred_Realized/Assemblages/Threshold0.05/Results/PredictedRealized_Revis.RData",sep=""))
+
+#start with just the present sites
+#head(PA_m2)
+
+dat<-PA_m2[PA_m2$Hyp %in% "Env" & PA_m2$P_R %in% "PA_Binary",c("Species","Locality","P_A","Phylo.Relatedness")]
+
+#remove infinites
+dat<-dat[is.finite(dat$Phylo.Relatedness),]
+
+#sample data
+```
+
+#Model I - Constrained - Single Slope and Intercept
+
+Species are constrained to have the same slope and intercept.
+
+$$ Y_i \sim Bern(p_i) $$
+
+$$ logit(p_i) = \alpha + \beta *x + \gamma *x^2 $$
+
+WinBugs code:
+
+```{r singlemodel,echo=FALSE,eval=TRUE}
+setwd("C:/Users/Ben/Documents/Pred_Obs/Bayesian")
+#Source model
+source("Single.R")
+
+#print model
+print.noquote(readLines("Single.R"))
+```
+
+```{r jagsmodelsingle,eval=TRUE,echo=FALSE,fig.align='center',results='hide'}
+#Input Data
+Dat <- list(
+  y=as.numeric(dat$P_A),
+  dist=dat$Phylo.Relatedness)
+
+InitStage <- function() {list(alpha=.1,beta=.1,gamma=.1)}
+
+#Parameters to track
+ParsStage <- c("alpha","beta","gamma")
+
+#MCMC options
+ni <- runs  # number of draws from the posterior
+nt <- 1    #thinning rate
+nb <- 0  # number to discard for burn-in
+nc <- 2  # number of chains
+
+#Jags
+
+mSingle = jags(inits = InitStage,
+         n.chains=nc,
+         model.file="Single.jags",
+         working.directory=getwd(),
+         data=Dat,
+         parameters.to.save=ParsStage,
+         n.thin=nt,
+         n.iter=ni,
+         n.burnin=nb,
+         DIC=T)
+```
+
+```{r}
+#Remove Burnin
+parsSingle<-melt(mSingle$BUGSoutput$sims.array)
+colnames(parsSingle)<-c("Draw","Chain","parameter","estimate")
+parsSingle<-parsSingle[!parsSingle$Draw %in% 1:burns,]
+
+#remove deviance
+parsSingle<-parsSingle[!parsSingle$parameter %in% "deviance",]
+```
+
+###Visualize posteriors
+
+```{r,fig.height=3}
+###Posterior Distributions
+ggplot(parsSingle,aes(x=estimate)) + geom_histogram() + ggtitle("Estimate of parameters") + facet_wrap(~parameter,scale="free") + theme_bw() 
+```
+
+###Visualize chains
+
+```{r,fig.height=3}
+###Chains
+ggplot(parsSingle,aes(x=Draw,col=as.factor(Chain),y=estimate)) + geom_line() + facet_wrap(~parameter,scale="free") + theme_bw() + labs(col="Chain")
+```
+
+###Output table
+
+```{r}
+parGSingle<-group_by(parsSingle,parameter)
+out_single<-summarise(parGSingle,mean=mean(estimate),lower=quantile(estimate,0.025),upper=quantile(estimate,0.975),sd=sd(estimate))
+print(out_single)
+
+#save.image("BayesPhylo.Rdata")
+```
+
+### Plot curves
+
+```{r,echo=TRUE,eval=TRUE,fig.width=6,fig.align='center'}
+#Load if needed
+
+dpars<-dcast(parsSingle,...~parameter)
+
+#sample 1000 values
+samp<-dpars[sample(1:nrow(dpars),500),]
+
+traj<-list()
+for(x in 1:nrow(samp)){
+  s<-samp[x,]
+  p<-inv.logit(s$alpha + s$beta* dat$Phylo.Relatedness +s$gamma * dat$Phylo.Relatedness^2)
+  traj[[x]]<-data.frame(x=dat$Phylo.Relatedness,y=p,Iteration=x)
+}
+    traj<-rbind_all(traj)
+
+#summarise mean and interval
+mtraj<-group_by(traj,x) %>% summarise(mean=mean(y),upper=quantile(y,0.975),lower=quantile(y,0.025))
+
+ggplot(mtraj,aes(x=x,y=mean)) + geom_line(col="red",linetype="dashed") + geom_line(aes(y=upper),col="blue",linetype="dashed") + geom_line(aes(y=lower),col="blue",linetype="dashed")+ theme_bw() + labs(x="Phylogenetic distance to closest related species in an assemblage",y="Probability of occurrence")
+```
+
+#Model II - Unconstrained - Varying Intercept
+
+Species have differing intercepts but constrained to have the same slope. This equates to a single mechanism shaping relatedness, but accounting for differences in occupancy between species. 
+
+$$ Y_i \sim Bern(p_i) $$
+
+$$ logit(p_i) = \alpha_{Species[i]} + \beta *x + \gamma *x^2 $$
+$$ \alpha_{Species[i]} \sim N(intercept,sigmaIntercept)$$
+
+WinBugs code:
+
+```{r printmodel,echo=FALSE,eval=TRUE}
+setwd("C:/Users/Ben/Documents/Pred_Obs/Bayesian")
+#Source model
+source("SingleSlope.R")
+
+#print model
+print.noquote(readLines("SingleSlope.R"))
+```
+
+Run jags. 
+
+```{r jagsmodelsingleslope,eval=TRUE,echo=FALSE,fig.align='center',results='hide'}
+#Input Data
+dat$Species<-factor(dat$Species)
+
+Dat <- list(
+  y=as.numeric(dat$P_A),
+  dist=dat$Phylo.Relatedness,
+  Species=as.numeric(dat$Species),
+  s=nlevels(dat$Species))
+
+
+InitStage <- function() {list(alpha=rep(0.1,Dat$s),beta=.1,gamma=.1)}
+
+#Parameters to track
+ParsStage <- c("alpha","beta","gamma","intercept","sigmaIntercept")
+
+#MCMC options
+ni <- 20000  # number of draws from the posterior
+nt <- 1    #thinning rate
+nb <- 0  # number to discard for burn-in
+nc <- 2  # number of chains
+
+#Jags
+
+mSingleS <- jags(inits = InitStage,
+         n.chains=nc,
+         model.file="SingleSlope.jags",
+         working.directory=getwd(),
+         data=Dat,
+         parameters.to.save=ParsStage,
+         n.thin=nt,
+         n.iter=ni,
+         n.burnin=nb,
+         DIC=T)
+```
+
+```{r remove burnin}
+#Remove Burnin
+parsSingleS<-melt(mSingleS$BUGSoutput$sims.array)
+colnames(parsSingleS)<-c("Draw","Chain","parameter","estimate")
+parsSingleS<-parsSingleS[!parsSingleS$Draw %in% 1:((ni/nt)-1000),]
+
+#seperate alpha,betas,gamma
+allparsSingleS<-parsSingleS
+
+specSingleS<-parsSingleS[str_detect(string=parsSingleS$parameter,pattern=c("alpha")),]
+
+#remove deviance and species level characters
+parsSingleS<-parsSingleS[!str_detect(string=parsSingleS$parameter,pattern=c("alpha")) & !parsSingleS$parameter %in% "deviance" ,]
+```
+
+###Visualize posteriors
+
+```{r,fig.height=3}
+###Posterior Distributions
+ggplot(parsSingleS,aes(x=estimate)) + geom_histogram() + ggtitle("Estimate of parameters") + facet_wrap(~parameter,scale="free") + theme_bw() 
+```
+
+###Visualize chains
+
+```{r,fig.height=3}
+###Chains
+ggplot(parsSingleS,aes(x=Draw,col=as.factor(Chain),y=estimate)) + geom_line() + facet_wrap(~parameter,scale="free") + theme_bw() + labs(col="Chain")
+```
+
+###Output table
+
+```{r}
+parGSingleS<-group_by(parsSingleS,parameter)
+out_slope<-summarise(parGSingleS,mean=mean(estimate),lower=quantile(estimate,0.025),upper=quantile(estimate,0.975),sd=sd(estimate))
+print(out_single)
+
+save.image("BayesPhylo.Rdata")
+```
+
+```{r,fig.height=15,fig.width=7}
+specSingleS$parameter<-droplevels(specSingleS$parameter)
+
+#merge with original table
+specSingleS$index<-as.numeric(str_extract(specSingleS$parameter,"\\d+"))
+di<-data.frame(index=1:nlevels(dat$Species),Species=levels(dat$Species))
+
+specSingleS<-merge(specSingleS,di,by="index")
+
+#ggplot(specSingleS,aes(x=Species,y=estimate)) + geom_violin(fill="dark grey") + coord_flip()  + theme_bw()
+```
+
+##Plot species models
+
+```{r,fig.height=40}
+
+dpars<-dcast(allparsSingleS,...~parameter)
+samp<-dpars[sample(1:nrow(dpars),1000),]
+
+alpha_plot<-function(alpha,sp){
+    
+  traj<-list()
+  for(x in 1:nrow(samp)){
+    s<-samp[x,]
+    p<-inv.logit(alpha[x] + s$beta* dat$Phylo.Relatedness +s$gamma * dat$Phylo.Relatedness^2)
+    traj[[x]]<-data.frame(x=dat$Phylo.Relatedness,y=p,Iteration=x)
+    }
+  traj<-rbind_all(traj)
+  
+  #summarise mean and interval
+  mtraj<-group_by(traj,x) %>% summarise(mean=mean(y),upper=quantile(y,0.975),lower=quantile(y,0.025))
+  
+  ggplot(mtraj,aes(x=x,y=mean)) + geom_line(col="red",linetype="dashed") + geom_line(aes(y=upper),col="blue",linetype="dashed") + geom_line(aes(y=lower),col="blue",linetype="dashed")+ theme_bw() + labs(x="",y="") + ggtitle(sp)
+  }
+
+alpha_index<-which(str_detect(string=colnames(samp),pattern=c("alpha")))
+
+pl<-list()
+for(x in 1:length(alpha_index)){
+  i<-alpha_index[x]
+  #Species
+  sp<-di[x,"Species"]
+  pl[[x]]<-alpha_plot(samp[,i],sp)
+}
+
+do.call("grid.arrange", c(pl, ncol=5))
+```
+
+##Model III - Unconstrained - Varying Intercept and Slope
+
+Species are unconstrained in both slopes and intercepts. Species each repond differently and having different occupancies, but are drawn from a hyperprior 
+
+$$ Y_i \sim Bern(p_i) $$
+
+$$ logit(p_i) = \alpha_{Species[i]} + \beta_{Species[i]} *x + \gamma_{Species[i]} *x^2 $$
+$$ \alpha_{Species[i]} \sim N(intercept,sigmaIntercept)$$
+$$ \beta_{Species[i]} \sim N(slope,sigmaSlope)$$
+$$ \gamma_{Species[i]} \sim N(slope2,sigmaSlope2)$$
+
+WinBugs code:
+
+```{r slopesandinterceptmodel,echo=FALSE,eval=TRUE}
+#Source model
+source("BPhylo.R")
+
+#print model
+print.noquote(readLines("BPhylo.R"))
+```
+
+Run jags
+
+```{r jagsmodelvarying,eval=TRUE,echo=FALSE,fig.align='center',results='hide'}
+
+dat$Species<-factor(dat$Species)
+
+#Input Data
+Dat <- list(
+  y=as.numeric(dat$P_A),
+  dist=dat$Phylo.Relatedness,
+  Species=as.numeric(dat$Species),
+  s=nlevels(dat$Species))
+
+InitStage <- function() {list(alpha=rep(0.1,Dat$s),beta=rep(0.1,Dat$s),gamma=rep(0.1,Dat$s),intercept=0.001,tauIntercept=0.001,tauSlope=0.001,tauSlope2=0.001)}
+
+#Parameters to track
+ParsStage <- c("intercept","linear","polynomial","sigmaSlope","sigmaIntercept","sigmaSlope2","alpha","beta","gamma")
+
+#MCMC options
+ni <- 1000000  # number of draws from the 
+nt <- 25   #thinning rate
+nb <- 0  # number to discard for burn-in
+nc <- 2  # number of chains
+
+#Jags
+
+m = jags(inits = InitStage,
+         n.chains=nc,
+         model.file="BPhylo.jags",
+         working.directory=getwd(),
+         data=Dat,
+         parameters.to.save=ParsStage,
+         n.thin=nt,
+         n.iter=ni,
+         n.burnin=nb,
+         DIC=T)
+```
+
+```{r}
+#Remove Burnin
+parsUS<-melt(m$BUGSoutput$sims.array)
+colnames(parsUS)<-c("Draw","Chain","parameter","estimate")
+parsUS<-parsUS[!parsUS$Draw %in% 1:((ni/nt)-2000),]
+
+#seperate alpha,betas,gamma
+spec<-parsUS[str_detect(string=parsUS$parameter,pattern=c("beta|alpha|gamma")),]
+
+#remove deviance and species level characters
+pars<-parsUS[!str_detect(string=parsUS$parameter,pattern=c("beta|alpha|gamma|deviance")),]
+```
+
+###Visualize chains
+
+```{r,cache=TRUE,fig.height=3}
+###Posterior Distributions
+ggplot(pars,aes(x=estimate)) + geom_histogram() + ggtitle("Estimate of parameters") + facet_wrap(~parameter,scale="free") + theme_bw() 
+```
+
+###Visualize posteriors
+
+```{r,cache=TRUE,fig.height=3}
+###Chains
+ggplot(pars,aes(x=Draw,col=as.factor(Chain),y=estimate)) + geom_line() + facet_wrap(~parameter,scale="free") + theme_bw() + labs(col="Chain")
+```
+
+###Output table
+
+```{r}
+parG<-group_by(pars,parameter)
+out_slopeintercept<-summarise(parG,mean=mean(estimate),lower=quantile(estimate,0.025),upper=quantile(estimate,0.975),sd=sd(estimate))
+print(out_slopeintercept)
+
+```
+
+##View species posteriors
+
+```{r}
+#Get index
+spec$ind<-str_extract(spec$parameter,pattern="\\d+")
+
+#Get parameter
+spec$par<-str_extract(spec$parameter,pattern="\\w+")
+
+ggplot(spec[spec$par %in% c("alpha","beta","gamma"),],aes(x=estimate)) + geom_density(alpha=.4,aes(group=factor(ind)),fill="grey80",col="grey30") + facet_wrap(~par,scale="free") + scale_color_discrete(guide="none") + theme_bw() + labs(y="Posterior Density")
+
+```
+
+
+##View Species
+
+###Compare estimates of gamma
+
+```{r view slope species,fig.height=40}
+
+spec$ind<-str_extract(spec$parameter,pattern="\\d+")
+
+#split into species
+specS<-split(spec,spec$ind)
+
+#match index with species names
+for (x in 1:length(specS)){
+  specS[[x]]$Species<-levels(dat$Species)[x]
+}
+
+#plot gamma slopes
+
+specSdf<-rbind_all(specS)
+
+gdf<-group_by(specSdf,Species) %>% filter(str_detect(parameter,"beta")) 
+ord<-gdf %>% summarize(meanE=mean(estimate)) %>% arrange(meanE)
+
+gdf$Species<-factor(gdf$Species,levels=ord$Species)
+
+ggplot(gdf,aes(x=Species,y=estimate)) + geom_violin(fill="grey30") + theme_bw() + coord_flip()
+
+#merge with data on relatedness
+datS<-split(dat,dat$Species)
+
+specCast<-lapply(specS,function(y){
+  dpars<-dcast(y[,-3],...~par,value.var="estimate")
+  samp<-dpars
+  
+  #species trajectories
+  traj<-list()
+  #Get species relatedness subset
+  R<-datS[[unique(samp$Species)]]$Phylo.Relatedness
+  
+  for(x in 1:nrow(samp)){
+    s<-samp[x,]
+    p<-inv.logit(s$alpha + s$beta*R  +s$gamma * R^2)
+    traj[[x]]<-data.frame(x=R,y=p,Iteration=x)
+    }
+  traj<-rbind_all(traj)
+  
+  #summarise mean and interval
+  mtraj<-group_by(traj,x) %>% summarise(mean=mean(y,na.rm=T),upper=quantile(y,0.975,na.rm=T),lower=quantile(y,0.025,na.rm=T))
+})
+
+
+alpha_plot<-function(alpha,sp){
+  ggplot(alpha,aes(x=x,y=mean)) + geom_line(col="red",linetype="dashed") + geom_line(aes(y=upper),col="blue",linetype="dashed") + geom_line(aes(y=lower),col="blue",linetype="dashed")+ theme_bw() + labs(x="",y="") + ggtitle(sp)
+  }
+
+pl<-list()
+for(x in 1:length(specCast)){
+  #Species
+  sp<-di[x,"Species"]
+  pl[[x]]<-alpha_plot(specCast[[x]],sp)
+}
+
+do.call("grid.arrange", c(pl, ncol=5))
+```
+
+#Comparison of Model Estimates 
+
+Group by the parameters they are trying to predict
+```{r,fig.width=15,fig.height=4}
+comp<-list(Unconstrained_slope=out_slopeintercept,Uncontrained_Intercept=out_single,Constrained=out_slope)
+
+compm<-melt(comp)
+compm<-dcast(compm,...~variable)
+
+compm[compm$parameter %in% c("intercept","alpha"),"Parm"]<-c("Intercept")
+compm[compm$parameter %in% c("slope","beta"),"Parm"]<-c("beta")
+compm[compm$parameter %in% c("slope2","gamma"),"Parm"]<-c("gamma")
+
+ggplot(compm[!is.na(compm$Parm),],aes(x=L1,y=mean,ymax=upper,ymin=lower)) + geom_pointrange() + facet_wrap(~Parm,scales="free") + labs(y="Model",x="Posterior Estimate")
+
+save.image("BayesPhylo.Rdata")
+```
+
+#Inference
+
+The observed assemblages showed an initial increase in the probability of co-occurrence with increasing relatedness, followed by decreased co-occurrence among closely related species. The posterior distributions were negative for the linear term and positive for the polynomial. Explorations of species specific responses showed that narrower confidence intervals for species with more data and our results of our observed data were evaluated against a fully constrained model and a full hierarchical model that allowed species level slopes to vary. All models had negative posteriors for the linear term and positive posteriors for the polynomial term. 
+
+These data support the non-linear relationship betwen phylogenetic relatedness and occurrence in hummingbirds. The decrease among closely related species could be evidence of limiting similarity due to niche overlap, which will be tested against null models of assemblage structure. 

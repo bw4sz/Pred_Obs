@@ -1,0 +1,101 @@
+---
+title: "Environmental Variables"
+author: "Ben Weinstein"
+date: "May 4, 2016"
+output: html_document
+---
+
+#Comments from Subject Editor
+Additionally, I would like some thinking on whether the worldclim data are accurate enough in the Andes, where we know climate differs drastically within very small spatial scale. Further, please provide information on why the used three variables well explain distribution patterns of hummingbirds in the Andes - and why not including more environmental variables.
+
+# Do adding more environmental variables change predicted distributions?
+
+Let's choose 5 species that encompass different environmental characteristics and slowly increase the number of environmental variables.
+
+#Read in libraries and hummingbird data
+
+```{r,warning=FALSE,message=FALSE}
+#Load required libraries
+library(reshape2)
+require(ggplot2)
+library(picante)
+library(dismo)
+library(ape)
+library(doSNOW)
+library(gdistance)
+library(foreach)
+library(boot)
+library(maptools)
+library(rasterVis)
+library(knitr)
+library(vegan)
+library(gridExtra)
+library(R2jags)
+library(stringr)
+library(dplyr)
+library(scales)
+
+opts_chunk$set(warning=FALSE,message=FALSE)
+opts_chunk$set(cache=FALSE, fig.path='figure/',fig.width=10,echo=TRUE)
+
+#Set git path
+gitpath<-"C:/Users/Ben/Documents/Pred_Obs/"
+droppath<-"C:/Users/Ben/Dropbox/"
+
+setwd(gitpath)
+
+#Source SDM script
+source(paste(gitpath,"SDMupdated.R",sep=""))
+
+
+#Load image if desired
+
+```
+
+## Choose species subset
+
+These five species represent a reasonable selection of the environmental challenges.
+
+* Pterophanes cyanopterus: High elevation species on both sides of the andes
+* Patagona gigas: Dry valley species at higher elevations
+* Heliodoxa leadbeateri: East-slope species
+* Colibri coruscans: Widespread species with pronounced elevation movement
+* Florisuga fusca: Low elevation species
+
+```{r}
+inLocalities<-read.csv("InputData/MASTER_POINTLOCALITYarcmap_review.csv")
+dat<-inLocalities[levels(inLocalities$SPECIES) %in% c("Pterophanes cyanopterus","Florisuga fusca","Colibri coruscans","Heliodoxa leadbeateri","Patagona gigas"),]
+```
+
+#Niche Models
+
+Run ensemble niche models using biomod2 at a desired cell size and subset
+
+```{r}
+cell_size=0.1
+envfolder<-"C:\\Users\\Ben\\Dropbox\\Thesis\\Pred_Realized\\EnvLayers"
+savefolder<-"C:/Users/Ben/Documents/Pred_Obs/NicheTest/Models"
+```
+
+Run distribution models (may need to be done offline, can take awhile)
+
+```{r Niche Models,eval=FALSE}
+#SDM_SP(cell_size,inLocalities,envfolder,savefolder)
+```
+
+##Import predicted suitable habitat rasters
+
+```{r niche raster}
+#Bring in niche models from the script SDM.R, get the folder from cell size arguemnt
+
+#Biomod Consensus ensemble niche models
+niche<-list.files(paste(savefolder,cell_size,sep="/"),pattern="ensemble.gri",full.name=T,recursive=T)
+
+#Just from the current env predictions.
+niche<-niche[grep("current",niche,value=FALSE)]
+
+#Name the list of suitability models
+names(niche)<-lapply(niche,function(path){
+  split.1<-strsplit(path,"/")[[1]][10]
+})
+```

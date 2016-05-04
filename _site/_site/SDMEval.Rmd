@@ -1,0 +1,163 @@
+```{r,warning=FALSE,message=FALSE}
+#Load required libraries
+library(ggplot2)
+library(knitr)
+library(plyr)
+library(dplyr)
+library(reshape2)
+library(GGally)
+library(raster)
+
+opts_chunk$set(warning=FALSE,message=FALSE)
+opts_chunk$set(cache=FALSE,fig.width=12,echo=TRUE)
+
+#Set git path
+gitpath<-"C:/Users/Ben/Documents/Pred_Obs/"
+droppath<-"C:/Users/Ben/Dropbox/"
+
+#Where are the niche models saved?
+savefolder<-"C:/Users/Ben/Dropbox/Thesis/Pred_Realized/NicheModels/0.1/"
+
+setwd(savefolder)
+```
+
+#Model Evaluation
+
+```{r}
+#Get the ROC model evaluation from file
+model_eval<-list.files("C:/Users/Ben/Dropbox/Thesis/Pred_Realized/NicheModels/0.1/",full.name=TRUE,recursive=T,pattern="ModelRocEval.csv")
+```
+
+```{r}
+model_eval<-rbind.fill(lapply(model_eval,read.csv))
+colnames(model_eval)<-c("Model","Species","Stat")
+#Plot
+ggplot(model_eval, aes(x=Species,y=Model,fill=Stat)) + geom_tile() + scale_fill_gradient("ROC",limits=c(0,1),low="blue",high="red",na.value="white") + theme(axis.text.x=element_text(angle=-90))
+
+```
+
+Number of Species included based on Ensemble Niche model support.
+
+```{r}
+model_thresh<-sapply(seq(.5,.95,.05),function(x){
+  table(model_eval$Stat > x,model_eval$Model)["TRUE",]
+})
+
+colnames(model_thresh)<-seq(.5,.95,.05)
+model_thresh<-melt(model_thresh)
+
+names(model_thresh)<-c("Model","ROC_Threshold","Number_of_Species")
+
+ggplot(model_thresh,aes(x=ROC_Threshold,y=Number_of_Species,col=Model)) + geom_line(size=1.5) + geom_point() + geom_text(aes(label=Number_of_Species),vjust=4,size=5) + theme_bw()
+
+```
+
+#Comparison of evaluation statistics
+
+```{r}
+model_eval<-list.files("C:/Users/Ben/Dropbox/Thesis/Pred_Realized/NicheModels/0.1/",full.name=TRUE,recursive=T,pattern="ModelEval.csv")
+
+#some legacy error here:
+model_eval<-rbind.fill(lapply(model_eval,read.csv))
+colnames(model_eval)<-c("Metric","Species","GBM","GLM","MAXENT")
+model_e<-melt(model_eval,id.var=c("Metric","Species"))
+
+#Plot with facets
+p<-ggplot(model_e, aes(x=Species,y=variable,fill=value)) + geom_tile() + facet_wrap(~Metric) + theme(axis.text.x=element_text(angle=-90))
+p + scale_fill_gradient("Score",limits=c(0,1),low="blue",high="red",na.value="white")+ theme_bw() + theme(axis.text.x = element_blank()) 
+
+#How correlated are model scores
+cast_mods<-dcast(model_e, Species~...)
+
+#GBM correlations
+ggpairs(cast_mods[,c(2,5,8)],lower=list(continuous="smooth",method="lm"))
+
+
+#GLM correcation
+ggpairs(na.omit(cast_mods[,c(3,6,9)]),na.rm=TRUE,lower=list(continuous="smooth",method="lm"))
+
+
+#Maxent Correlation
+ggpairs(cast_mods[,c(4,7,10)],lower=list(continuous="smooth",method="lm"))
+
+
+ggplot(model_e,aes(x=variable,y=value)) + facet_wrap(~Metric) + geom_boxplot()+ geom_smooth(method="lm") + theme_bw() + labs(y="Score",x="Model")
+```
+
+#Variable importance
+```{r}
+varI<-list.files("C:/Users/Ben/Dropbox/Thesis/Pred_Realized/NicheModels/0.1/",full.name=TRUE,recursive=T,pattern="VarImportance.csv")
+varI<-rbind.fill(lapply(varI,read.csv))
+varI<-varI[,-1]
+
+#Melt variable for plotting
+mvar<-melt(varI)
+colnames(mvar)<-c("Bioclim","Species","Model","value")
+
+#Plot variable importance across all models
+ggplot(mvar, aes(x=Species,y=Bioclim,fill=value)) + geom_tile() + scale_fill_gradient(limits=c(0,1),low="blue",high="red",na.value="white") + theme(axis.text.x=element_text(angle=-90)) + facet_grid(Model ~ .) + ggtitle("Variable Importance")
+
+```
+
+#Sensitivity and specificity
+
+* Evaluate threshold of habitat suitability which translates the niche model results into predicted assemblages.
+
+* Calculate true positives (TP), true negatives (TN), false positives (fP), and false negatives (fn), as well as sensitivity (TP/TP+FN) and specificity (TN/TN+FP) using our observed assemblages compared to the predicted assemblages
+
+* Also calculate the mean habitat suitability for each threshold
+
+```{r}
+load(paste(droppath,"C:/Users/Ben/DropboxThesis/Pred_Realized/Assemblages/Threshold0.1/Results/PredictedRealized_.RData",sep=""))
+```
+
+```{r}
+source(paste(gitpath,"SpeciesOverlapSourceFunctions.R",sep=""))
+
+#load models to file, makes it more transferable than keeping them on disk
+modr<-lapply(niche,raster,values=TRUE)
+
+#Get the number of records per site, atleast 10 presences. 
+records_site<-names(which(apply(siteXspp.raster,1,sum,na.rm=TRUE) > 5))
+modlist<-modr[names(modr) %in% records_site]
+
+#Lets go get the presence data on hummingbird distributions
+  Niche_locals<-read.csv(paste(gitpath,"InputData\\MASTER_POINTLOCALITYarcmap_review.csv",sep=""))
+  
+  #Just take the columns you want. 
+  PAdat<-Niche_locals[,colnames (Niche_locals) %in% c("RECORD_ID","SPECIES","COUNTRY","LOCALITY","LATDECDEG","LONGDECDEG","Decision","SpatialCheck","MapDecision")]
+  
+  #clean localities, we checked them against published range records and visually inspected them
+  PAdat<-PAdat[!PAdat$LONGDECDEG==-6,]
+  loc_clean<-PAdat[!PAdat$MapDecision=="REJECT",]
+
+###################################################
+thresholds<-seq(.05,.95,.1)
+
+th<-lapply(thresholds,function(y){
+all_models<-rbind_all(lapply(modlist,function(x){
+    pred_realized(mod=x,thresh.suit=y,dispersal=FALSE,plots=FALSE,loc_clean=loc_clean,fold=tempdir())
+}))})
+
+for(x in 1:length(thresholds)){
+ th[[x]]$Threshold<-thresholds[x] 
+}
+
+thdf<-rbind_all(th)
+
+ss<-dplyr::group_by(thdf,Threshold) %>% dplyr::summarize(meanSuit= mean(Suitability[P_Apred==1]),TP=sum(P_Apred==1 & PA_Binary==1),TN=sum(P_Apred==1 & PA_Binary==1),FP=sum(P_Apred==1 & PA_Binary==0),FN=sum(P_Apred==0 & PA_Binary==1)) %>% dplyr::mutate(Sensitivity=TP/(TP+FN),Specificity=TN/(TN+FP),NPV=TN/TN+FN)
+
+ssmelt<-melt(ss,id.var="Threshold")
+ggplot(ssmelt,aes(x=as.factor(Threshold),y=value,col=variable)) + geom_line(aes(group=1),col="black") + facet_wrap(~variable,scales="free") + geom_point(size=3) + theme_bw() + labs(x="Threshold"                                                                                                                                                                          )
+```
+
+Because we are most interested in predicted suitable habitat, not species occupancy, what we want to do is maximize the number of true positives and true negatives, while minimizing the number of false negatives. The worst thing for the accuracy of the model would be a lot of species occurring in predicted unsuitable habitat.
+
+```{r}
+ggplot(ss,aes(y=TP,x=TN,col=as.factor(Threshold))) + geom_point(aes(size=FN)) + geom_line(aes(group=1),col="black") + theme_bw()  + labs(col="Suitability Quantile Threshold")
+```
+
+
+#Conclusion
+
+**The 0.05 quantile maximizes the number of true predicted presences and absences in the observed data, while minimizing the number of false negatives**

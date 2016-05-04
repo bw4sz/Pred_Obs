@@ -1,0 +1,443 @@
+#Read in libraries and hummingbird data
+
+```{r,warning=FALSE,message=FALSE}
+#Load required libraries
+library(reshape2)
+require(ggplot2)
+library(picante)
+library(lme4)
+library(ape)
+library(doSNOW)
+library(phytools)
+library(maptools)
+library(knitr)
+library(raster)
+library(gridExtra)
+library(phytools)
+library(stringr)
+library(dplyr)
+library(scales)
+
+opts_chunk$set(warning=FALSE,message=FALSE)
+opts_chunk$set(fig.path='figure/',fig.width=10,echo=TRUE)
+
+#Set git path
+gitpath<-"C:/Users/Ben/Documents/Pred_Obs/"
+droppath<-"C:/Users/Ben/Dropbox/"
+
+setwd(gitpath)
+```
+
+The analysis takes in:
+
+* Phylogenetic Tree in newick format
+
+* Sites matrix with long lat
+
+* Species Assemblages corresponding to the sites matrix
+
+```{r}
+#Bring in Phylogenetic Data
+trx<-read.tree(paste(gitpath,"InputData\\hum294.tre",sep=""))
+
+#format tips
+new<-str_extract(trx$tip.label,"(\\w+).(\\w+)")
+#get duplicates
+trx<-drop.tip(trx,trx$tip.label[duplicated(new)])
+
+#name tips.
+trx$tip.label<-str_extract(trx$tip.label,"(\\w+).(\\w+)")
+
+ctrx<-cophenetic(trx)
+
+#Bring in the assemblages, cleaned from JP
+Sites<-read.csv(paste(gitpath,"InputData//Sites.csv",sep=""),row.names=1)
+
+####bring in Clade data
+clades<-read.csv(paste(gitpath,"InputData//CladeList.txt",sep=""),header=FALSE)[,-1]
+colnames(clades)<-c("Clade","Genus","Species","double","English")
+clades<-clades[,1:5]
+
+#Change the syntax on clades so it matches output, replace . with space
+clades$double.<-sub(" ",".",clades$double)
+
+#Bring in spatial data for the sites
+#Extract env information for each site
+Sites.sp<-SpatialPointsDataFrame(Sites[,c("LongDecDeg","LatDecDeg")],Sites)
+
+#site by species lists that was aggregate for the SDM dataset in SpeciesOverlap.RmD
+siteXspp<-read.csv("C:/Users/Ben/Dropbox/Thesis/Pred_Realized/Assemblages//SiteXsppraster.csv",row.names=1)
+
+##Elev raster
+elev.ca<-raster("InputData/EcuadorRaster.grd")
+
+#raster template for cell numbers
+r<-raster("InputData/RasterTemplate.grd")
+
+
+```
+
+Following Pigot's 2013 paper [here](http://www.researchgate.net/profile/Alex_Pigot/publication/233899889_Species_interactions_constrain_geographic_range_expansion_over_evolutionary_time/links/0912f50d031ba1c026000000.pdf), we can create reasonable expectation for the degree of sympatry versus time since speciation. 
+
+We will modify this to look at co-occurrence of sister pairs as a function of time since speciation.
+
+## Find sister pairs
+
+```{r}
+plotTree(trx,fsize=.1)
+
+sisters<-sapply(trx$tip.label,function(x){
+  getSisters(trx,mode="label",node=x)})
+
+names(sisters)<-trx$tip.label
+sisters<-melt(sisters)
+colnames(sisters)<-c("Sister","Node")
+```
+
+## Time since divergence for sister pairs
+
+```{r}
+sisters$Time<-NULL
+for (x in 1:nrow(sisters)){
+  row<-sisters[x,]
+  distp<-ctrx[rownames(ctrx) %in% row[[1]],colnames(ctrx) %in% row[[2]]]
+  if(length(distp)==0){
+    sisters[x,"Time"]<-NA
+    next}
+  sisters[x,"Time"]<-distp
+}
+
+#remove duplicates
+sisters<-sisters[!duplicated(sisters$Time),]
+```
+
+## Co-occurrence Rates
+
+How many times do sister pairs co-occur?
+
+```{r}
+sisters$Co<-NA
+for (x in 1:nrow(sisters)){
+  row<-sisters[x,]
+  pairs<-siteXspp[rownames(siteXspp) %in% c(row[[1]],row[[2]]),]
+  
+  #If we are missing a species from the list, skip
+  if(nrow(pairs)==2) {
+  co_occur<-sum(apply(pairs,2,sum)==2)
+  sisters[x,"Co"]<-co_occur}
+}
+
+```
+
+## Co-occurrence and Time since Divergence
+
+Probability of co-occurrence of sister pairs as a function of time since divergence, getting closer to the model proposed by Pigot.
+
+```{r}
+sisters$PCo<-(sisters$Co>0) * 1
+ggplot(sisters,aes(x=Time,y=PCo)) + geom_point() + theme_bw() + geom_smooth(method="glm",family="binomial") + labs(x="Time since divergence between sister taxa",y="Probability of co-occurrence")
+```
+
+This seems quite sensitive to the shape of the phylogeny. If we ignore just the furthest tip (co-occurrence among deep splitting topazes), what happens?
+
+```{r}
+sisters$PCo<-(sisters$Co>0) * 1
+```
+
+In the Pigot 2013 Ecology Letters paper, the relationship is plotted as the proportion of species in sympatry. For this we need to bin time intervals, let's round time since divergence to two decimal places.
+
+```{r}
+#round to two decimal places
+sisters$RTime<-round(sisters$Time)
+```
+
+For each time interval, what % of species are sympatric?
+
+In the 2013 paper, Pigot combines time intervals with less than 4 species
+
+```{r}
+#remove species for which we have no information
+sis<-sisters[!is.na(sisters$PCo),]
+#remove na for divergence time
+sis<-sis[!is.na(sis$Time),]
+
+#how many sister pairs do we have left?
+nrow(sis)
+
+pigot<-sis %>% group_by(RTime) %>% summarize(n=n(),pairs=sum(PCo,na.rm=T)) %>% mutate(p=pairs/n)
+
+```
+
+Cut the sister lineages into class based on time since speciation
+
+```{r}
+sis$RTime_cut<-cut(sis$RTime,c(seq(0,8,1),10,15,30),right=F)
+
+pigot<-sis %>% group_by(RTime_cut) %>% summarize(n=n(),pairs=sum(PCo,na.rm=T)) %>% mutate(p=pairs/n)
+
+ggplot(pigot,aes(x=RTime_cut,y=p,size=n)) + geom_point(alpha=.5) + geom_smooth(method="glm",aes(group=1),family="binomial",se=F) + ylab("% Pairs Sympatric") + xlab("Time Since Speciation") + theme_bw() + labs(size="Species Pairs") 
+
+```
+
+#Time since divergence and cost distance.
+
+Geographic weighted cost distance. If dispersal limitation was an important factor, we would expect recently diverged taxa to be separated by large geographic barriers compared to deeper splits.
+
+```{r}
+#read in cost matrix between all sites from SpeciesOverlap.Rmd
+cp<-read.table("CostMatrix.txt")
+
+#make 0 (instead of infinite) cost from site to itself
+cp<-as.matrix(cp)
+diag(cp)<-0
+
+rownames(cp)<-colnames(siteXspp)
+colnames(cp)<-colnames(siteXspp)
+```
+
+##View cost paths between sister taxa
+For each species pair, get the cost distance between sites, with cost of co-occurrence being 0. 
+
+```{r}
+
+costsis<-list()
+for (x in 1:nrow(sis)){
+  A<-sis[x,"Sister"]
+  B<-sis[x,"Node"]
+
+  pairs<-siteXspp[rownames(siteXspp) %in% c(A,B),]
+  
+  #remove sites where neither occur
+  pairs<-pairs[,apply(pairs,2,sum) > 0]
+  
+  #pres for each species
+  presA<- colnames(pairs)[which(pairs[A,]==1)]
+  presB<- colnames(pairs)[which(pairs[B,]==1)]  
+  
+  #Presence locations for species A and species B in cost distance matrix
+  spdist<-cp[presA, presB,drop=F]
+  
+  #minimum distance
+  #The easist way to preserve naming is to maintain the matrix structure, but set all non min values to NA
+    for (g in 1:nrow(spdist)){
+      min.col<-min(spdist[g,])
+      #colnames to set to NA
+      nacol<-as.numeric(which(spdist[g,] > min.col))
+      spdist[g,nacol]<-NA
+    }
+  
+ 
+  #create a dataframe
+  df<-data.frame(To=A,From=B,Time=sis[x,"Time"],melt(spdist))
+  
+  #need to convert cells to characters
+  df$Var1<-as.character(df$Var1)
+  df$Var2<-as.character(df$Var2)
+  
+  costsis[[x]]<-df
+}
+
+#bind all dataframes together
+costdf<-rbind_all(costsis)
+colnames(costdf)<-c("To","From","Time","CellTo","CellFrom","CostDistance")
+
+#remove the NAs
+costdf<-costdf[!is.na(costdf$CostDistance),]  
+```
+
+###Plots
+
+```{r}
+#turn to a numeric value
+costdf$CellTo<-as.numeric(str_extract(costdf$CellTo,"\\d+"))
+costdf$CellFrom<-as.numeric(str_extract(costdf$CellFrom,"\\d+"))
+
+#remove infinites (islands or holes in DEM)
+costdf<-costdf[is.finite(costdf$CostDistance),]
+
+#label pairs
+costdf$pairs<-as.factor(as.numeric(as.factor(paste(costdf$To,costdf$From))))
+
+sampl<-costdf[costdf$pairs==1,]
+```
+
+
+```{r example cost path,eval=T}
+makePlot<-function(sampl){
+  
+  paths<-foreach(x=1:nrow(sampl),.packages=c("raster","gdistance","stringr"),.errorhandling = 'pass',.export=c("elev.ca","r")) %dopar% {
+    orig<-xyFromCell(r,cell=sampl$CellTo[x],spatial=T)
+    dest<-xyFromCell(r,cell=sampl$CellFrom[x],spatial=T)
+    
+    if(sampl$CellTo[x]==sampl$CellFrom[x]){return(NA)}
+    
+    #What elevation is the origin
+    elev_origin<-extract(elev.ca,orig)[[1]]
+    if(is.na(elev_origin)){ elev_origin<-0}
+    
+    #Get the difference between the origin elevation and every cell in the raster
+    elev_diff<-abs(elev_origin-elev.ca)
+    
+    #create a the transition matrix where permeability is high where elev difference is low
+    trans_diff<-transition(elev_diff,function(x) 1/mean(x),8)
+    
+    #Diagonal Cell Correction, diagonals are father away than adjacent cells. 
+    slope <- geoCorrection(trans_diff)
+  
+    #shortest path
+    l<-shortestPath(slope,orig,dest,output="SpatialLines")
+    return(l)
+  }
+  
+  #plot raster and lines
+  orig<-xyFromCell(r,cell=sampl$CellTo,spatial=T)
+  dest<-xyFromCell(r,cell=sampl$CellFrom,spatial=T)
+  
+  op <- par(mar=rep(.01, 4))
+  plot(elev.ca,axes=F,legend=F,box=F,ext=extent(rbind.SpatialPoints(orig,dest))*2.5)
+  par(op)
+  
+  points(orig,col="red",cex=2.5,pch=20)
+  points(dest,col="blue",cex=1.5,pch=20)
+  
+  #add a point legend
+  l <- legend( "top"
+         , inset = c(0.01,0.01) 
+         , cex = .8
+         , bty = "n"
+         , legend = c(unique(sampl$To), unique(sampl$From))
+         , pt.bg = c("red","blue")
+         , pch = 21
+)
+  
+  for(x in 1:length(paths)){
+    lines(paths[[x]])
+  }
+  
+  #write to file
+  filnam<-paste("CostFigures/",str_replace_all(paste(unique(sampl$To),unique(sampl$From),sep="_"),"\\.+",""),".svg",sep="")
+  
+  svg(filnam)
+  op <- par(mar=rep(.01, 4))
+  plot(elev.ca,axes=F,legend=F,box=F,ext=extent(rbind.SpatialPoints(orig,dest))*2.5,col=grey.colors(100))
+  par(op)
+  
+  points(orig,col="black",cex=2,pch=1)
+  points(dest,col="black",cex=1,pch=17)
+  
+  #add a point legend
+  l <- legend( "top"
+         , inset = c(0,0) 
+         , cex = .8
+         , bty = "n"
+         , legend = c(unique(sampl$To), unique(sampl$From))
+         , col = c("black","black")
+         , pch = c(1,17)
+)
+  for(x in 1:length(paths)){
+    lines(paths[[x]],lwd=2)
+  }
+  
+  invisible(out<-dev.off())
+}
+
+```
+
+Run for each sister pair.
+
+```{r,fig.height=5,fig.width=6,fig.align="center"}
+splitdf<-split(costdf,costdf$pairs)
+
+  cl<-makeCluster(20,"SOCK")
+  registerDoSNOW(cl)
+  
+lapply(splitdf,makePlot)
+
+    stopCluster(cl)
+
+```
+
+Color each sister pair to see the spread.
+
+```{r}
+ggplot(costdf,aes(x=Time,y=CostDistance,col=pairs)) + geom_point() + geom_smooth(method="glm",aes(group=1),family="poisson") + theme_bw() + xlab("Time since divergence between sister taxa") + scale_color_discrete(guide="none") + ylab("Environmentally Weighted Geographic Distance") 
+```
+
+This is caused by the co-occurrence of topazes - plot both lines
+
+```{r}
+#label pairs
+ggplot(costdf,aes(x=Time,y=CostDistance,col=pairs)) + geom_point() + geom_smooth(method="glm",aes(group=1),family="poisson") + theme_bw() + xlab("Time since divergence between sister taxa (myr)") + scale_color_discrete(guide="none") + ylab("Environmentally Weighted Geographic Distance") + geom_smooth(data=costdf[costdf$Time<20,],aes(group=1),linetype="dashed",method="glm",family="poisson",col="black",size=1.1)
+```
+
+Is that negative relationship is meaningful - Fit a regression line with a random effect for species pair.
+
+```{r}
+mod<-lmer(data=costdf,CostDistance~Time + (1|pairs))
+summary(mod)
+
+#assuming normal approximation
+# extract coefficients
+coefs <- data.frame(coef(summary(mod)))
+# use normal distribution to approximate p-value
+coefs$p.z <- 2 * (1 - pnorm(abs(coefs$t.value)))
+coefs
+```
+
+Time since divergence between taxa is weakly useful predictor for the cost distance between species sites. If dispersal limitation through a time lag was a important factor shaping co-occurrence, we would expect to see the weight of the sympatry to be stronger, because it could be the spread of points.
+
+How would the relationship look just with the mean cost distance between sister pairs?
+
+```{r}
+meanC<-costdf %>% group_by(pairs,Time) %>% summarise(cp=mean(CostDistance))
+
+#label pairs
+p<-ggplot(meanC,aes(x=Time,y=cp)) + geom_point(size=4,alpha=.8,shape=1) 
+
+#highlight two sample pairs
+phaethornis<-as.numeric(unique(costdf[costdf$To %in% c("Phaethornis.guy",'Phaethornis.yaruqui'),"pairs"]))
+
+lesbia<-as.numeric(unique(costdf[costdf$To %in% c("Lesbia.nuna",'Lesbia.victoriae'),"pairs"]))
+
+#label callouts
+p<-p + geom_point(data=meanC[meanC$pairs %in% phaethornis,],col="black",size=4,alpha=.8)
+
+p<-p + geom_point(data=meanC[meanC$pairs %in% lesbia,],col="black",size=4,alpha=.8)
+
+#add theme
+p + scale_shape_discrete(solid=F)+ geom_smooth(method="lm",aes(group=1),col="black") + theme_bw() + xlab("Time since divergence between sister taxa (myr)") + scale_color_discrete(guide="none") + ylab("Average cost distance between localities") + geom_smooth(data=meanC[meanC$Time<10,],method="lm",aes(group=1),linetype="dashed",col="black") 
+
+
+ggsave("CostDivergence.svg",height=5,width=7)
+ggsave("CostDivergence.jpeg",height=5,width=7,dpi=600)
+
+```
+
+Is the relationship significant for mean distance?
+
+```{r}
+mod<-lm(data=meanC,cp~Time)
+summary(mod)
+
+#assuming normal approximation
+# extract coefficients
+coefs <- data.frame(coef(summary(mod)))
+# use normal distribution to approximate p-value
+coefs$p.z <- 2 * (1 - pnorm(abs(coefs$t.value)))
+coefs
+```
+
+Ignoring the deepest lineages. 
+
+```{r}
+mod<-lm(data=meanC[meanC$Time < 10,],cp~Time)
+summary(mod)
+
+#assuming normal approximation
+# extract coefficients
+coefs <- data.frame(coef(summary(mod)))
+# use normal distribution to approximate p-value
+coefs$p.z <- 2 * (1 - pnorm(abs(coefs$t.value)))
+coefs
+```
+

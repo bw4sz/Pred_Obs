@@ -1,0 +1,113 @@
+```{r,warning=FALSE,message=FALSE,echo=FALSE}
+#Load required libraries
+library(reshape2)
+require(ggplot2)
+library(picante)
+library(dismo)
+library(ape)
+library(doSNOW)
+library(gdistance)
+library(foreach)
+library(boot)
+library(maptools)
+library(rasterVis)
+library(knitr)
+library(vegan)
+library(gridExtra)
+library(R2jags)
+library(stringr)
+library(dplyr)
+
+opts_chunk$set(warning=FALSE,message=FALSE)
+opts_chunk$set(cache=TRUE, cache.path = 'Sensitivity_cache/', fig.path='figure/',fig.width=10,echo=TRUE)
+
+#Set git path
+gitpath<-"C:/Users/Ben/Documents/Pred_Obs/"
+droppath<-"C:/Users/Ben/Dropbox/"
+
+setwd(gitpath)
+source(paste(gitpath,"SpeciesOverlapSourceFunctions.R",sep=""))
+
+#Load image if desired
+load(paste(droppath,"Thesis/Pred_Realized/Assemblages/Threshold0.1/Results/PredictedRealized.RData",sep=""))
+
+rm(predAssemblages)
+rm(pred_realized)
+
+source(paste(gitpath,"SpeciesOverlapSourceFunctions.R",sep=""))
+
+```
+
+#Loop through suitability thresholds
+
+```{r}
+#list of thresholds
+thresholds<-seq(.05,.55,.1)
+
+th<-lapply(thresholds,function(y){
+all_models<-rbind_all(lapply(modlist,function(x){
+    pred_realized(mod=x,thresh.suit=y,dispersal=TRUE,plots=FALSE,loc_clean=loc_clean,fold=tempdir())
+}))})
+
+for(x in 1:length(thresholds)){
+ th[[x]]$Threshold<-thresholds[x] 
+}
+
+thdf<-rbind_all(th)
+```
+
+#Plot glm estimates of polynomial
+
+While this is ignoring the between species differences, for the sake of computational efficiency, I will use a frequentist method to test the effect of threshold on polynomial estimates
+
+```{r}
+names(thr_loop)<-thr
+
+for(x in 1:length(thr_loop)){
+thr_loop[[x]]$Thresh<-thr[x]
+  }
+
+PA_m2<-rbind_all(thr_loop)
+
+#legacy name change.
+datF<-PA_m2
+
+#make formats the same
+datF$Locality<-as.numeric(as.character(datF$Locality))
+datF$P_A<-as.integer(datF$P_A)
+
+#split data into types of assemblages
+#drop Env + Dispersal for observed, its just a data subset
+sdat<-split(datF,list(datF$P_R,datF$Hyp),drop=TRUE)
+
+names(sdat)<-c("Env","Observed","Env + Dispersal")
+
+#remove the observed dat
+sdat<-sdat[-2]
+
+#for now grab 10000 random samples and remove inf values
+sdat<-lapply(sdat,function(x){
+  x<-x[is.finite(x$Phylo.Relatedness),]
+  return(x)
+})
+```
+
+#View plots
+```{r,fig.width=6,fig.align='center'}
+plotlist<-lapply(sdat,function(x){
+p<-ggplot(x,aes(x=Phylo.Relatedness,y=P_A,col=factor(Thresh))) + geom_smooth(method="glm",family="binomial",formula=y~poly(x,2)) + theme_bw() + labs("x=Distance to closest related species in an assemblage",y="Probability of presence") + ggtitle("") + scale_color_brewer(palette="Reds") + labs(col="Habitat Suitability Threshold")
+return(p)
+})
+
+#title plots
+for (x in 1:length(plotlist)){
+  plotlist[[x]]<-plotlist[[x]]+ggtitle(names(plotlist)[x])
+}
+
+do.call(grid.arrange,plotlist)
+```
+
+```{r}
+save.image("Sensitivity.Rdata")
+#load("Sensitivity.Rdata")
+```

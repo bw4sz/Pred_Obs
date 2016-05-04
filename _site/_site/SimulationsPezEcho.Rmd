@@ -1,0 +1,482 @@
+Aim
+---
+
+To compare the form of the function between distance to most closely related species and the probability of co-occurrence if the evolution of an occurrence trait had simultaneous effects of trait conservatism and repulsion among closely related species.
+
+#Simulate Phylogeny
+
+Start with a simple balanced phylogeny with constructed branch lengths from 0 to 1. There needs to be a sufficient number of species to distinguish patterns from random, but not too many as to make the analysis huge and unwieldy. Let's begin with 16 species.
+
+* Create Phylogeny
+* Simulate branch lengths
+* Compute cophenetic distance matrix
+
+```{r,warning=FALSE,message=FALSE,echo=FALSE}
+library(knitr)
+library(pez)
+library(ape)
+library(dplyr)
+library(ggplot2)
+library(reshape2)
+library(vegan)
+library(RColorBrewer)
+library(gridExtra)
+library(scales)
+library(picante)
+
+#Load Data
+#load("Simulation.RData")
+
+opts_chunk$set(warning=FALSE,message=FALSE,echo=FALSE)
+opts_chunk$set(cache=F, cache.path = 'SimulationsPez_cache/', fig.path='figureSim/',fig.width=11,fig.height=6,fig.align='center')
+
+#create phylogeny
+trx<-compute.brlen(stree(n=16,type="balanced"))
+plot(trx)
+```
+
+```{r,echo=FALSE}
+multiplot <- function(..., plotlist=NULL, file, cols=1, layout=NULL) {
+  require(grid)
+
+  # Make a list from the ... arguments and plotlist
+  plots <- c(list(...), plotlist)
+
+  numPlots = length(plots)
+
+  # If layout is NULL, then use 'cols' to determine layout
+  if (is.null(layout)) {
+    # Make the panel
+    # ncol: Number of columns of plots
+    # nrow: Number of rows needed, calculated from # of cols
+    layout <- matrix(seq(1, cols * ceiling(numPlots/cols)),
+                    ncol = cols, nrow = ceiling(numPlots/cols))
+  }
+
+ if (numPlots==1) {
+    print(plots[[1]])
+
+  } else {
+    # Set up the page
+    grid.newpage()
+    pushViewport(viewport(layout = grid.layout(nrow(layout), ncol(layout))))
+
+    # Make each plot, in the correct location
+    for (i in 1:numPlots) {
+      # Get the i,j matrix positions of the regions that contain this subplot
+      matchidx <- as.data.frame(which(layout == i, arr.ind = TRUE))
+
+      print(plots[[i]], vp = viewport(layout.pos.row = matchidx$row,
+                                      layout.pos.col = matchidx$col))
+    }
+  }
+}
+```
+
+#Simulation Parameters
+
+Parameter | Description
+------------- | -------------
+tree|phylo object
+scape.size|edge dimension of square landscape
+g.center|strength of phylogenetic signal in species range centers
+g.range|strength of phylogenetic signal in species range sizes
+g.repulse|strength of phylogenetic repulsion
+wd.all|niche width, larger values simulate broader range sizes
+signal.center|simulate with phylosignal in range centers
+signal.range|simulate with phylosignal in range size
+same.range|make all range sizes equal
+repulse|include phylogenetic repulsion in range centers
+center.scale|adjust strength of phylogenetic attraction in range centers independent of g.center
+range.scale|adjust strength of phylogenetic signal in range size independent of g.range
+repulse.scale|adjust strength of phylogenetic repulsion independent of g.repulse
+site.stoch.scale|adjust strength of random variation in species richness across sites
+sd.center|sd in rnorm for the range centers, increase to get more variation in center values across species
+sd.range|sd rnorm for the range sizes, increase to get more variation in range sizes across gradients
+rho|Grafen branch adjustment of phylogenetic tree see corGrafen
+th|probability threshold 10^-th above which species are considered present at a site
+
+
+#Paramater choices
+
+For the simulations the scape size will be a 20*20 grid, with species able to occupy any part of the grid. This allows the species to have enough space to occupy their full range, without forcing overlap because not enough available cells. This value doesn't really matter, its the ratio of grid size to range size. I've chosen a relatively small number because I'm iterating twenty times in the model and it creates a relatively large data frame (n=20,000). 
+
+For our purposes, we care most about the parameters g.center and g. repulse. The help functions reads: 
+
+```
+The amount and type of structure is determened by the signal parameters g.center, g.range and g.repulse. Parameters are based on an Ornstein-Uhlenbeck model of evolution with stabilizing selection. Values of g=1 indicate no stabilizing selection and correspond to the Brownian motion model of evolution; **0<g<1 represents stabilizing selection**; and **g>1 corresponds to disruptive selection** where phylogenetic signal for the supplied tree is amplified. See corBlomberg. Communities are simulated along two gradients where the positions along those gradients, g.center and range sizes g.range, can exhibit phylogenetic signal. Phylogenetic attraction is simulated in the g.center parameter, while repulsion in g.repulse.
+```
+##View function
+```{r}
+print(scape)
+```
+
+```{r,echo=FALSE}
+###Species Ranges
+
+#Function to plot species ranges on to the simulated grid. Needs to specify the same threshold as the scape th function (see questions). Optional argument to color species 
+ 
+#color ramp function
+gs.pal <- colorRampPalette(c("red","blue"),space="rgb")
+
+gridplot<-function(x,tree,threshold,opt.color=FALSE,plot=TRUE,guide=TRUE){
+  dat<-melt(x$sppXs)
+  
+  #Binary presences
+  dat$binary<-(dat$value>threshold)
+  colnames(dat)<-c("Site1","Site2","Species","value","binary")
+  
+  #remove empty slots
+  dat[dat$binary==FALSE,"Species"]<-NA
+  
+  #remove NA's
+  dat<-dat[!is.na(dat$Species),]
+  
+  #merge color profile
+  col.tip<-data.frame(Label=tree$tip.label,col=gs.pal(length(tree$tip.label)))
+  
+  #species number
+  col.tip$Species<-which(col.tip$Label %in% tree$tip.label)
+
+  dat<-merge(dat,col.tip,by="Species")
+  
+
+  if(opt.color){
+      if(!guide){
+  p<-ggplot(dat,aes(x=Site1,y=Site2,fill=col)) + geom_tile(alpha=.7)  + theme_bw() + labs(fill="Species") + scale_fill_identity(labels=col.tip$Label)
+  
+    }
+        else {
+  p<-ggplot(dat,aes(x=Site1,y=Site2,fill=col)) + geom_tile(alpha=.7)  + theme_bw() + labs(fill="Species") + scale_fill_identity(labels=col.tip$Label,guide="legend")
+              }
+              }
+  
+
+  if(plot) {p}
+  return(p)
+}
+```
+
+
+```{r,echo=FALSE}
+#Co-occurrence wrapper function
+#For each simulation, i'm interested in the probability of occurrence as a function of distance to species nearest to in the assemblage. 
+
+#Let's define a wrapper function to calculate this data.frame
+co_occur<-function(d,trx,ctrx){
+ 
+#reshape data
+colnames(d$Y)<-trx$tip.label
+#fix rownames
+rownames(d$Y)<-1:nrow(d$Y)
+
+siteXsppm<-melt(d$Y)
+colnames(siteXsppm)<-c("Locality","Species","P_A")
+
+f<-split(siteXsppm,siteXsppm$Locality)
+
+#remove the localities with only 1 presence
+f<-f[sapply(f,function(x) sum(x$P_A)) > 1]
+
+
+if(length(f)==0){return(NA)}
+
+#Get closest related species in each site
+closest<-lapply(f,function(x){
+
+  #species present
+  pres<-x$Species[x$P_A ==1]
+  dis<-ctrx[rownames(ctrx) %in% trx$tip.label,colnames(ctrx) %in% pres]
+  apply(dis,1,function(y){
+      as.matrix(min(y[!y==0]))
+      })
+  })
+
+#melt each list, a bit ugly
+tomerge<-lapply(closest,function(x){
+ dm<-melt(as.matrix(x))[,-2]
+ colnames(dm)<-c("Species","Phylo.Relatedness")
+ return(dm)})
+
+tomerge<-melt(tomerge,id.var=c("Species"))
+
+tomerge<-dcast(tomerge,...~variable)
+colnames(tomerge)<-c("Species","Locality","Phylo.Relatedness")
+
+#need to be characters not factors
+siteXsppm$Locality<-as.character(siteXsppm$Locality)
+tomerge$Locality<-as.character(tomerge$Locality)
+
+PA_phylo<-merge(siteXsppm,tomerge,by=c("Locality","Species"))
+PA_phylo$P_A<-as.numeric(PA_phylo$P_A)
+
+#remove Inf lengths, no co-occurrence
+PA_phylo[!is.finite(PA_phylo$Phylo.Relatedness),"Phylo.Relatedness"]<-NA
+
+return(PA_phylo)
+}
+  
+```
+
+```{r,echo=F}
+sim<-function(trx,size,breadth,signal=10,signalFlag=T,repulse,repulseVal=10,replicates,plotR=T,multiplot=F,ylm=c(0,.8)){
+#Create a function to run any combiation of parameters and create the plot
+  
+  ctrx<-cophenetic(trx)
+  ctrx<-ctrx/max(ctrx)
+sim.func<-function(){
+  #probability of occupancy
+  th=.6
+  
+  scape(tree=trx,scape.size=size, g.center=signal, g.range=1, g.repulse=repulseVal, wd.all=breadth, signal.center=signalFlag, signal.range=F, same.range=F, repulse=repulse,center.scale = 1, range.scale = 1, repulse.scale = 1, site.stoch.scale = 0, sd.center=1, sd.range=1,rho=NULL, th=th)
+    }
+
+sim.list<-replicate(replicates,sim.func(),simplify=FALSE)
+
+th=.6 
+
+### Compute co-occurrence
+sim.occur<-lapply(sim.list,function(x){
+  phy<-co_occur(x,trx,ctrx)
+  })
+
+for (x in 1:length(sim.list)){
+    phy<-co_occur(sim.list[[x]],trx,ctrx)
+
+}
+
+#remove null lists
+sim.occur<-sim.occur[!sapply(sim.occur,length)==1]
+
+if(multiplot){
+  gridlist<-lapply(sim.list[1:4],function(x){
+  p<-gridplot(x,tree=trx,threshold=-log10(th),opt.color=TRUE,guide=F)})
+do.call(grid.arrange,gridlist)
+}
+
+#Iteration count
+for(x in 1:length(sim.occur)){
+  sim.occur[[x]]$Iteration<-x
+}
+phy_comp<-rbind_all(sim.occur)
+
+phy_comp$I<-cut(phy_comp$Iteration,c(seq(0,replicates,1)),labels=1:replicates)
+
+nicheCplot<-ggplot(phy_comp,aes(x=Phylo.Relatedness,y=P_A)) + geom_smooth(aes(group=1),alpha=.1,se=F,method="glm",family="binomial",formula=(y~(poly(x,2)))) + labs(y="Probability of Presence",x="Phylogenetic Distance to Nearest Species in the Assemblage") + theme_bw() + coord_cartesian(ylim = ylm)
+
+if(plotR){return(nicheCplot)} else {return(phy_comp)}
+}
+```
+
+---
+
+#Visualizing the simulation
+
+The easiest way to quickly tell the phylogenetic structure of a run would be to color each species range on a scale from red to blue. Let's say i wanted to color by relatedness. One simple way to approximate this is to number the tips from 1 to n, and assume a divergent scale. This is not quite true, since the relationship is non linear, but its a good start.
+
+```
+**For each visualization, we have one clade 'blue' and one clade 'red'.**
+```
+#Simulation 1: No Phylogenetic Signal Followed by Strong Repulsion in Occurrence Trait
+
+We would expect red and blue clades to separate, but then fragment to create the checkerboard pattern of distribution.
+
+Using a logistic model, what would the functional form be between probability of co-occurrence and phylogenetic distance to closest related species, if we knew that both niche conservatism and competition were acting simultaneously?
+
+```{r,fig.height=4,fig.width=4,eval=T}
+nicheWCplot<-sim(trx=trx,size=10,breadth=50,signalFlag=F,repulse=T,replicates=50,multiplot=T)
+nicheWCplot<-nicheWCplot + ggtitle("No Phylogenetic Signal and Strong Repulsion in Occurance Trait")
+
+```
+
+#Simulation 2: Strong Phylogenetic Signal Followed by Strong Repulsion in Occurrence Trait
+
+```{r,fig.height=4,fig.width=4}
+nicheCplot<-sim(trx,size=10,breadth=50,signalFlag=T,repulse=T,replicates=50,multiplot=T,ylm=c(0,1)) + ggtitle("Strong Phylogenetic Signal and Repulsion in Occurance Trait")
+```
+
+#Simulation 3: No Phylogenetic Signal Followed by No Repulsion in Occurrence Trait
+
+```{r,fig.height=4,fig.width=4}
+nicheWCNRplot<-sim(trx,size=10,breadth=50,signalFlag=F,repulse=F,replicates=50,multiplot=T)
+
+nicheWCNRplot<-nicheWCNRplot + ggtitle("No Phylogenetic Signal and No Repulsion in Occurance Trait")
+```
+
+#Simulation 4: Strong Phylogenetic Signal Followed by No Repulsion in Occurrence Trait
+
+```{r,fig.height=4,fig.width=4}
+ 
+nicheCNRplot<-sim(trx,size=10,breadth=50,signalFlag=T,repulse=F,replicates=50,multiplot=T)
+
+nicheCNRplot<-nicheCNRplot + ggtitle("Strong Phylogenetic Signal and No Repulsion in Occurance Trait")
+```
+
+#Comparison of functional form
+
+```{r fig.width=14,fig.height=8}
+grid.arrange(nicheWCplot,nicheCplot,nicheWCNRplot,nicheCNRplot,ncol=2) 
+```
+
+```{r,echo=FALSE,eval=T}
+
+mod1<-sim(trx,size=10,breadth=50,signalFlag=F,repulse=T,replicates=50,multiplot=F,plotR=F)
+
+mod2<-sim(trx,size=10,breadth=50,signalFlag=T,repulse=T,replicates=50,plotR=F,ylm=c(0,1)) 
+
+mod3<-sim(trx,size=10,breadth=50,signalFlag=F,repulse=F,replicates=50,plotR=F)
+
+mod4<-sim(trx,size=10,breadth=50,signalFlag=T,repulse=F,replicates=50,plotR=F)
+
+#Write simulations to file to be used in bayesian estimation
+ps<-list(Mod1=mod1,Mod2=mod2,Mod3=mod3,Mod4=mod4)
+
+for(x in 1:length(ps)){
+  ps[[x]]$Hyp<-names(ps)[x]
+}
+
+nda<-lapply(ps,nrow) 
+
+psdat<-rbind_all(ps)
+write.csv(psdat,"C:/Users/Ben/Documents/Pred_Obs/Bayesian/simdats.csv")
+```
+
+#Varying levels of repulsion and signal
+
+One important question would be the sensitivity of the level of repulsion and range signal in creating our predicted pattern.
+
+```{r,fig.height=6,eval=TRUE}
+th=.6
+sim.func<-function(repulse,signal,scale){scape(trx, scape.size=20, g.center=signal, g.range=signal, g.repulse=repulse, wd.all=10, signal.center=TRUE, signal.range=FALSE, same.range=FALSE, repulse=TRUE,center.scale = 1, range.scale = 1, repulse.scale = 1, site.stoch.scale = 0, sd.center=1, sd.range=1,rho=NULL, th=th)} 
+
+ctrx<-cophenetic(trx)
+ctrx<-ctrx/max(ctrx)
+#repeat 5 times for each set
+sig<-c(seq(0.2,1,.2),2,5)
+repel<-c(seq(0.2,1,.2),2,5)
+
+ins<-expand.grid(sig,repel,scale=1) 
+ins<- ins[rep(seq_len(nrow(ins)), 5), ]
+colnames(ins)<-c("Signal","Repulse") 
+
+#container
+sim.list<-list()
+
+for (x in 1:nrow(ins)){
+  sim.list[[x]]<-sim.func(signal=ins[x,1],repulse=ins[x,2])
+}
+
+### Compute co-occurrence
+sim.occur<-list()
+for(x in 1:length(sim.list)){
+  phy<-co_occur(sim.list[[x]],trx,ctrx)
+  phy$Repulsion<-ins[x,"Repulse"]
+  phy$Signal<-ins[x,"Signal"]
+  sim.occur[[x]]<-phy
+  }
+
+sim.occur<-sim.occur[!sapply(sim.occur,length)==3]
+ 
+phy<-rbind_all(sim.occur)
+ggplot(phy,aes(x=Phylo.Relatedness,y=P_A,col=Repulsion)) + geom_smooth(method="glm",family="binomial",formula=(y~(poly(x,2))),aes(group=as.factor(Repulsion)),se=F) + labs(y="Probability of Presence",x="Phylogenetic Distance to Nearest Species in the Assemblage") + theme_bw() + facet_wrap(~Signal,scales="free") + labs(col="Repulsion") + scale_color_continuous(low="blue",high="red")
+```
+
+```{r}
+#create Phylogeny
+trees<-function(sp,type,size,breadth,replicates,ylm){
+
+#create phylogeny
+trx<-compute.brlen(stree(n=sp,type))
+
+#cophenetic distance
+ctrx<-cophenetic(trx)
+ctrx<-ctrx/max(ctrx)
+
+#Threshold for presence
+th=.6
+#Compute Models
+
+#Model 1
+nicheWCplot<-sim(trx,size=size,breadth=breadth,repulse=T,replicates=replicates,signalFlag=F,ylm=ylm) + ggtitle("No Phylogenetic Signal and Strong Repulsion in Occurance Trait")
+
+#Model 2
+nicheCplot<-sim(trx,size=size,breadth=breadth,repulse=T,replicates=replicates,ylm=ylm,signalFlag=T) + ggtitle("Strong Phylogenetic Signal and Strong Repulsion in Occurance Trait")
+
+#Model 3
+nicheWCNRplot<-sim(trx,size=size,breadth=breadth,repulse=F,signalFlag=F,replicates=replicates,ylm=ylm) + ggtitle("No Phylogenetic Signal and No Repulsion in Occurance Trait")
+
+#Model 4
+nicheCNRplot<-sim(trx,size=size,breadth=breadth,signalFlag=T,repulse=F,replicates=replicates,ylm=ylm) + ggtitle("Strong Phylogenetic Signal and No Repulsion in Occurance Trait")
+
+grid.arrange(nicheWCplot,nicheCplot,nicheWCNRplot,nicheCNRplot,ncol=2)
+}
+```
+
+# Sensitivity to Tree Shape and Size
+
+The grid size needs to increase to accommodate more species, so we are not artificially packing them into a tight space. 
+
+## 8 Tips
+
+###Balanced
+
+```{r,fig.height=6}
+trees(sp=8,type="balanced",size=10,breadth=50,replicates=50,ylm=c(0,1)) 
+```
+
+###Ladder
+
+```{r,fig.height=6}
+trees(sp=8,type="left",size=10,breadth=50,replicates=50,ylm=c(0,1)) 
+```
+
+Ladder trees show a slightly weaker pattern because there are fewer closely related species. Only a few species have short branch lengths between them.
+
+## 16 Tips
+
+As we increase the number of tips, the range size of any one species needs to increase to get potential overlap with all other species.
+
+###Balanced
+
+```{r,fig.height=6}
+trees(sp=16,type="balanced",size=10,breadth=50,replicates=50,ylm=c(0,.8)) 
+```
+
+###Ladder
+
+```{r,fig.height=6}
+trees(sp=16,type="left",size=10,breadth=50,replicates=50,ylm=c(0,.8)) 
+```
+
+## 32 Tips
+
+###Balanced
+
+```{r,fig.height=5}
+trees(sp=32,type="balanced",size=10,breadth=50,replicates=50,ylm=c(0,.5)) 
+```
+
+###Ladder
+
+```{r,fig.height=6}
+trees(sp=32,type="left",size=10,breadth=50,replicates=50,ylm=c(0,.7)) 
+```
+
+**Increase the level of repulsion.**
+
+```{r}
+trx<-compute.brlen(stree(n=32,type="balanced"))
+plot(trx)
+
+nicheCplot<-sim(trx,size=10,breadth=50,signalFlag=T,repulse=T,replicates=5,multiplot=T,ylm=c(0,.5),repulseVal=100,signal=100) + ggtitle("Stronger Phylogenetic Signal and Stronger Repulsion in Occurance Trait")
+nicheCplot
+```
+
+As species # increase, the level of repulsion and signal needs to increase to get the predicted pattern. Once we increase the signal and repulsion, we recover the polynomial pattern we see with smaller trees.
+
+#Conclusion
+The polynomial pattern is robust to tree size, although the level of repulsion needs to be increased as there are more species in the tree. This is due to more time since most recent common ancestry. The pattern is not very robust to ladder trees. This is due to very few closely related species in a ladder tree. We would expect this pattern to be more possible in tippy trees that have many late branching taxa and a more even distribution of tip distances.
+
+```{r}
+save.image("Simulation.RData")
+````

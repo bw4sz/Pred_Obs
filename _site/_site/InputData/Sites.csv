@@ -1,0 +1,230 @@
+"","IDComm","Richness","Community","CommunityName","Country","LatDecDeg","LongDecDeg","SingleSpCommunities.IDComm","CountOfSpecies","pts_eco"
+"4",5,9,"Vereda Cantagallos","Vereda Cantagallos","Colombia",6.810002691,-73.36111336,NA,NA,3
+"5",7,7,"Lepipuerto","Lepipuerto","Colombia",6.464962215,-73.45473551,NA,NA,3
+"6",12,14,"Puerto Bello","Puerto Bello","Colombia",1.137222222,-76.28194444,NA,NA,6
+"7",13,16,"Rio Nabueno","Rio Nabueno","Colombia",1.113333333,-76.4,NA,NA,6
+"8",14,11,"Alro rio Hornoyaco","Alro rio Hornoyaco","Colombia",1.233055556,-76.53277778,NA,NA,5
+"9",15,12,"Villa Iguana","Villa Iguana","Colombia",1.238333333,-76.51972222,NA,NA,5
+"10",17,10,"Nabu","Nabu","Colombia",1.600061448,-76.27609725,NA,NA,5
+"11",18,7,"Tataui","Tataui","Colombia",1.614866667,-76.25,NA,NA,3
+"15",23,8,"Alto Combate","Alto Combate","Colombia",6.999444444,-75.1425,NA,NA,5
+"17",26,5,"Alder forest","Alder forest","Ecuador",-0.356858864,-78.07291365,NA,NA,3
+"18",30,11,"Acanama","Acanama","Ecuador",-3.7,-79.23333333,NA,NA,3
+"19",31,7,"River Maspa chico","River Maspa chico","Ecuador",-0.409468956,-78.03355878,NA,NA,3
+"21",34,10,"Canelos","Canelos","Ecuador",-1.533333333,-77.75,NA,NA,6
+"24",37,13,"Cerro Mungus","Cerro Mungus","Ecuador",0.44088729,-77.86355501,NA,NA,3
+"28",44,5,"Cerro Achi","Cerro Achi","Ecuador",-1.333333333,-80.65,NA,NA,9
+"30",50,8,"Oyacachi","Oyacachi","Ecuador",-0.216666667,-78.03333333,NA,NA,3
+"32",52,15,"Papallacta Pass","Papallacta Pass","Ecuador",-0.333333333,-78.2,NA,NA,3
+"33",53,9,"Parque National Cotopaxi","Parque National Cotopaxi","Ecuador",-0.666666667,-78.36666667,NA,NA,3
+"36",59,13,"Shishico camp","Shishico camp","Ecuador",-0.196936642,-77.47832828,NA,NA,5
+"37",60,10,"Sozoranga","Sozoranga","Ecuador",-4.35,-79.78333333,NA,NA,4
+"40",127,16,"Achiral - Pozul","Achiral - Pozul","Ecuador",-4.02527,-79.90005,NA,NA,4
+"42",129,18,"Angashcola","Angashcola","Ecuador",-4.56371,-79.36314,NA,NA,4
+"44",132,21,"Bombuscaro2","Bombuscaro2","Ecuador",-4.13329,-78.96675,NA,NA,5
+"45",133,8,"Bosque Protector Aguarongo","Bosque Protector Aguarongo","Ecuador",-2.97591,-78.8523,NA,NA,3
+"46",137,8,"Celica","Celica","Ecuador",-3.94996,-79.80005,NA,NA,4
+"47",139,10,"Cubilán","Cubilán","Ecuador",-2.68712,-78.86888,NA,NA,3
+"48",140,5,"Cuenca","Cuenca","Ecuador",-2.88049,-78.98122,NA,NA,4
+"49",142,7,"El Chorro","El Chorro","Ecuador",-3.13063,-79.16564,NA,NA,3
+"50",143,8,"El Labrado","El Labrado","Ecuador",-2.72165,-79.07512,NA,NA,3
+"51",144,12,"El Limo","El Limo","Ecuador",-3.96787,-80.14465,NA,NA,9
+"52",149,8,"Huashapamba","Huashapamba","Ecuador",-3.65334,-79.26247,NA,NA,3
+"53",150,6,"Jatumpamba","Jatumpamba","Ecuador",-4.31663,-79.86672,NA,NA,4
+"54",153,7,"Laipuna","Laipuna","Ecuador",-4.22015,-79.91824,NA,NA,9
+"56",160,7,"Quebrada Las Vegas","Quebrada Las Vegas","Ecuador",-4.01496,-80.02509,NA,NA,4
+"57",161,5,"Quebrada Suquinda","Quebrada Suquinda","Ecuador",-4.30908,-79.80964,NA,NA,4
+"59",164,10,"Reserva Yunguilla","Reserva Yunguilla","Ecuador",-3.24997,-79.25007,NA,NA,4
+"60",165,7,"San Miguel","San Miguel","Ecuador",-2.811467538,-79.53898999,NA,NA,4
+"61",167,8,"Selva Alegre","Selva Alegre","Ecuador",-3.5333,-79.36674,NA,NA,4
+"62",168,8,"Sunsun-Yanasacha","Sunsun-Yanasacha","Ecuador",-2.94754,-79.09183,NA,NA,3
+"63",169,6,"Tambillo","Tambillo","Ecuador",-3.28658,-78.85036,NA,NA,3
+"64",176,9,"Páramos de Matanga and Bestión","Páramos de Matanga and Bestión","Ecuador",-3.283333333,-78.90833333,NA,NA,3
+"66",178,20,"Guandera","Guandera","Ecuador",0.583333,-77.7,NA,NA,3
+"67",179,19,"Yanacocha","Yanacocha","Ecuador",-0.146286809,-78.58798144,NA,NA,3
+"68",180,19,"Verdecocha","Verdecocha","Ecuador",-0.1,-78.6,NA,NA,3
+"70",183,20,"Cajanuma","Cajanuma","Ecuador",-4.1,-79.15,NA,NA,3
+"71",184,25,"San Isidro","San Isidro","Ecuador",-1.522206558,-78.17969703,NA,NA,5
+"72",186,13,"Otonga","Otonga","Ecuador",-0.416666667,-79,NA,NA,5
+"73",187,11,"Chicaque","Chicaque","Colombia",4.627222339,-74.31473584,NA,NA,3
+"74",188,8,"Tabio","Tabio","Colombia",4.927484,-74.11167,NA,NA,3
+"75",189,15,"Cachalu","Cachalu","Colombia",6.116667,-73.216667,NA,NA,5
+"76",190,17,"Minga","Minga","Colombia",3.56702,-76.58448,NA,NA,5
+"78",194,16,"Matamatá","Matamatá","Colombia",-3.816666667,-70.26666667,NA,NA,6
+"79",195,10,"Paramo Frontino Camp I","Paramo Frontino Camp I","Colombia",6.451250818,-76.07458322,NA,NA,3
+"80",196,8,"Paramo Frontino Camp II","Paramo Frontino Camp II","Colombia",6.429480805,-76.07862468,NA,NA,3
+"81",217,20,"Loro Orajiamarillo","Loro Orajiamarillo","Colombia",5.535228,-75.793603,NA,NA,3
+"82",223,16,"El colibri del Sol","El colibri del Sol","Colombia",6.483333,-76.1,NA,NA,3
+"83",225,12,"Arrierito Antioqueno","Arrierito Antioqueno","Colombia",6.983333,-75.1,NA,NA,5
+"86",235,20,"CIEM","CIEM","Colombia",2.666667,-74.1666667,NA,NA,6
+"88",239,25,"Rio Guajalito","Rio Guajalito","Ecuador",-0.233333,-78.81667,NA,NA,5
+"90",241,7,"Hacienda El Para","Hacienda El Para","Ecuador",-0.806111111,-77.78333333,NA,NA,5
+"93",246,19,"Sani Lodge","Sani Lodge","Ecuador",-0.400833333,-76.1325,NA,NA,6
+"96",249,8,"Antisana Ecological Reserve","Antisana Ecological Reserve","Ecuador",-0.434722222,-78.0575,NA,NA,3
+"98",251,7,"Jorupe Low","Jorupe Low","Ecuador",-4.371708333,-79.92003056,NA,NA,9
+"99",255,6,"Intag","Intag","Ecuador",0.35,-78.42138889,NA,NA,3
+"100",256,6,"Corazon","Corazon","Ecuador",-0.55,-78.71666667,NA,NA,3
+"101",258,11,"Mazan","Mazan","Ecuador",-2.866666667,-79.11666667,NA,NA,3
+"102",259,7,"Chaucha","Chaucha","Ecuador",-2.866666667,-79.38333333,NA,NA,3
+"103",260,8,"Ana Tenorio","Ana Tenorio","Ecuador",-0.983333333,-78.26666667,NA,NA,3
+"104",261,8,"Toledo","Toledo","Ecuador",-4.383333333,-79.11666667,NA,NA,3
+"105",262,9,"Lagunillas","Lagunillas","Ecuador",-4.783333333,-79.4,NA,NA,3
+"106",263,5,"Atillo","Atillo","Ecuador",-2.183333333,-78.48333333,NA,NA,3
+"107",264,7,"Tingichaca","Tingichaca","Ecuador",-2.2,-78.43333333,NA,NA,3
+"108",265,17,"Purshi","Purshi","Ecuador",-2.2,-78.38333333,NA,NA,3
+"109",266,10,"Lago","Lago","Ecuador",-2.066666667,-78.21666667,NA,NA,5
+"110",267,11,"Primero","Primero","Ecuador",-2.083333333,-78.18333333,NA,NA,5
+"111",268,14,"Nueva","Nueva","Ecuador",-2.1,-78.15,NA,NA,5
+"112",271,13,"Romerillos","Romerillos","Ecuador",-4.085719444,-78.95770833,NA,NA,5
+"113",272,14,"East of San Pedro de Vilcabamba","East of San Pedro de Vilcabamba","Ecuador",-3.943805556,-79.41430833,NA,NA,4
+"114",275,13,"Bosque Protector Cashca Totoras","Bosque Protector Cashca Totoras","Ecuador",-1.75,-78.96666667,NA,NA,4
+"116",277,7,"Comuna La Esperanza","Comuna La Esperanza","Ecuador",0.781388889,-77.89444444,NA,NA,3
+"117",280,8,"Lagunas del Voladero, Reserva Ecológica el Ángel","Lagunas del Voladero, Reserva Ecológica el Ángel","Ecuador",0.683611111,-77.87666667,NA,NA,3
+"119",285,9,"Parque Nacional Cajas - Paramo","Parque Nacional Cajas - Paramo","Ecuador",-2.857621,-79.27267,NA,NA,3
+"123",290,7,"Reserva Tito Santos","Reserva Tito Santos","Ecuador",-0.15,-80.2,NA,NA,9
+"124",291,5,"Finca Integral Río Muchacho","Finca Integral Río Muchacho","Ecuador",-0.4167,-80.4333,NA,NA,9
+"125",293,5,"Reserva Cerro Seco","Reserva Cerro Seco","Ecuador",-0.58334,-80.41667,NA,NA,9
+"129",300,9,"Utuana Reserve","Utuana Reserve","Ecuador",-4.36667,-79.7,NA,NA,4
+"130",301,6,"Macara","Macara","Ecuador",-4.38334,-79.95,NA,NA,9
+"131",303,7,"Bosque Protector Fasañán","Bosque Protector Fasañán","Ecuador",-3.05,-78.7,NA,NA,3
+"132",304,13,"Bosque Protector Yanuncay-Yanasacha-Irquis","Bosque Protector Yanuncay-Yanasacha-Irquis","Ecuador",-2.93,-79.083334,NA,NA,3
+"133",305,14,"Mazar Wildlife Reserve","Mazar Wildlife Reserve","Ecuador",-2.36,-78.7,NA,NA,3
+"134",307,9,"Reserva de Fauna Chimborazo","Reserva de Fauna Chimborazo","Ecuador",-1.434,-78.884,NA,NA,3
+"136",309,6,"Parque Metropolitano","Parque Metropolitano","Ecuador",-0.21667,-78.5,NA,NA,3
+"137",310,6,"Parque Itchimbía","Parque Itchimbía","Ecuador",-0.25,-78.516667,NA,NA,3
+"138",311,14,"Refugio Pasochoa","Refugio Pasochoa","Ecuador",-0.46667,-78.4833,NA,NA,3
+"139",312,5,"Nayon","Nayon","Ecuador",-0.1667,-78.4333,NA,NA,4
+"140",313,7,"Tumbaco","Tumbaco","Ecuador",-0.21,-78.4,NA,NA,4
+"141",314,8,"Ilaló","Ilaló","Ecuador",-0.3,-78.4,NA,NA,4
+"142",316,9,"Cordillera Toisán","Cordillera Toisán","Ecuador",0.33334,-78.616667,NA,NA,4
+"143",317,18,"Mojanda","Mojanda","Ecuador",0.116667,-78.26667,NA,NA,3
+"147",323,15,"La Selva Lodge","La Selva Lodge","Ecuador",-2.41667,-76.33334,NA,NA,6
+"148",324,15,"Yuturi Lodge","Yuturi Lodge","Ecuador",-0.55,-76.08333,NA,NA,6
+"149",325,13,"Estacion Cientifica Yasuni","Estacion Cientifica Yasuni","Ecuador",-0.6667,-76.38333,NA,NA,6
+"150",326,11,"Reserva Sierra Azul","Reserva Sierra Azul","Ecuador",-0.68333,-77.91667,NA,NA,5
+"152",328,25,"Cordillera de Guacamayos","Cordillera de Guacamayos","Ecuador",-0.68333,-77.8,NA,NA,5
+"155",332,9,"Via Oyacachi-El Chaco","Via Oyacachi-El Chaco","Ecuador",-0.233333333,-77.91666667,NA,NA,3
+"157",334,7,"Guayllabamba","Guayllabamba","Ecuador",0.466666667,-78.41666667,NA,NA,3
+"158",335,10,"Chugchilán","Chugchilán","Ecuador",-0.8,-78.91666667,NA,NA,3
+"159",336,7,"Otongachi","Otongachi","Ecuador",-0.316666667,-78.95,NA,NA,5
+"161",340,11,"Miazi, Cordillera del Condor","Miazi, Cordillera del Condor","Ecuador",-4.333333333,-78.58333333,NA,NA,5
+"162",344,11,"Cordillera Virgen Negra","Cordillera Virgen Negra","Ecuador",0.680287294,-77.64585348,NA,NA,3
+"163",345,11,"Loma Guagua","Loma Guagua","Ecuador",0.497403588,-77.77429041,NA,NA,3
+"164",346,7,"El Triunfo","El Triunfo","Ecuador",-1.256944444,-78.3675,NA,NA,3
+"165",347,7,"Machay","Machay","Ecuador",-1.385555556,-78.28027778,NA,NA,5
+"166",348,8,"Río Mulatos","Río Mulatos","Ecuador",-0.9675,-78.21527778,NA,NA,4
+"167",349,15,"Caripero","Caripero","Ecuador",-0.666666667,-79.08333333,NA,NA,4
+"168",350,7,"Sinangoe","Sinangoe","Ecuador",-0.133333333,-77.45,NA,NA,5
+"169",351,10,"Chandiquia","Chandiquia","Ecuador",-0.133333333,-77.38333333,NA,NA,6
+"170",352,6,"Pacaritambo","Pacaritambo","Ecuador",-1.033333333,-79.48333333,NA,NA,9
+"171",354,14,"Chinapintza, Cordillera del Cóndor","Chinapintza, Cordillera del Cóndor","Ecuador",-4,-78.56666667,NA,NA,5
+"173",361,7,"Abras de Mantequilla","Abras de Mantequilla","Ecuador",-1.466666667,-79.58333333,NA,NA,9
+"176",367,8,"Territorio Etnico Awá parte baja","Territorio Etnico Awá parte baja","Ecuador",1.066666667,-78.51666667,NA,NA,6
+"177",371,5,"Parque Omaere","Parque Omaere","Ecuador",-1.466666667,-77.98333333,NA,NA,6
+"178",372,10,"Río Conambo","Río Conambo","Ecuador",-1.583333333,-77.75,NA,NA,6
+"179",375,6,"Catamayo","Catamayo","Ecuador",-3.983333333,-79.35,NA,NA,4
+"180",376,5,"Cerro La Torre","Cerro La Torre","Ecuador",-1.666666667,-80.5,NA,NA,9
+"182",397,11,"Vereda La Suiza","Vereda La Suiza","Colombia",4.733333333,-75.58333333,NA,NA,5
+"184",407,6,"La Buitrera","La Buitrera","Colombia",3.3625,-76.56333333,NA,NA,5
+"186",411,8,"Campus de la Universidad del Quindío","Campus de la Universidad del Quindío","Colombia",4.544444444,-75.77027778,NA,NA,5
+"187",412,10,"Vereda Cerca de Piedra","Vereda Cerca de Piedra","Colombia",4.85,-74.05,NA,NA,3
+"188",413,5,"Reserva Natural La Montaña del Ocaso","Reserva Natural La Montaña del Ocaso","Colombia",4.716666667,-75.85,NA,NA,5
+"189",415,13,"Santuario de Flora y Fauna Galeras","Santuario de Flora y Fauna Galeras","Colombia",1.242064,-77.396211,NA,NA,3
+"190",416,11,"Páramo de Miraflores","Páramo de Miraflores","Colombia",2.333333333,-75.41666667,NA,NA,3
+"192",418,7,"Resguardo","Resguardo","Colombia",5.5015,-75.792722,NA,NA,3
+"193",420,8,"Bolívar","Bolívar","Colombia",1.8401,-76.95121667,NA,NA,4
+"194",421,5,"Cajamarca","Cajamarca","Colombia",1.9022,-77.1097,NA,NA,5
+"195",422,5,"Curacas","Curacas","Colombia",1.734155556,-77.12586111,NA,NA,5
+"196",424,13,"Los Alpes","Los Alpes","Colombia",1.74325,-77.06844444,NA,NA,5
+"197",425,18,"Los Milagros","Los Milagros","Colombia",1.799,-76.889,NA,NA,3
+"198",426,13,"Marsella","Marsella","Colombia",1.53985,-77.07336667,NA,NA,4
+"199",427,9,"Mazamorras","Mazamorras","Colombia",1.773383333,-76.94501667,NA,NA,4
+"200",428,7,"San Joaquín","San Joaquín","Colombia",1.780083333,-77.07055,NA,NA,5
+"202",435,11,"Resguardo Indigena Chimborazo","Resguardo Indigena Chimborazo","Colombia",2.75,-76.63333333,NA,NA,5
+"203",437,13,"Vereda El Naranjal","Vereda El Naranjal","Colombia",2.333388889,-77.34944444,NA,NA,5
+"206",442,13,"Bosque de Río Blanco, Popayán","Bosque de Río Blanco, Popayán","Colombia",2.497127778,-76.52862222,NA,NA,5
+"207",444,6,"Bosque la Cabuyera, Popayán","Bosque la Cabuyera, Popayán","Colombia",2.523172222,-76.54526667,NA,NA,5
+"208",445,13,"Sector La Romelia","Sector La Romelia","Colombia",2.666655556,-76.90083611,NA,NA,5
+"214",451,11,"Reserva Marilandia","Reserva Marilandia","Colombia",4.43375,-74.09019444,NA,NA,3
+"215",452,10,"Queremal","Queremal","Colombia",3.516666667,-76.71666667,NA,NA,5
+"217",454,8,"La Barca","La Barca","Colombia",1.966666667,-77.11666667,NA,NA,7
+"218",455,14,"Torca Norte","Torca Norte","Colombia",4.778944444,-74.01277778,NA,NA,3
+"219",480,10,"El Alto del trueno","El Alto del trueno","Colombia",2.561463889,-76.13141111,NA,NA,3
+"220",481,8,"El Carmen","El Carmen","Colombia",2.584,-76.057,NA,NA,5
+"224",486,5,"Hacienda la Corocora","Hacienda la Corocora","Colombia",3.95,-73.4,NA,NA,7
+"225",487,11,"Resguardo Indigena Uitoto","Resguardo Indigena Uitoto","Colombia",-4.132424,-69.949871,NA,NA,6
+"226",488,6,"Complejo Petrolero Caño Limón","Complejo Petrolero Caño Limón","Colombia",6.9166,-70.9666,NA,NA,8
+"227",489,19,"Flanco Occidental, Volcán de Chiles","Flanco Occidental, Volcán de Chiles","Colombia",0.866666667,-77.96666667,NA,NA,3
+"228",490,16,"Alto Ucumarí Parque Nacional Natural Ucumarí","Alto Ucumarí Parque Nacional Natural Ucumarí","Colombia",4.708888889,-75.49361111,NA,NA,3
+"229",492,5,"Fincas Cafeteras de la Vereda Valladolid","Fincas Cafeteras de la Vereda Valladolid","Colombia",5.133333333,-75.93333333,NA,NA,5
+"231",495,15,"Corregimiento de Cupica y Jurubirá","Corregimiento de Cupica y Jurubirá","Colombia",6.694452778,-77.499775,NA,NA,6
+"232",496,14,"Finca Villa Carolina","Finca Villa Carolina","Colombia",3.563297222,-76.60329722,NA,NA,5
+"233",497,6,"Páramo Santa Isabel","Páramo Santa Isabel","Colombia",0.879,-77.196,NA,NA,3
+"234",498,6,"Paramo el Estero","Paramo el Estero","Colombia",0.950123,-77.153661,NA,NA,3
+"235",499,6,"Bordoncillo","Bordoncillo","Colombia",1.183333333,-77.117,NA,NA,3
+"236",500,13,"Reserva Natural Nirvana","Reserva Natural Nirvana","Colombia",3.475277778,-76.19055556,NA,NA,5
+"237",501,6,"Alto mesay","Alto mesay","Colombia",0.263297222,-72.91996389,NA,NA,7
+"242",506,25,"Rios Rumichaco y Rancheria","Rios Rumichaco y Rancheria","Colombia",0.515366667,-77.27583333,NA,NA,5
+"243",507,12,"El mirador","El mirador","Colombia",1.069722222,-76.74472222,NA,NA,5
+"244",510,9,"Quebrada santa Elena","Quebrada santa Elena","Colombia",6.226833,-75.5177,NA,NA,5
+"245",514,10,"Acacias","Acacias","Colombia",4.042222222,-73.79138889,NA,NA,6
+"247",517,8,"Bosque de Bavaria","Bosque de Bavaria","Colombia",4.1775,-73.64555556,NA,NA,6
+"249",519,11,"Finca Rosita","Finca Rosita","Colombia",3.54413,-76.1641,NA,NA,5
+"250",520,7,"Hacienda Mozambique","Hacienda Mozambique","Colombia",4.0833,-72.9833,NA,NA,7
+"253",525,9,"La Leticia","La Leticia","Colombia",-4.215731,-69.93521,NA,NA,6
+"254",526,10,"Mambita","Mambita","Colombia",4.768,-73.222,NA,NA,6
+"255",527,17,"Mistrato","Mistrato","Colombia",5.309261111,-75.88506667,NA,NA,5
+"258",530,9,"Reserva Forestal Navarco","Reserva Forestal Navarco","Colombia",4.6166667,-75.5833333,NA,NA,5
+"259",533,8,"Hitomo II","Hitomo II","Colombia",-4.142422,-69.932101,NA,NA,6
+"261",535,14,"Restrepo","Restrepo","Colombia",4.26513,-73.557762,NA,NA,6
+"262",536,9,"Bocas del Pira","Bocas del Pira","Colombia",-0.441263,-70.257216,NA,NA,6
+"263",537,10,"Rio Inídira","Rio Inídira","Colombia",3.649198,-67.933718,NA,NA,7
+"268",545,10,"1600","1600","Colombia",6.621,-73.50036111,NA,NA,5
+"269",550,9,"2000","2000","Colombia",6.629194444,-73.31477778,NA,NA,5
+"270",552,6,"3000","3000","Colombia",6.633388889,-73.39441667,NA,NA,3
+"272",554,8,"Vereda Retiro Grande, Finca El Brasil","Vereda Retiro Grande, Finca El Brasil","Colombia",7.142555556,-73.05427778,NA,NA,5
+"274",556,13,"Finca Buenos Aires","Finca Buenos Aires","Colombia",7.344611111,-73.08419444,NA,NA,5
+"278",576,13,"El rasgon","El rasgon","Colombia",7.038888889,-72.98888889,NA,NA,3
+"279",578,9,"Juan Parra","Juan Parra","Colombia",7.072361111,-72.93797222,NA,NA,3
+"281",580,7,"La planada","La planada","Colombia",7.013638889,-72.96919444,NA,NA,3
+"282",581,7,"Pangote","Pangote","Colombia",7.408972222,-72.94711111,NA,NA,3
+"283",582,12,"La Pedrera","La Pedrera","Colombia",-0.59937,-72.398646,NA,NA,6
+"287",619,15,"Mirador","Mirador","Colombia",4.135305556,-75.73281481,NA,NA,3
+"290",622,23,"Monserrat","Monserrat","Colombia",5.598278,-75.856336,NA,NA,5
+"306",644,22,"Roncesvalles","Roncesvalles","Colombia",4.04701,-75.593844,NA,NA,3
+"307",646,11,"Primavera Alta","Primavera Alta","Colombia",6.783333333,-73.4,NA,NA,5
+"308",648,5,"La Florida, Hacienda","La Florida, Hacienda","Colombia",5.60147,-75.462632,NA,NA,5
+"309",649,9,"Bosque Los Alcazares, El arenillo","Bosque Los Alcazares, El arenillo","Colombia",5.071837,-75.505213,NA,NA,5
+"310",650,21,"Bosque de Florencia","Bosque de Florencia","Colombia",5.5833,-74.9167,NA,NA,6
+"311",651,7,"Cerro de Guadalupe","Cerro de Guadalupe","Colombia",5.2664,-75.26675,NA,NA,3
+"312",653,8,"En Medio De Rio, finca Villa Belmira","En Medio De Rio, finca Villa Belmira","Colombia",5.3356278,-75.4823611,NA,NA,5
+"313",654,10,"Jardín Botánico, Universidad de Caldas","Jardín Botánico, Universidad de Caldas","Colombia",5.054595,-75.495678,NA,NA,5
+"315",657,8,"Rio Manso, Vereda San Roque","Rio Manso, Vereda San Roque","Colombia",5.6667,-74.7833,NA,NA,7
+"317",660,9,"Camino a San Juanito. Monasterio Monterredondo","Camino a San Juanito. Monasterio Monterredondo","Colombia",4.4833,-73.9333,NA,NA,5
+"319",663,10,"Reserva Natural Privada - Semillas de Agua","Reserva Natural Privada - Semillas de Agua","Colombia",4.243055556,-75.56194444,NA,NA,3
+"320",664,5,"Barbona","Barbona","Colombia",4.3,-75.006667,NA,NA,7
+"321",665,6,"Doima","Doima","Colombia",4.426,-74.966,NA,NA,7
+"322",667,5,"Salado","Salado","Colombia",4.450556,-75.145,NA,NA,5
+"323",668,8,"Rio Coello","Rio Coello","Colombia",4.483333,-75.25,NA,NA,5
+"325",670,8,"Dantas","Dantas","Colombia",4.3,-75.433333,NA,NA,3
+"328",673,11,"Ecological park Los Alcázares","Ecological park Los Alcázares","Colombia",5.077,-75.48,NA,NA,3
+"329",676,5,"Gabriel Arango Restrepo Foundation","Gabriel Arango Restrepo Foundation","Colombia",5.043,-75.444,NA,NA,3
+"330",677,11,"El Zancudo","El Zancudo","Colombia",5.059,-75.433,NA,NA,3
+"331",678,7,"Rio Blanco outlet","Rio Blanco outlet","Colombia",5.093,-75.42,NA,NA,3
+"332",680,5,"Páramo de Letras","Páramo de Letras","Colombia",5.037,-75.329,NA,NA,3
+"333",682,5,"Reserva El Caduceo","Reserva El Caduceo","Colombia",3.665416667,-73.65802778,NA,NA,7
+"335",686,7,"Arroyo Julian","Arroyo Julian","Colombia",11.21913333,-73.31623333,NA,NA,9
+"336",694,7,"Parque Los Nevados","Parque Los Nevados","Colombia",4.983333333,-75.31666667,NA,NA,3
+"337",697,9,"Cerro Montezuma","Cerro Montezuma","Colombia",5.016,-76.191,NA,NA,5
+"339",699,6,"Reserva Bioandina","Reserva Bioandina","Colombia",4.856154,-73.852763,NA,NA,3
+"340",700,9,"Reserva Rogitama","Reserva Rogitama","Colombia",5.795305556,-73.45672222,NA,NA,3
+"342",704,14,"Reserva Macanal","Reserva Macanal","Colombia",4.724939,-74.3628,NA,NA,3
+"343",705,12,"Quebrada La Vieja","Quebrada La Vieja","Colombia",4.622033,-74.054258,NA,NA,3
+"344",708,5,"Reserva Natural La Esperanza","Reserva Natural La Esperanza","Colombia",5.717361111,-71.23716667,NA,NA,8
+"345",715,14,"Juntas y Combeima","Juntas y Combeima","Colombia",4.566666667,-75.31666667,NA,NA,3
+"347",719,7,"Onzaga Peak","Onzaga Peak","Colombia",6.333333333,-72.73333333,NA,NA,3
+"348",721,5,"Virgen del Agua","Virgen del Agua","Colombia",8.219809,-73.391596,NA,NA,4
+"350",724,6,"Carrizal","Carrizal","Colombia",5.683333333,-73.46166667,NA,NA,3
+"351",725,5,"Chorrera 1","Chorrera 1","Colombia",5.683333333,-73.47861111,NA,NA,3
+"352",726,6,"La Colorada","La Colorada","Colombia",5.725,-73.45277778,NA,NA,3
+"353",727,5,"Morronegro","Morronegro","Colombia",5.633333333,-73.48333333,NA,NA,3

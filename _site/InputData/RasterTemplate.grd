@@ -1,0 +1,26 @@
+[general]
+creator=R package 'raster'
+created=2015-08-20 09:11:16
+[georeference]
+nrows=175
+ncols=122
+xmin=-81.15
+ymin=-5.5333333333333
+xmax=-68.95
+ymax=11.9666666666667
+projection=+proj=longlat +ellps=WGS84 +towgs84=0,0,0,0,0,0,0 +no_defs
+[data]
+datatype=FLT8S
+byteorder=little
+nbands=1
+bandorder=BIL
+categorical=FALSE
+minvalue=9
+maxvalue=628
+nodatavalue=-1.7e+308
+[legend]
+legendtype=
+values=
+color=
+[description]
+layername=Adelomyia.melanogenys_TotalConsensus_ROC_EMmean

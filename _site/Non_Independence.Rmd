@@ -1,0 +1,465 @@
+#Aim
+  * Ensure that our result could rise arise solely due to the topology of the tree. Since all species are related, there is a finite number of possible curves that could be produced from our observed phylogeny. The goal is to randomize the species tips and create communities equal to the observed richness, but random with respect to phylo-relatedness. If our observed function is outside the $\alpha=.05$ confidence interval, we can conclude that our result is highly unlikely to be influenced by the topology of our tree.
+  
+  * Compare the estimates from a bayesian model used in the main text with an simliarly formulated model fitted use generalized linear mixed models.
+
+
+```{r,message=FALSE,warning=FALSE}
+library(knitr)
+library(pez)
+library(ape)
+library(dplyr)
+library(ggplot2)
+library(reshape2)
+library(boot)
+library(vegan)
+library(RColorBrewer)
+library(gridExtra)
+library(scales)
+library(stringr)
+library(picante)
+library(foreach)
+library(doSNOW)
+library(lme4)
+opts_chunk$set(warning=FALSE,message=FALSE,echo=TRUE,eval=T)
+opts_chunk$set(cache=TRUE, cache.path = 'Independence_cache/', fig.path='figure/',fig.width=11,fig.height=6)
+
+#load("Independence.Rdata")
+
+```
+
+
+```{r,echo=FALSE}
+#Define co-occur function
+
+co_occur<-function(dat,trx,ctrx){
+ 
+f<-split(dat,dat$site)
+
+#remove the localities with only 2 species
+f<-f[sapply(f,function(x) sum(x$Y)) > 1]
+
+if(length(f)==0){return(NA)}
+
+#Get closest related species in each site
+closest<-lapply(f,function(x){
+  
+  #species present
+  pres<-x$sp[x$Y==1]
+    dis<-ctrx[rownames(ctrx) %in% trx$tip.label,colnames(ctrx) %in% pres]
+    apply(dis,1,function(y){
+      as.matrix(min(y[!y==0]))
+      })
+  }) 
+
+#melt each list, a bit ugly
+tomerge<-lapply(closest,function(x){
+ dm<-melt(as.matrix(x))[,-2]
+ colnames(dm)<-c("sp","x")
+ return(dm)})
+
+tomerge<-melt(tomerge,id.var=c("sp"))
+
+tomerge<-dcast(tomerge,...~variable)
+colnames(tomerge)<-c("sp","site","x")
+
+#need to be characters not factors
+dat$site<-as.character(dat$site)
+tomerge$site<-as.character(tomerge$site)
+
+PA_phylo<-merge(dat,tomerge,by=c("site","sp"))
+PA_phylo$Y<-as.numeric(PA_phylo$Y)
+
+#remove Inf lengths, no co-occurrence
+PA_phylo[!is.finite(PA_phylo$Y),"Y"]<-NA
+
+return(PA_phylo)
+}
+
+```
+
+```{r}
+
+simL<-function(species,sites){
+
+#Simulate a balanced phylogeny
+trx<-compute.brlen(stree(species,"balanced",tip.label=1:species))
+
+#Cophenetic matrix
+ctrx<-cophenetic(trx)
+
+#Create data.frame
+sp=rep(1:species,sites)
+site=as.vector(sapply(1:sites,function(x) rep(x,species)))
+dat<-data.frame(sp,site)
+
+#Presence/absence
+dat$Y<-rbinom(sites*species,1,.5)
+
+#Compute co-occurrence
+dat<-co_occur(dat,trx,ctrx)
+return(dat)}
+```
+
+
+##Observed versus null distribution of covariate estimates
+
+```{r}
+##read in data
+#read in tree
+trx<-read.tree("InputData\\hum294.tre")
+
+new<-str_extract(trx$tip.label,"(\\w+).(\\w+)")
+#get duplicates
+trx<-drop.tip(trx,trx$tip.label[duplicated(new)])
+
+#name tips.
+trx$tip.label<-str_extract(trx$tip.label,"(\\w+).(\\w+)")
+
+ctrx<-cophenetic(trx)
+
+#standardize the distances, just to avoid rounding error.
+ctrx<-ctrx/max(ctrx)
+
+siteXspp<-read.csv("ObservedData.csv",row.names=1)
+source("SpeciesOverlapSourceFunctions.R")
+
+```
+
+```{r}
+#definite function to randomize assemblage and compute glm
+randomCo<-function(siteXspp){
+  siteXspp$Phylo.RelatednessR<-sample(siteXspp$Phylo.Relatedness)
+  mod<-glm(data=siteXspp,formula = P_A ~ poly(Phylo.RelatednessR,2,raw=TRUE), family = "binomial") 
+  mode<-summary(mod)$coefficients[,"Estimate"]
+  data.frame(Intercept=mode[[1]],x=mode[[2]],x2=mode[[3]])
+}
+```
+
+```{r,eval=TRUE}
+cl<-makeCluster(8,"SOCK")
+registerDoSNOW(cl)
+out<-foreach(x=1:1000,.packages=c("picante","reshape2")) %dopar% {
+  randomCo(siteXspp)
+  }
+
+stopCluster(cl)
+```
+
+```{r}
+#melt data frame
+dat<-melt(out)
+
+#remove last column
+dat<-dat[,-3] 
+```
+
+###Observed Relationship using glm and glmm
+
+What is our observed relationship between probability of presence and phylogenetic distaance to a co-occurring species. I want to both compare the bayesian estimate to a null distrubiton of randomized assemblages, as well as to other modeling approaches.
+
+  * Fit a glm without a random effect
+  * Fit a mixed model (glmer) with a species level random effect for intercept, linear and polynomial covariates.
+
+###GLM
+
+```{r model fit,fig.height=4,fig.width=4,cache=TRUE,eval=TRUE} 
+
+#glm observed
+mod<-glm(data=siteXspp,formula = as.factor(P_A) ~ poly(Phylo.Relatedness,2,raw=TRUE), family = "binomial") 
+summary(mod)
+mode<-summary(mod)$coefficients[,"Estimate"]
+observed<-melt(data.frame(Intercept=mode[[1]],x=mode[[2]],x2=mode[[3]]))
+#confint.glm<-confint(mod)
+predict.glm<-data.frame(x=siteXspp$Phylo.Relatedness,y=predict(mod))
+```
+
+### GLMM with random effect on intercept and slopes
+
+```{r}
+mod2<-glmer(data=siteXspp,formula = as.factor(P_A) ~ 1 + poly(Phylo.Relatedness,2,raw=TRUE) + (1 + poly(Phylo.Relatedness,2,raw=TRUE)|Species), family = "binomial")
+smod2<-summary(mod2)
+smod2
+coef.glmer<-smod2$coefficients
+observed.glmer<-melt(data.frame(Intercept=coef.glmer[1,1],x=coef.glmer[2,1],x2=coef.glmer[3,1]))
+#confint.glmer<-confint(mod2)
+predict.glmer<-data.frame(x=siteXspp$Phylo.Relatedness,y=predict(mod2))
+
+observed.bayes<-melt(data.frame(Intercept=-1.96,x=6.64,x2=-11.69))
+
+#bind results
+coef.dat<-melt(list(GLM=observed,GLMM=observed.glmer,Bayesian=observed.bayes)) 
+```
+
+#Visualize null distribution versus observed value
+
+  * View the mean estimates against the null distribution
+  
+```{r,eval=TRUE}
+
+quants<-group_by(dat,variable) %>% summarize(lower=quantile(value,0.025),upper=quantile(value,0.975))
+
+ggplot(dat,aes(x=value)) + geom_histogram() + facet_wrap(~variable,scales="free") + theme_bw() + geom_vline(data=coef.dat,aes(xintercept=value,col=L1),linetype='dashed',size=1.1,show_guide = T) + geom_vline(data=quants,aes(xintercept=lower),col='black',size=.7)+ geom_vline(data=quants,aes(xintercept=upper),col='black',size=.7) + labs(col="Modeling Approach") 
+  
+```
+
+The histogram is the distribution of glm estimates for randomly draw assembalges. We compare this null distrubtion to the observed mean covariate estimates for glm glmm, and bayesian models. 
+From this figure I infer that the the probability of getting our result by the intertwined structure of the model is very low. In addition, our result is even more extreme since we need to get both the x and x^2 terms, they are not independent, so the joint probability of getting our result is even more remote than just $\alpha=0.05$ would suggest.
+
+```{r,cache=TRUE}
+
+#define trajectory function
+trajF<-function(intercept,linear,polynomial,x){
+  p<-inv.logit(intercept + linear * x  + polynomial * x^2)
+  return(p)
+}
+
+s<-seq(0,1,0.01)
+
+#Simulated trajectories
+ynew<-lapply(out,function(x){
+  y<-trajF(x$Intercept,x$x,x$x2,s)
+  data.frame(s,y)
+  })
+ 
+ynew<-rbind_all(ynew)
+
+conf<-group_by(ynew,s) %>% summarise(mean=mean(y),upper=quantile(y,0.975),lower=quantile(y,0.025))
+
+
+#Observed glm
+yobs.glm<-data.frame(x=siteXspp$Phylo.Relatedness,y=trajF(observed[1,2],observed[2,2],observed[3,2],siteXspp$Phylo.Relatedness))
+
+#observed glmer (1|Species)
+yobs.glmer<-data.frame(x=siteXspp$Phylo.Relatedness,y=trajF(observed.glmer[1,2],observed.glmer[2,2],observed.glmer[3,2],siteXspp$Phylo.Relatedness))
+
+#observed bayesian with species level effect
+confint.bayes<-data.frame("2.5%"=c(-2.44,4.72,-9.37),"97.5%"=c(-1.48,8.62,-14.71))
+#colnames(confint.bayes)<-colnames(confint.glm)
+
+yobs.bayes<-data.frame(x=siteXspp$Phylo.Relatedness,y=trajF(observed.bayes[1,2],observed.bayes[2,2],observed.bayes[3,2],siteXspp$Phylo.Relatedness))
+
+obs<-melt(list(GLM=yobs.glm,Mixed_Effects=yobs.glmer,Bayes=yobs.bayes),id.var=c("x","y"))
+
+ggplot(data=conf,aes(x=s,y=mean)) + geom_ribbon(aes(ymin=lower,ymax=upper),fill='gray80') + theme_bw()  + labs(x="Phylogenetic distance to the closest related species",y="Probability of Presence") + geom_line(data=obs,aes(x=x,y=y,col=L1),show_guide=TRUE,size=1.5,linetype="dashed") + ggtitle("Observed versus null fit") + geom_line(aes(y=mean)) + labs(col="Modeling Approach") 
+
+```
+
+The grey area is the null distrubition of glm estimates. The red line is the Bayesian estimate, blue is the glm mixed effects with a random effect for all coefficients, and the green is glm without accounting for species differences. Regardless of model choice, the observed relationship is quite different than the flat relationship we expect based on the topology of the tree.
+
+## Compare bayesian credible intervals with generalized linear models for each on the simulated, predicted, and observed assemblages.
+
+```{r,warning=FALSE,message=FALSE}
+#Load required libraries
+library(reshape2)
+require(ggplot2)
+library(picante)
+library(dismo)
+library(ape)
+library(doSNOW)
+library(gdistance)
+library(foreach)
+library(boot)
+library(maptools)
+library(rasterVis)
+library(knitr)
+library(vegan)
+library(gridExtra)
+library(R2jags)
+library(stringr)
+library(dplyr)
+library(scales)
+library(lme4)
+opts_chunk$set(warning=FALSE,message=FALSE)
+opts_chunk$set(cache=TRUE, cache.path = 'SpeciesOverlap_cache/', fig.path='figure/',fig.width=10,echo=TRUE)
+
+#Set git path
+gitpath<-"C:/Users/Ben/Documents/Pred_Obs/"
+droppath<-"C:/Users/Ben/Dropbox/"
+
+setwd(gitpath)
+
+#Load image if desired
+#load(paste(droppath,"Thesis\\Pred_Realized\\Assemblages\\Threshold0.05\\Results\\","PredictedRealized_Revis.RData",sep=""))
+
+```
+
+```{r}
+PA_m2<-read.csv("InputData/SpeciesData.csv")
+```
+
+##Combine simulation, predicted and observed assemblages.
+
+Read in simulated data - see Simulations.Rmd
+
+```{r}
+simall<-read.csv("C:/Users/Ben/Documents/Pred_Obs/Bayesian/simdats.csv",row.names=1)
+
+simall$P_R<-"Simulation"
+```
+
+Bind data to one dataframe.
+
+```{r}
+
+#make formats the same
+PA_m2$Locality<-as.numeric(as.character(PA_m2$Locality))
+PA_m2$P_A<-as.integer(PA_m2$P_A)
+
+#bind with simulated data
+PA_m2<-rbind_all(list(PA_m2,simall))
+
+#fill in iteration for non simulations
+PA_m2$Iteration[is.na(PA_m2$Iteration)]<-1
+#split data into types of assemblages
+
+#drop Env + Dispersal for observed, its just a data subset
+sdat<-split(PA_m2,list(PA_m2$P_R,PA_m2$Hyp),drop=TRUE)
+
+names(sdat)<-c("Env","Observed","Env + Dispersal","No Signal & Strong Repulsion","Strong Signal & Strong Repulsion","No Signal & No Repulsion","Strong Signal & No Repulsion")
+
+# remove inf values
+sdat<-lapply(sdat,function(y){
+    y<-y[is.finite(y$Phylo.Relatedness),]
+})
+
+```
+
+On average, how many data points in each simulation and observed data?
+```{r}
+sapply(sdat,nrow)
+```
+
+#Compare to generalized linear models
+
+While these are constrained to have the same intercept and slope for each species, they provide a reasonable check on whether the bayesian estimates are giving logical values.
+
+```{r,fig.height=10}
+plotlist<-lapply(sdat,function(x){
+p<-ggplot(x,aes(x=Phylo.Relatedness,y=P_A)) + geom_line(aes(group=Iteration),stat="smooth",method="glm",family="binomial",formula=y~poly(x,2),alpha=min(c(1,(1/max(x$Iteration)*10)))) + theme_bw() + labs("x=Distance to closest related species in an assemblage",y="Probability of presence") + ggtitle("") + scale_alpha(guide="none")
+return(p)
+})
+
+#title plots
+for (x in 1:length(plotlist)){
+  plotlist[[x]]<-plotlist[[x]]+ggtitle(names(plotlist)[x])
+}
+
+do.call(grid.arrange,plotlist)
+```
+
+##Define model function
+
+Define a function that takes in species, presence/absence and distance to the closest related species for each type of assemblage, and returns the posterior estimates of X and X^2.
+
+```{r singlemodel,echo=TRUE,eval=TRUE}
+
+GLMM<-function(dat){
+mod<-glmer(data=dat,formula = as.factor(P_A) ~ 1 + poly(Phylo.Relatedness,2,raw=TRUE) + (1|Species), family = "binomial")
+return(mod)
+}
+```
+
+##Fit GLMM function for each assemblage type
+
+```{r run jags,results='hide',eval=T}
+parall<-lapply(sdat,function(x){
+  out<-GLMM(x)
+})
+```
+
+The next goal is to extract the fixed effects from the GLMM and visualize them.
+
+```{r}
+formatfixed<-function(x){
+
+#fixed estimates
+f<-fixef(x)
+out<-melt(data.frame(Intercept=f[1],Linear=f[[2]],Polynomial=f[[3]]))
+out$Var2<-"Mean"
+
+#Find confidence intervals of fixed effects (assuming distribution...)
+conf<-confint.merMod(x,method = "Wald")
+rownames(conf)<-c("Intercept","Linear","Polynomial")
+colnames(conf)<-c("Lower","Upper")
+conf<-melt(conf)
+
+#match column names
+colnames(out)<-c("Var1","value","Var2")
+
+#bind mean and confidence intervals
+out<-rbind(out,conf)
+return(out)
+}
+```
+
+```{r}
+#get fixed effects
+fixf<-lapply(parall,formatfixed)
+```
+
+Plot fixed effects against underlying data
+
+```{r}
+#define trajectory function
+trajF<-function(intercept,linear,polynomial,x){
+   p<-inv.logit(intercept + linear * x  + polynomial * x^2)
+   return(p)
+}
+
+predframe<-list()
+for (x in 1:length(parall)){
+  #correct level of effects
+  f<-fixf[[x]]
+  
+  #split by estimate
+  sf<-split(f,f$Var2)
+  
+  sfvalue<-lapply(sf,function(y){
+    y=trajF(y$value[1],y$value[2],y$value[3],sdat[[x]]$Phylo.Relatedness)
+    data.frame(x=sdat[[x]]$Phylo.Relatedness,y)
+  })
+  
+  #bind 
+  sfvalue<-melt(sfvalue,id.vars=c("x","y"))
+  
+  sfvalue$P_A<-sdat[[x]]$P_A
+  
+  colnames(sfvalue)<-c("x","y","line","P_A")
+  predframe[[x]]<-sfvalue
+  
+  }
+names(predframe)<-names(sdat)
+```
+
+```{r,fig.height=10,fig.width=14,cache=FALSE}  
+#plot predicted values
+mpred<-melt(predframe,id.vars=colnames(predframe[[1]]))
+
+#order the factors
+mpred$Assemblage<-factor(mpred$L1,levels=names(sdat)[c(2,1,3,4,5,6,7)])
+
+#assign names
+mpred$Type<-mpred$Assemblage %in% names(sdat)[1:3]
+mpred$Type[mpred$Type == T]<-"Observed"
+mpred$Type[!mpred$Type == "Observed"]<-"Simulation"
+
+#simulated
+psim<-ggplot() + geom_line(data=mpred[mpred$Type == "Simulation" & mpred$line=="Mean",],aes(x=x,y=y)) + geom_line(data=mpred[mpred$Type == "Simulation" & mpred$line=="Lower",],aes(x=x,y=y),linetype="dashed") + geom_line(data=mpred[mpred$Type == "Simulation" & mpred$line=="Upper",],aes(x=x,y=y),linetype="dashed") + facet_wrap(~Assemblage,scales="free") + theme_bw() + labs(x="Phylogenetic distance to the closest related species",y="Probability of occurrence")
+
+pobs<-ggplot() + geom_line(data=mpred[mpred$Type == "Observed" & mpred$line=="Mean",],aes(x=x,y=y)) + geom_line(data=mpred[mpred$Type == "Observed" & mpred$line=="Lower",],aes(x=x,y=y),linetype="dashed") + geom_line(data=mpred[mpred$Type == "Observed" & mpred$line=="Upper",],aes(x=x,y=y),linetype="dashed") + facet_wrap(~Assemblage) + theme_bw() + labs(x="Phylogenetic distance to the closest related species",y="Probability of occurrence")
+
+grid.arrange(psim,pobs)
+```
+
+```{r,echo=FALSE,results='hide',cache=FALSE}
+jpeg("MixedEffects.svg",res=600,height=9,width=10,units="in")
+grid.arrange(psim,pobs)
+dev.off()  
+```
+
+This figure is almost identical to the bayesian estimate shown in the paper. The only exception is the size of the confidence intervals for the observed data. This is due to the relatively low sample size for some species and inflates the estimate. In a bayesian approach, the data poor species borrow strength from the hierarcichal inference, giving a more reasonable confidence interval. 
+
+```{r}
+save.image("Independence.Rdata") 
+```
