@@ -1,0 +1,25 @@
+[general]
+creator=R package 'raster'
+created=2016-05-04 13:43:51
+[georeference]
+nrows=33
+ncols=22
+xmin=-79.9
+ymin=-5.3166666666667
+xmax=-68.9
+ymax=11.1833333333333
+projection=+proj=longlat +ellps=WGS84 +towgs84=0,0,0,0,0,0,0 +no_defs
+[data]
+datatype=FLT8S
+byteorder=little
+nbands=7
+bandorder=BIL
+minvalue=3:17.9681228533346:0:8:0:0:4
+maxvalue=750:205.474935161425:619:884:706:1000:747
+nodatavalue=-1.7e+308
+[legend]
+legendtype=
+values=
+color=
+[description]
+layername=Patagona.gigas_EMmeanByROC_mergedAlgo_mergedRun_mergedData:Patagona.gigas_EMcvByROC_mergedAlgo_mergedRun_mergedData:Patagona.gigas_EMciInfByROC_mergedAlgo_mergedRun_mergedData:Patagona.gigas_EMciSupByROC_mergedAlgo_mergedRun_mergedData:Patagona.gigas_EMmedianByROC_mergedAlgo_mergedRun_mergedData:Patagona.gigas_EMcaByROC_mergedAlgo_mergedRun_mergedData:Patagona.gigas_EMwmeanByROC_mergedAlgo_mergedRun_mergedData

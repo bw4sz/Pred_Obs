@@ -1,0 +1,174 @@
+
+-=-=-=-=-=-=-=-=-=-=-=-= Patagona_gigas Data Formating -=-=-=-=-=-=-=-=-=-=-=-=
+
+ Response variable name was converted into Patagona.gigas
+> No pseudo absences selection !
+      ! No data has been set aside for modeling evaluation
+			! Some NAs have been automaticly removed from your data
+-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-= Done -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+
+-=-=-=-=-=-=-=-=-=-=-=-=-=-= 'BIOMOD.formated.data' -=-=-=-=-=-=-=-=-=-=-=-=-=-=
+
+sp.name =  Patagona.gigas
+
+	 18 presences,  0 true absences and  300 undifined points in dataset
+
+
+	 4 explanatory variables
+
+     bio_1           bio_12         bio_15          bio_2       
+ Min.   :109.6   Min.   : 827   Min.   :14.39   Min.   : 73.68  
+ 1st Qu.:165.7   1st Qu.:1334   1st Qu.:33.27   1st Qu.: 97.78  
+ Median :189.9   Median :1818   Median :41.46   Median :100.45  
+ Mean   :187.3   Mean   :1847   Mean   :43.49   Mean   :101.40  
+ 3rd Qu.:198.9   3rd Qu.:2070   3rd Qu.:51.39   3rd Qu.:104.68  
+ Max.   :273.4   Max.   :5244   Max.   :96.12   Max.   :122.69  
+
+-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+
+
+Loading required library...
+
+Checking Models arguments...
+
+Creating suitable Workdir...
+
+	> No weights : all observations will have the same weight
+
+
+-=-=-=-=-=-=-=-=-=-=-=-= Patagona.gigas Modeling Summary -=-=-=-=-=-=-=-=-=-=-=-=
+
+ 4  environmental variables ( bio_1 bio_12 bio_15 bio_2 )
+Number of evaluation repetitions : 2
+Models selected : GBM GLM MAXENT.Phillips 
+
+Total number of model runs : 6 
+
+-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+
+
+-=-=-=- Run :  Patagona.gigas_AllData 
+
+
+-=-=-=--=-=-=- Patagona.gigas_AllData_RUN1 
+
+Model=Generalised Boosting Regression 
+	 2500 maximum different trees and  3  Fold Cross-Validation
+	Evaluating Model stuff...
+	Evaluating Predictor Contributions... 
+
+Model=GLM ( quadratic with no interaction )
+	Stepwise procedure using AIC criteria
+	selected formula : Patagona.gigas ~ bio_1 + I(bio_15^2) + I(bio_2^2)
+<environment: 0x00000000228326d8>
+
+	Evaluating Model stuff...
+	Evaluating Predictor Contributions... 
+
+Model=MAXENT.Phillips
+	Creating Maxent Temp Proj Data..
+ Running Maxent...
+ Getting predictions...
+	Removing Maxent Temp Data..
+	Evaluating Model stuff...
+	Evaluating Predictor Contributions... 
+
+
+-=-=-=--=-=-=- Patagona.gigas_AllData_Full 
+
+Model=Generalised Boosting Regression 
+	 2500 maximum different trees and  3  Fold Cross-Validation
+	Evaluating Model stuff...
+	Evaluating Predictor Contributions... 
+
+Model=GLM ( quadratic with no interaction )
+	Stepwise procedure using AIC criteria
+	selected formula : Patagona.gigas ~ bio_1 + I(bio_15^2) + bio_15
+<environment: 0x000000002292a130>
+
+	Evaluating Model stuff...
+	Evaluating Predictor Contributions... 
+
+Model=MAXENT.Phillips
+	Creating Maxent Temp Proj Data..
+ Running Maxent...
+ Getting predictions...
+	Removing Maxent Temp Data..
+	Evaluating Model stuff...
+	Evaluating Predictor Contributions... 
+
+-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-= Done -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+
+-=-=-=-=-=-=-=-=-=-=-=-=-=-= Build Ensemble Models -=-=-=-=-=-=-=-=-=-=-=-=-=-=
+
+   ! all models available will be included in ensemble.modeling
+   > Evaluation & Weighting methods summary :
+      ROC over 0.75
+
+
+  > mergedAlgo_mergedRun_mergedData ensemble modeling
+   ! Models projections for whole zonation required...
+	> Projecting Patagona.gigas_AllData_RUN1_GBM ...
+	> Projecting Patagona.gigas_AllData_RUN1_GLM ...
+	> Projecting Patagona.gigas_AllData_Full_GBM ...
+	> Projecting Patagona.gigas_AllData_Full_GLM ...
+	> Projecting Patagona.gigas_AllData_Full_MAXENT.Phillips ...
+
+   > Mean of probabilities...
+			Evaluating Model stuff...
+   > Coef of variation of probabilities...
+			Evaluating Model stuff...
+   > Confidence Interval...
+			Evaluating Model stuff...
+			Evaluating Model stuff...
+   > Median of ptobabilities...
+			Evaluating Model stuff...
+   >  Comittee averaging...
+*** in setMethod('BinaryTransformation', signature(data='data.frame')
+			Evaluating Model stuff...
+   > Prababilities wegthing mean...
+		  original models scores =  0.792 0.758 0.967 0.908 0.875
+		  final models weights =  0.184 0.176 0.225 0.211 0.203
+			Evaluating Model stuff...
+-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-= Done -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+
+-=-=-=-=-=-=-=-=-=-=-=-=-=-= Do Models Projections -=-=-=-=-=-=-=-=-=-=-=-=-=-=
+
+	> Building clamping mask
+
+*** in setMethod('BinaryTransformation', signature(data='RasterLayer')
+*** in setMethod('BinaryTransformation', signature(data='RasterLayer')
+*** in setMethod('BinaryTransformation', signature(data='RasterLayer')
+*** in setMethod('BinaryTransformation', signature(data='RasterLayer')
+*** in setMethod('BinaryTransformation', signature(data='RasterLayer')
+*** in setMethod('BinaryTransformation', signature(data='RasterLayer')
+*** in setMethod('BinaryTransformation', signature(data='RasterLayer')
+*** in setMethod('BinaryTransformation', signature(data='RasterLayer')
+	> Projecting Patagona.gigas_AllData_RUN1_GBM ...
+	> Projecting Patagona.gigas_AllData_RUN1_GLM ...
+	> Projecting Patagona.gigas_AllData_RUN1_MAXENT.Phillips ...
+	> Projecting Patagona.gigas_AllData_Full_GBM ...
+	> Projecting Patagona.gigas_AllData_Full_GLM ...
+	> Projecting Patagona.gigas_AllData_Full_MAXENT.Phillips ...
+
+	> Building ROC binaries
+-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-= Done -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+
+-=-=-=-=-=-=-=-=-=-=-=-= Do Ensemble Models Projections -=-=-=-=-=-=-=-=-=-=-=-=
+
+
+	> Projecting Patagona.gigas_EMmeanByROC_mergedAlgo_mergedRun_mergedData ...
+
+	> Projecting Patagona.gigas_EMcvByROC_mergedAlgo_mergedRun_mergedData ...
+
+	> Projecting Patagona.gigas_EMciInfByROC_mergedAlgo_mergedRun_mergedData ...
+
+	> Projecting Patagona.gigas_EMciSupByROC_mergedAlgo_mergedRun_mergedData ...
+
+	> Projecting Patagona.gigas_EMmedianByROC_mergedAlgo_mergedRun_mergedData ...
+
+	> Projecting Patagona.gigas_EMcaByROC_mergedAlgo_mergedRun_mergedData ...
+
+	> Projecting Patagona.gigas_EMwmeanByROC_mergedAlgo_mergedRun_mergedData ...
+
+-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-= Done -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=

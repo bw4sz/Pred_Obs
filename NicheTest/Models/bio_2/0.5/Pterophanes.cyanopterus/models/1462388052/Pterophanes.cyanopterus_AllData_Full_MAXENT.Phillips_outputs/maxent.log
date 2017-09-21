@@ -1,0 +1,44 @@
+Wed May 04 11:56:34 PDT 2016
+MaxEnt version 3.3.3k
+Reading file Back_swd.csv
+readGrid: max memory 518979584, total allocated 16252928, free 12090616, used 4162312, increment 4162312
+Reading samples from Sp_swd.csv
+Read samples: max memory 518979584, total allocated 16252928, free 13025712, used 3227216, increment -935096
+Making features
+makeFeatures: max memory 518979584, total allocated 16252928, free 11851024, used 4401904, increment 1174688
+Command line used:  environmentallayers=Pterophanes.cyanopterus/models/1462388052/m_31192728/Back_swd.csv samplesfile=Pterophanes.cyanopterus/models/1462388052/m_31192728/Sp_swd.csv projectionlayers=Pterophanes.cyanopterus/models/1462388052/m_31192728/Predictions/Pred_swd.csv outputdirectory=Pterophanes.cyanopterus/models/1462388052/Pterophanes.cyanopterus_AllData_Full_MAXENT.Phillips_outputs outputformat=logistic redoifexists visible=TRUE linear=TRUE quadratic=TRUE product=TRUE threshold=TRUE hinge=TRUE lq2lqptthreshold=80 l2lqthreshold=10 hingethreshold=15 beta_threshold=-1 beta_categorical=-1 beta_lqp=-1 beta_hinge=-1 betamultiplier=1 defaultprevalence=0.5 autorun nowarnings notooltips noaddsamplestobackground
+Command line to repeat: java density.MaxEnt nowarnings noprefixes outputdirectory=Pterophanes.cyanopterus/models/1462388052/Pterophanes.cyanopterus_AllData_Full_MAXENT.Phillips_outputs projectionlayers=Pterophanes.cyanopterus/models/1462388052/m_31192728/Predictions/Pred_swd.csv samplesfile=Pterophanes.cyanopterus/models/1462388052/m_31192728/Sp_swd.csv environmentallayers=Pterophanes.cyanopterus/models/1462388052/m_31192728/Back_swd.csv nowarnings notooltips noaskoverwrite noaddsamplestobackground autorun
+Species: Pterophanes.cyanopterus_AllData_Full
+Layers: bio_1 bio_12 bio_15 bio_2
+Layertypes: Continuous Continuous Continuous Continuous
+outputdirectory: Pterophanes.cyanopterus/models/1462388052/Pterophanes.cyanopterus_AllData_Full_MAXENT.Phillips_outputs
+projectionlayers: Pterophanes.cyanopterus/models/1462388052/m_31192728/Predictions/Pred_swd.csv
+samplesfile: Pterophanes.cyanopterus/models/1462388052/m_31192728/Sp_swd.csv
+environmentallayers: Pterophanes.cyanopterus/models/1462388052/m_31192728/Back_swd.csv
+warnings: false
+tooltips: false
+askoverwrite: false
+addsamplestobackground: false
+autorun: true
+
+getSamples: max memory 518979584, total allocated 16252928, free 11632856, used 4620072, increment 218168
+Pterophanes.cyanopterus_AllData_Full: 
+Regularization values: linear/quadratic/product: 0.241, categorical: 0.250, threshold: 1.670, hinge: 0.500
+33 samples
+Density: max memory 518979584, total allocated 16252928, free 11185184, used 5067744, increment 447672
+linearPredictor: max memory 518979584, total allocated 16252928, free 11185184, used 5067744, increment 0
+FeaturedSpace: max memory 518979584, total allocated 16252928, free 11185184, used 5067744, increment 0
+Sequential: max memory 518979584, total allocated 16252928, free 11117000, used 5135928, increment 68184
+Initial loss: 5.652489180268651
+Time since start: 2.453
+380: time = 1.694000 loss = 5.182787
+Resulting gain: 0.4697020657147286
+Time since start: 4.471
+Projecting...
+Writing file Pterophanes.cyanopterus\models\1462388052\Pterophanes.cyanopterus_AllData_Full_MAXENT.Phillips_outputs\Pterophanes.cyanopterus_AllData_Full.csv
+Projecting...
+Reading file Pred_swd.csv
+readGrid: max memory 518979584, total allocated 16252928, free 11425488, used 4827440, increment -308488
+Writing file Pterophanes.cyanopterus\models\1462388052\Pterophanes.cyanopterus_AllData_Full_MAXENT.Phillips_outputs\Pterophanes.cyanopterus_AllData_Full_Pred_swd.csv
+Writing file Pterophanes.cyanopterus\models\1462388052\Pterophanes.cyanopterus_AllData_Full_MAXENT.Phillips_outputs\Pterophanes.cyanopterus_AllData_Full_Pred_swd_clamping.csv
+Ending

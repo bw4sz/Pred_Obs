@@ -1,0 +1,43 @@
+Wed May 04 11:43:32 PDT 2016
+MaxEnt version 3.3.3k
+Reading file Back_swd.csv
+readGrid: max memory 518979584, total allocated 16252928, free 9759728, used 6493200, increment 6493200
+Reading samples from Sp_swd.csv
+Read samples: max memory 518979584, total allocated 16252928, free 13010056, used 3242872, increment -3250328
+Making features
+makeFeatures: max memory 518979584, total allocated 16252928, free 9366544, used 6886384, increment 3643512
+Command line used:  environmentallayers=Colibri.coruscans/models/1462387380/m_30791752/Back_swd.csv samplesfile=Colibri.coruscans/models/1462387380/m_30791752/Sp_swd.csv projectionlayers=Colibri.coruscans/models/1462387380/m_30791752/Predictions/Pred_swd.csv outputdirectory=Colibri.coruscans/models/1462387380/Colibri.coruscans_AllData_RUN1_MAXENT.Phillips_outputs outputformat=logistic redoifexists visible=TRUE linear=TRUE quadratic=TRUE product=TRUE threshold=TRUE hinge=TRUE lq2lqptthreshold=80 l2lqthreshold=10 hingethreshold=15 beta_threshold=-1 beta_categorical=-1 beta_lqp=-1 beta_hinge=-1 betamultiplier=1 defaultprevalence=0.5 autorun nowarnings notooltips noaddsamplestobackground
+Command line to repeat: java density.MaxEnt nowarnings noprefixes outputdirectory=Colibri.coruscans/models/1462387380/Colibri.coruscans_AllData_RUN1_MAXENT.Phillips_outputs projectionlayers=Colibri.coruscans/models/1462387380/m_30791752/Predictions/Pred_swd.csv samplesfile=Colibri.coruscans/models/1462387380/m_30791752/Sp_swd.csv environmentallayers=Colibri.coruscans/models/1462387380/m_30791752/Back_swd.csv nowarnings notooltips noaskoverwrite noaddsamplestobackground autorun
+Species: Colibri.coruscans_AllData_RUN1
+Layers: bio_1 bio_12 bio_15 bio_2
+Layertypes: Continuous Continuous Continuous Continuous
+outputdirectory: Colibri.coruscans/models/1462387380/Colibri.coruscans_AllData_RUN1_MAXENT.Phillips_outputs
+projectionlayers: Colibri.coruscans/models/1462387380/m_30791752/Predictions/Pred_swd.csv
+samplesfile: Colibri.coruscans/models/1462387380/m_30791752/Sp_swd.csv
+environmentallayers: Colibri.coruscans/models/1462387380/m_30791752/Back_swd.csv
+warnings: false
+tooltips: false
+askoverwrite: false
+addsamplestobackground: false
+autorun: true
+
+getSamples: max memory 518979584, total allocated 16252928, free 9171392, used 7081536, increment 195152
+Colibri.coruscans_AllData_RUN1: 
+Regularization values: linear/quadratic/product: 0.050, categorical: 0.250, threshold: 1.000, hinge: 0.500
+188 samples
+Density: max memory 518979584, total allocated 16252928, free 12990520, used 3262408, increment -3819128
+linearPredictor: max memory 518979584, total allocated 16252928, free 12990520, used 3262408, increment 0
+FeaturedSpace: max memory 518979584, total allocated 16252928, free 12990520, used 3262408, increment 0
+Sequential: max memory 518979584, total allocated 16252928, free 12954656, used 3298272, increment 35864
+Initial loss: 4.0943445622221
+500: time = 0.432000 loss = -27.333318
+Resulting gain: 31.42766255124076
+Time since start: 1.523
+Projecting...
+Writing file Colibri.coruscans\models\1462387380\Colibri.coruscans_AllData_RUN1_MAXENT.Phillips_outputs\Colibri.coruscans_AllData_RUN1.csv
+Projecting...
+Reading file Pred_swd.csv
+readGrid: max memory 518979584, total allocated 16252928, free 7686000, used 8566928, increment 5268656
+Writing file Colibri.coruscans\models\1462387380\Colibri.coruscans_AllData_RUN1_MAXENT.Phillips_outputs\Colibri.coruscans_AllData_RUN1_Pred_swd.csv
+Writing file Colibri.coruscans\models\1462387380\Colibri.coruscans_AllData_RUN1_MAXENT.Phillips_outputs\Colibri.coruscans_AllData_RUN1_Pred_swd_clamping.csv
+Ending

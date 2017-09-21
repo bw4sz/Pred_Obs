@@ -1,0 +1,44 @@
+Wed May 04 11:56:34 PDT 2016
+MaxEnt version 3.3.3k
+Reading file Back_swd.csv
+readGrid: max memory 518979584, total allocated 16252928, free 12259704, used 3993224, increment 3993224
+Reading samples from Sp_swd.csv
+Read samples: max memory 518979584, total allocated 16252928, free 12859944, used 3392984, increment -600240
+Making features
+makeFeatures: max memory 518979584, total allocated 16252928, free 12349272, used 3903656, increment 510672
+Command line used:  environmentallayers=Patagona.gigas/models/1462388051/m_32123845/Back_swd.csv samplesfile=Patagona.gigas/models/1462388051/m_32123845/Sp_swd.csv projectionlayers=Patagona.gigas/models/1462388051/m_32123845/Predictions/Pred_swd.csv outputdirectory=Patagona.gigas/models/1462388051/Patagona.gigas_AllData_Full_MAXENT.Phillips_outputs outputformat=logistic redoifexists visible=TRUE linear=TRUE quadratic=TRUE product=TRUE threshold=TRUE hinge=TRUE lq2lqptthreshold=80 l2lqthreshold=10 hingethreshold=15 beta_threshold=-1 beta_categorical=-1 beta_lqp=-1 beta_hinge=-1 betamultiplier=1 defaultprevalence=0.5 autorun nowarnings notooltips noaddsamplestobackground
+Command line to repeat: java density.MaxEnt nowarnings noprefixes outputdirectory=Patagona.gigas/models/1462388051/Patagona.gigas_AllData_Full_MAXENT.Phillips_outputs projectionlayers=Patagona.gigas/models/1462388051/m_32123845/Predictions/Pred_swd.csv samplesfile=Patagona.gigas/models/1462388051/m_32123845/Sp_swd.csv environmentallayers=Patagona.gigas/models/1462388051/m_32123845/Back_swd.csv nowarnings notooltips noaskoverwrite noaddsamplestobackground autorun
+Species: Patagona.gigas_AllData_Full
+Layers: bio_1 bio_12 bio_15 bio_2
+Layertypes: Continuous Continuous Continuous Continuous
+outputdirectory: Patagona.gigas/models/1462388051/Patagona.gigas_AllData_Full_MAXENT.Phillips_outputs
+projectionlayers: Patagona.gigas/models/1462388051/m_32123845/Predictions/Pred_swd.csv
+samplesfile: Patagona.gigas/models/1462388051/m_32123845/Sp_swd.csv
+environmentallayers: Patagona.gigas/models/1462388051/m_32123845/Back_swd.csv
+warnings: false
+tooltips: false
+askoverwrite: false
+addsamplestobackground: false
+autorun: true
+
+getSamples: max memory 518979584, total allocated 16252928, free 12192016, used 4060912, increment 157256
+Patagona.gigas_AllData_Full: 
+Regularization values: linear/quadratic/product: 0.481, categorical: 0.250, threshold: 1.820, hinge: 0.500
+18 samples
+Density: max memory 518979584, total allocated 16252928, free 11663032, used 4589896, increment 528984
+linearPredictor: max memory 518979584, total allocated 16252928, free 11663032, used 4589896, increment 0
+FeaturedSpace: max memory 518979584, total allocated 16252928, free 11663032, used 4589896, increment 0
+Sequential: max memory 518979584, total allocated 16252928, free 11648696, used 4604232, increment 14336
+Initial loss: 5.703782474656201
+Time since start: 1.056
+500: time = 0.769000 loss = 4.596233
+Resulting gain: 1.1075497116786055
+Time since start: 3.516
+Projecting...
+Writing file Patagona.gigas\models\1462388051\Patagona.gigas_AllData_Full_MAXENT.Phillips_outputs\Patagona.gigas_AllData_Full.csv
+Projecting...
+Reading file Pred_swd.csv
+readGrid: max memory 518979584, total allocated 16252928, free 11684872, used 4568056, increment -36176
+Writing file Patagona.gigas\models\1462388051\Patagona.gigas_AllData_Full_MAXENT.Phillips_outputs\Patagona.gigas_AllData_Full_Pred_swd.csv
+Writing file Patagona.gigas\models\1462388051\Patagona.gigas_AllData_Full_MAXENT.Phillips_outputs\Patagona.gigas_AllData_Full_Pred_swd_clamping.csv
+Ending

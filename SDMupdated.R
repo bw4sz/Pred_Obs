@@ -8,7 +8,6 @@
 #Wrap this into a function to be called from another script
 
 SDM_SP<-function(cell_size,inLocalities,envfolder,savefolder,env='all'){
-  
   #If you have already installed, let's start here.
   #Call the packages we are going to need in this tutorial
   library(biomod2)
@@ -44,18 +43,20 @@ SDM_SP<-function(cell_size,inLocalities,envfolder,savefolder,env='all'){
   
   #There is one errant record.
   PAdat<-PAdat[!PAdat$LONGDECDEG==-6,]
-  
-  if(env=='all'){
-  #Import environmental data from worldclim, three variables
-  myExpl <- c(paste(envfolder,"bio_1.bil",sep="/"),
-              paste(envfolder,"bio_12.bil",sep="/"),
-              paste(envfolder,"bio_15.bil",sep="/"))
-  } else {
+
     myExpl<-c()
-    for(x in 1:length(env)){
-      myExpl[[x]]<- paste(envfolder,"/",env[[1]],".bil",sep="")
-    }
-  }
+    #Import environmental data from worldclim, three variables
+    
+  if(env=='all'){
+    e<-list.files(envfolder,".gri")
+    for (x in 1:length(e)){
+      myExpl[[x]]<- paste(envfolder,e[[x]],sep="")
+      }
+      } else {
+      for(x in 1:length(env)){
+        myExpl[[x]]<-paste(envfolder,env[[x]],".gri",sep="")
+      }
+      }
   
   
   myExpl<-stack(myExpl)
@@ -118,15 +119,15 @@ SDM_SP<-function(cell_size,inLocalities,envfolder,savefolder,env='all'){
   spec<-spec[!spec %in% gsub("\\."," ",completed)]
   paste("Species to be modeled",spec,sep=": ")
   
-  cl<-snow::makeCluster(11,"SOCK")
+  cl<-snow::makeCluster(2,"SOCK")
   doSNOW::registerDoSNOW(cl)
-    niche_loop<-foreach::foreach(x=1:length(spec),.errorhandling="stop",.inorder=FALSE,.export=c("spec","loc_clean","myExpl.crop")) %dopar% {
+    niche_loop<-foreach::foreach(x=1:length(spec),.errorhandling="stop",.inorder=FALSE) %dopar% {
     
     library(reshape)
     library(biomod2)
     library(plyr)
     
-    sink(paste("logs/",paste(spec[[x]],".txt",sep=""),sep=""))
+    #sink(paste("logs/",paste(spec[[x]],".txt",sep=""),sep=""))
 
     #print(paste("Start Time is",Sys.time()))
     ###############Step 1) Get presence records for species
@@ -187,7 +188,7 @@ SDM_SP<-function(cell_size,inLocalities,envfolder,savefolder,env='all'){
               
               #Define modeling options
               myBiomodOption <- BIOMOD_ModelingOptions(    
-                MAXENT = list( path_to_maxent.jar = savefolder,
+                MAXENT.Phillips = list( path_to_maxent.jar="C:/Users/Ben/Documents/Pred_Obs/NicheTest/Models/maxent.jar",
                                maximumiterations = 200,
                                visible = TRUE,
                                linear = TRUE,
@@ -209,13 +210,12 @@ SDM_SP<-function(cell_size,inLocalities,envfolder,savefolder,env='all'){
               #Give current project a name, so we can go get the files later
               projnam<-'current'
               myBiomodModelOut<-BIOMOD_Modeling( myBiomodData, 
-                                                 models = c("GBM","GLM","MAXENT"), 
+                                                 models = c("GBM","GLM","MAXENT.Phillips"), 
                                                  models.options = myBiomodOption, 
                                                  NbRunEval=1, 
                                                  DataSplit=80, 
                                                  Yweights=NULL, 
                                                  VarImport=3, 
-                                                 #models.eval.meth = c('ROC'),
                                                  models.eval.meth = c('ROC',"TSS"),
                                                  SaveObj = TRUE )
               
@@ -244,7 +244,7 @@ SDM_SP<-function(cell_size,inLocalities,envfolder,savefolder,env='all'){
               filename<-paste(paste(getwd(),gsub(" ",".",spec[x]),sep="/"),"VarImportance.csv",sep="/")
               write.csv(cbind(c.var,spec[x]),filename)
               
-              # projection over the globe under current conditions  
+              # projection under current conditions  
               
               #Ensemble model
               myBiomodEM <- BIOMOD_EnsembleModeling( 
@@ -290,7 +290,7 @@ SDM_SP<-function(cell_size,inLocalities,envfolder,savefolder,env='all'){
               
               #end file output
               #print(paste("End Time is",system.time()))
-              sink()
+              #sink()
               return(stat)
   }
 stopCluster(cl)

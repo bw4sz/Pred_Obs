@@ -53,7 +53,7 @@ droppath<-"C:/Users/Ben/Dropbox/"
 setwd(gitpath)
 
 #Load image if desired
-#load(paste(droppath,"Thesis\\Pred_Realized\\Assemblages\\Threshold0.05\\Results\\","PredictedRealized_Revis.RData",sep=""))
+load(paste(droppath,"Thesis\\Pred_Realized\\Assemblages\\Threshold0.05\\Results\\","PredictedRealized_Revis.RData",sep=""))
 
 ```
 
@@ -117,14 +117,14 @@ To make this run, you need to [download maxent](http://www.cs.princeton.edu/~sch
 ```{r}
 cell_size=0.1
 inLocalities<-read.csv("InputData/MASTER_POINTLOCALITYarcmap_review.csv")
-envfolder<-"C:\\Users\\Ben\\Dropbox\\Thesis\\Pred_Realized\\EnvLayers"
+envfolder<-"C:\\Users\\Ben\\Dropbox\\Thesis\\Pred_Realized\\EnvLayers\\Cropped/"
 savefolder<-"C:/Users/Ben/Dropbox/Thesis/Pred_Realized/NicheModels/"
 ```
 
 Run distribution models (may need to be done offline, can take awhile)
 
-```{r Niche Models,eval=FALSE}
-#SDM_SP(cell_size,inLocalities,envfolder,savefolder)
+```{r Niche Models,eval=F}
+SDM_SP(cell_size,inLocalities,envfolder,savefolder,env=c('bio_1','bio_4','bio_12',"bio_15"))
 ```
 
 ##Import predicted suitable habitat rasters
@@ -196,7 +196,7 @@ completeI<-cong[names(which(apply(cong,1,sum)==4)),]
 modr<-lapply(niche,raster,values=TRUE)
 
 #Get the number of records per site, atleast 5 presences. 
-records_site<-names(which(apply(siteXspp.raster,1,sum,na.rm=TRUE) > 5))
+records_site<-names(which(apply(siteXspp.raster,1,sum,na.rm=TRUE) > 0))
 modlist<-modr[names(modr) %in% records_site]
 
 print(paste(length(modlist),"Species in the analysis"))
@@ -207,7 +207,7 @@ print(paste(length(modlist),"Species in the analysis"))
 To provide a reasonable dispersal filter we compute cost distance between assemblages. Computing cost distances among locations requires construction of environmentally weighted cost surface based on change in elevation and calculation of a least-cost path between two locations.  We used the R package gDistance to calculate cost-distance (Etten 2011). Our cost distance is a function of difference in elevation. So high elevation species see low elevation areas as a barrier, and low elevation species see high elevation areas as a barrier.
 
 
-```{r Cost Path, eval=TRUE}
+```{r Cost Path, eval=T}
 
 #Import Friction layer, this can be changed later if we want a more fine grained 
 elevr<-raster(paste(droppath,"Thesis/Pred_Realized/etopo2\\w001001.adf",sep=""))
@@ -224,8 +224,8 @@ elev.ca<-aggregate(elev.c,2)
 
 ##Find shortest cost path between all sites
 
-```{r compute cost,eval=FALSE}
-cl<-makeCluster(15,"SOCK")
+```{r compute cost,eval=F}
+cl<-makeCluster(2,"SOCK")
 registerDoSNOW(cl)
 costPath.list<-foreach(x = 1:length(cellSitesXY)) %dopar% {
   require(raster)
@@ -256,7 +256,7 @@ stopCluster(cl)
 
 #Format the cost path matrix
 m.costlist<-melt(costPath.list)
-CostPathMatrix<-log(dcast(m.costlist,Var1~Var2,value.var="value")[,-1])
+CostPathMatrix<-log(dcast(m.costlist,X1~X2,value.var="value")[,-1])
 rownames(CostPathMatrix)<-colnames(siteXspp.raster)
 colnames(CostPathMatrix)<-colnames(siteXspp.raster)
 write.table(CostPathMatrix,paste(gitpath,sep="/","CostMatrix.txt"))
@@ -482,7 +482,7 @@ write.csv(PA_m2,paste(gitpath,"InputData/SpeciesData.csv",sep=""),row.names=F)
 **Empty Blue Triangles = predicted assemblage list based on environmental suitabilitys**
 **Filled Blue Triangles = predicted assemblage list based on environmental suitability, but outside of dispersal distance**
 
-```{r}
+```{r,eval=F}
 #plot raster with presence points and localities
 #bring in raw localities
  #Lets go get the presence data on hummingbird distributions
@@ -594,7 +594,7 @@ PA_m2$Iteration[is.na(PA_m2$Iteration)]<-1
 #drop Env + Dispersal for observed, its just a data subset
 sdat<-split(PA_m2,list(PA_m2$P_R,PA_m2$Hyp),drop=TRUE)
 
-names(sdat)<-c("Env","Observed","Env + Dispersal","No Signal & Strong Repulsion","Strong Signal & Strong Repulsion","No Signal & No Repulsion","Strong Signal & No Repulsion")
+names(sdat)<-c("Env","Observed","Env + Dispersal","No Conservatism & Strong Repulsion","Strong Conservatism & Strong Repulsion","No Conservatism & No Repulsion","Strong Conservatism & No Repulsion")
 
 # remove inf values
 sdat<-lapply(sdat,function(y){
@@ -614,7 +614,7 @@ While these are constrained to have the same intercept and slope for each specie
 
 ```{r,fig.height=10}
 plotlist<-lapply(sdat,function(x){
-p<-ggplot(x,aes(x=Phylo.Relatedness,y=P_A)) + geom_line(aes(group=Iteration),stat="smooth",method="glm",family="binomial",formula=y~poly(x,2),alpha=min(c(1,(1/max(x$Iteration)*10)))) + theme_bw() + labs("x=Distance to closest related species in an assemblage",y="Probability of presence") + ggtitle("") + scale_alpha(guide="none")
+p<-ggplot(x,aes(x=Phylo.Relatedness,y=P_A)) + geom_smooth(method="glm",method.args=list(family="binomial"),formula=y~poly(x,2),alpha=min(c(1,(1/max(x$Iteration)*10)))) + theme_bw() + labs("x=Distance to closest related species in an assemblage",y="Probability of presence") + ggtitle("") + scale_alpha(guide="none")
 return(p)
 })
 
@@ -731,23 +731,21 @@ return(m)}
 
 ##Bayes function for each assemblage type
 
-Run 7 models in parallel.
-
 ```{r run jags,results='hide',eval=T}
 
 #There is no reason everyone needs the same number of runs
 #Draws for each model
-runsl<-rep(10000,2000000,10000,10000,10000,10000,10000)
+runsl<-rep(50000,50000,50000,5000,5000,5000,5000)
 
 #Which model we want to draw , heir=T is for full model
 modhier<-c(rep(T,7))
 
-cl<-snow::makeCluster(7,"SOCK")
+cl<-snow::makeCluster(2,"SOCK")
 doSNOW::registerDoSNOW(cl)
 
 parall<-foreach(x=1:length(sdat),.errorhandling="pass") %dopar% {
   y<-sdat[[x]]
-  out<-Bayes(presence=y$P_A,distance=y$Phylo.Relatedness,species=y$Species,Iteration=y$Iteration,runs =runsl[x],burn=((runsl[x]/25)-3000),hier=modhier[x])
+  out<-Bayes(presence=y$P_A,distance=y$Phylo.Relatedness,species=y$Species,Iteration=y$Iteration,runs =runsl[x],burn=((runsl[x]/25)-2000),hier=modhier[x])
   return(out)
 }
 stopCluster(cl)
@@ -829,7 +827,7 @@ Bayes <-function(presence,species,Iteration,runs,burn,hier) {
 ```
 
 
-```{r run jags,results='hide',eval=T}
+```{r,results='hide',eval=T}
 
 #Draws for each model
 runsl<-rep(2000,2000,2000,2000,2000,2000,2000)
@@ -837,7 +835,7 @@ runsl<-rep(2000,2000,2000,2000,2000,2000,2000)
 #legacy
 modhier<-c(rep(T,7))
 
-cl<-snow::makeCluster(7,"SOCK")
+cl<-snow::makeCluster(2,"SOCK")
 doSNOW::registerDoSNOW(cl)
 
 parnull<-foreach(x=1:length(sdat),.errorhandling="pass") %dopar% {
@@ -1026,7 +1024,7 @@ ggsave("Figure4OverlayPoints.jpg",height=5,width=7,dpi=400)
 
 #rename levels
 specdf$AssemblageL<-factor(specdf$Assemblage)
-#levels(specdf$AssemblageL)<-c("Environment","Environment + Dispersal","Lottery","Niche Conservatism","Niche Conservatism + Competition","Observed")
+levels(specdf$AssemblageL)<-c("Environment","Environment + Dispersal","No Conservatism & No Repulsion","No Conservatism & Strong Repulsion","Observed","Strong Conservatism & No Repulsion","Strong Conservatism & Strong Repulsion")
 
 
 #add some blank data to zoom out on lottery, its not readable.

@@ -1,0 +1,25 @@
+[general]
+creator=R package 'raster'
+created=2016-05-04 11:57:06
+[georeference]
+nrows=33
+ncols=22
+xmin=-79.9
+ymin=-5.3166666666667
+xmax=-68.9
+ymax=11.1833333333333
+projection=+proj=longlat +ellps=WGS84 +towgs84=0,0,0,0,0,0,0 +no_defs
+[data]
+datatype=FLT8S
+byteorder=little
+nbands=7
+bandorder=BIL
+minvalue=30:2.18657133145834:0:61:35:0:30
+maxvalue=523:125.601624676663:183:948:427:1000:520
+nodatavalue=-1.7e+308
+[legend]
+legendtype=
+values=
+color=
+[description]
+layername=Pterophanes.cyanopterus_EMmeanByROC_mergedAlgo_mergedRun_mergedData:Pterophanes.cyanopterus_EMcvByROC_mergedAlgo_mergedRun_mergedData:Pterophanes.cyanopterus_EMciInfByROC_mergedAlgo_mergedRun_mergedData:Pterophanes.cyanopterus_EMciSupByROC_mergedAlgo_mergedRun_mergedData:Pterophanes.cyanopterus_EMmedianByROC_mergedAlgo_mergedRun_mergedData:Pterophanes.cyanopterus_EMcaByROC_mergedAlgo_mergedRun_mergedData:Pterophanes.cyanopterus_EMwmeanByROC_mergedAlgo_mergedRun_mergedData

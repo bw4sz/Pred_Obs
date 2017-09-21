@@ -1,0 +1,173 @@
+
+-=-=-=-=-=-=-=-=-=-= Pterophanes_cyanopterus Data Formating -=-=-=-=-=-=-=-=-=-=
+
+ Response variable name was converted into Pterophanes.cyanopterus
+> No pseudo absences selection !
+      ! No data has been set aside for modeling evaluation
+			! Some NAs have been automaticly removed from your data
+-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-= Done -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+
+-=-=-=-=-=-=-=-=-=-=-=-=-=-= 'BIOMOD.formated.data' -=-=-=-=-=-=-=-=-=-=-=-=-=-=
+
+sp.name =  Pterophanes.cyanopterus
+
+	 33 presences,  0 true absences and  285 undifined points in dataset
+
+
+	 4 explanatory variables
+
+     bio_1            bio_12           bio_15          bio_2       
+ Min.   : 80.43   Min.   : 720.6   Min.   :15.17   Min.   : 83.71  
+ 1st Qu.:139.57   1st Qu.:1162.5   1st Qu.:34.58   1st Qu.: 96.41  
+ Median :166.33   Median :1587.6   Median :39.80   Median :100.32  
+ Mean   :168.05   Mean   :1708.2   Mean   :42.49   Mean   :101.69  
+ 3rd Qu.:197.74   3rd Qu.:2178.3   3rd Qu.:51.45   3rd Qu.:106.17  
+ Max.   :251.67   Max.   :4698.2   Max.   :92.41   Max.   :126.96  
+
+-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+
+
+Loading required library...
+
+Checking Models arguments...
+
+Creating suitable Workdir...
+
+	> No weights : all observations will have the same weight
+
+
+-=-=-=-=-=-=-=-=-=-= Pterophanes.cyanopterus Modeling Summary -=-=-=-=-=-=-=-=-=-=
+
+ 4  environmental variables ( bio_1 bio_12 bio_15 bio_2 )
+Number of evaluation repetitions : 2
+Models selected : GBM GLM MAXENT.Phillips 
+
+Total number of model runs : 6 
+
+-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+
+
+-=-=-=- Run :  Pterophanes.cyanopterus_AllData 
+
+
+-=-=-=--=-=-=- Pterophanes.cyanopterus_AllData_RUN1 
+
+Model=Generalised Boosting Regression 
+	 2500 maximum different trees and  3  Fold Cross-Validation
+	Evaluating Model stuff...
+	Evaluating Predictor Contributions... 
+
+Model=GLM ( quadratic with no interaction )
+	Stepwise procedure using AIC criteria
+	selected formula : Pterophanes.cyanopterus ~ I(bio_1^2)
+<environment: 0x0000000004b3b128>
+
+	Evaluating Model stuff...
+	Evaluating Predictor Contributions... 
+
+Model=MAXENT.Phillips
+	Creating Maxent Temp Proj Data..
+ Running Maxent...
+ Getting predictions...
+	Removing Maxent Temp Data..
+	Evaluating Model stuff...
+	Evaluating Predictor Contributions... 
+
+
+-=-=-=--=-=-=- Pterophanes.cyanopterus_AllData_Full 
+
+Model=Generalised Boosting Regression 
+	 2500 maximum different trees and  3  Fold Cross-Validation
+	Evaluating Model stuff...
+	Evaluating Predictor Contributions... 
+
+Model=GLM ( quadratic with no interaction )
+	Stepwise procedure using AIC criteria
+	selected formula : Pterophanes.cyanopterus ~ I(bio_1^2) + I(bio_12^2) + bio_2 + 
+    bio_1
+<environment: 0x0000000022ea5f08>
+
+	Evaluating Model stuff...
+	Evaluating Predictor Contributions... 
+
+Model=MAXENT.Phillips
+	Creating Maxent Temp Proj Data..
+ Running Maxent...
+ Getting predictions...
+	Removing Maxent Temp Data..
+	Evaluating Model stuff...
+	Evaluating Predictor Contributions... 
+
+-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-= Done -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+
+-=-=-=-=-=-=-=-=-=-=-=-=-=-= Build Ensemble Models -=-=-=-=-=-=-=-=-=-=-=-=-=-=
+
+   ! all models available will be included in ensemble.modeling
+   > Evaluation & Weighting methods summary :
+      ROC over 0.75
+
+
+  > mergedAlgo_mergedRun_mergedData ensemble modeling
+   ! Models projections for whole zonation required...
+	> Projecting Pterophanes.cyanopterus_AllData_RUN1_GBM ...
+	> Projecting Pterophanes.cyanopterus_AllData_Full_GBM ...
+	> Projecting Pterophanes.cyanopterus_AllData_Full_MAXENT.Phillips ...
+
+   > Mean of probabilities...
+			Evaluating Model stuff...
+   > Coef of variation of probabilities...
+			Evaluating Model stuff...
+   > Confidence Interval...
+			Evaluating Model stuff...
+			Evaluating Model stuff...
+   > Median of ptobabilities...
+			Evaluating Model stuff...
+   >  Comittee averaging...
+*** in setMethod('BinaryTransformation', signature(data='data.frame')
+			Evaluating Model stuff...
+   > Prababilities wegthing mean...
+		  original models scores =  0.753 0.917 0.79
+		  final models weights =  0.306 0.373 0.321
+			Evaluating Model stuff...
+-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-= Done -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+
+-=-=-=-=-=-=-=-=-=-=-=-=-=-= Do Models Projections -=-=-=-=-=-=-=-=-=-=-=-=-=-=
+
+	> Building clamping mask
+
+*** in setMethod('BinaryTransformation', signature(data='RasterLayer')
+*** in setMethod('BinaryTransformation', signature(data='RasterLayer')
+*** in setMethod('BinaryTransformation', signature(data='RasterLayer')
+*** in setMethod('BinaryTransformation', signature(data='RasterLayer')
+*** in setMethod('BinaryTransformation', signature(data='RasterLayer')
+*** in setMethod('BinaryTransformation', signature(data='RasterLayer')
+*** in setMethod('BinaryTransformation', signature(data='RasterLayer')
+*** in setMethod('BinaryTransformation', signature(data='RasterLayer')
+	> Projecting Pterophanes.cyanopterus_AllData_RUN1_GBM ...
+	> Projecting Pterophanes.cyanopterus_AllData_RUN1_GLM ...
+	> Projecting Pterophanes.cyanopterus_AllData_RUN1_MAXENT.Phillips ...
+	> Projecting Pterophanes.cyanopterus_AllData_Full_GBM ...
+	> Projecting Pterophanes.cyanopterus_AllData_Full_GLM ...
+	> Projecting Pterophanes.cyanopterus_AllData_Full_MAXENT.Phillips ...
+
+	> Building ROC binaries
+-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-= Done -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+
+-=-=-=-=-=-=-=-=-=-=-=-= Do Ensemble Models Projections -=-=-=-=-=-=-=-=-=-=-=-=
+
+
+	> Projecting Pterophanes.cyanopterus_EMmeanByROC_mergedAlgo_mergedRun_mergedData ...
+
+	> Projecting Pterophanes.cyanopterus_EMcvByROC_mergedAlgo_mergedRun_mergedData ...
+
+	> Projecting Pterophanes.cyanopterus_EMciInfByROC_mergedAlgo_mergedRun_mergedData ...
+
+	> Projecting Pterophanes.cyanopterus_EMciSupByROC_mergedAlgo_mergedRun_mergedData ...
+
+	> Projecting Pterophanes.cyanopterus_EMmedianByROC_mergedAlgo_mergedRun_mergedData ...
+
+	> Projecting Pterophanes.cyanopterus_EMcaByROC_mergedAlgo_mergedRun_mergedData ...
+
+	> Projecting Pterophanes.cyanopterus_EMwmeanByROC_mergedAlgo_mergedRun_mergedData ...
+
+-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-= Done -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=

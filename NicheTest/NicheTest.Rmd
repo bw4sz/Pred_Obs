@@ -6,7 +6,7 @@ output: html_document
 ---
 
 #Comments from Subject Editor
-Additionally, I would like some thinking on whether the worldclim data are accurate enough in the Andes, where we know climate differs drastically within very small spatial scale. Further, please provide information on why the used three variables well explain distribution patterns of hummingbirds in the Andes - and why not including more environmental variables.
+"I would like some thinking on whether the worldclim data are accurate enough in the Andes, where we know climate differs drastically within very small spatial scale. Further, please provide information on why the used three variables well explain distribution patterns of hummingbirds in the Andes - and why not including more environmental variables."
 
 # Do adding more environmental variables change predicted distributions?
 
@@ -60,11 +60,11 @@ These five species represent a reasonable selection of the environmental challen
 * Patagona gigas: Dry valley species at higher elevations
 * Heliodoxa leadbeateri: East-slope species
 * Colibri coruscans: Widespread species with pronounced elevation movement
-* Florisuga fusca: Low elevation species
+* Florisuga mellivora: Low elevation species
 
 ```{r}
 inLocalities<-read.csv("InputData/MASTER_POINTLOCALITYarcmap_review.csv")
-dat<-inLocalities[levels(inLocalities$SPECIES) %in% c("Pterophanes cyanopterus","Florisuga fusca","Colibri coruscans","Heliodoxa leadbeateri","Patagona gigas"),]
+dat<-inLocalities[inLocalities$SPECIES %in% c("Pterophanes cyanopterus","Florisuga mellivora","Colibri coruscans","Heliodoxa leadbeateri","Patagona gigas"),]
 ```
 
 #Niche Models
@@ -72,21 +72,33 @@ dat<-inLocalities[levels(inLocalities$SPECIES) %in% c("Pterophanes cyanopterus",
 Run ensemble niche models using biomod2 at a desired cell size and subset
 
 ```{r}
-cell_size=0.1
-envfolder<-"C:\\Users\\Ben\\Dropbox\\Thesis\\Pred_Realized\\EnvLayers"
+cell_size=0.5
+envfolder<-"C:\\Users\\Ben\\Dropbox\\Thesis\\Pred_Realized\\EnvLayers/Cropped/"
 savefolder<-"C:/Users/Ben/Documents/Pred_Obs/NicheTest/Models"
 ```
 
-Run distribution models (may need to be done offline, can take awhile)
+Loop through all bioclim variables and produce models for our candidate five species. 
 
-```{r Niche Models,eval=FALSE}
-#SDM_SP(cell_size,inLocalities,envfolder,savefolder)
+```{r}
+el<-paste("bio_",1:19,sep="")
+rl<-el[-c(1,12,15)]
+
+#remove base set used in original model
+
+for(x in 1:length(el)){
+  #layers to use
+  env=c(el[c(1,12,15)],rl[1:x])
+  
+  savefolder<-paste("C:/Users/Ben/Documents/Pred_Obs/NicheTest/Models",paste(rl[1:x],collapse = "_"),sep="/")
+  dir.create(savefolder)
+  SDM_SP(cell_size,inLocalities=dat,envfolder,env=env,savefolder = savefolder)
+}
 ```
 
 ##Import predicted suitable habitat rasters
 
 ```{r niche raster}
-#Bring in niche models from the script SDM.R, get the folder from cell size arguemnt
+#Bring in niche models from the script SDM.R, get the folder from cell size argument
 
 #Biomod Consensus ensemble niche models
 niche<-list.files(paste(savefolder,cell_size,sep="/"),pattern="ensemble.gri",full.name=T,recursive=T)
@@ -96,6 +108,82 @@ niche<-niche[grep("current",niche,value=FALSE)]
 
 #Name the list of suitability models
 names(niche)<-lapply(niche,function(path){
-  split.1<-strsplit(path,"/")[[1]][10]
+  str_match(path,"current_(\\w+.\\w+)_ensemble.gri")[[2]]
 })
+r<-lapply(niche,raster)
+plot(stack(r))
+```
+
+# Bring in assemblage data
+
+These assemblage data are independent from the point localities and will be used in model validation.
+
+```{r}
+#Bring in the assemblages, cleaned from JP
+Sites<-read.csv(paste(gitpath,"InputData//Sites.csv",sep=""),row.names=1)
+
+#Bring in spatial data for the sites
+#Extract env information for each site
+Sites.sp<-SpatialPointsDataFrame(Sites[,c("LongDecDeg","LatDecDeg")],Sites)
+
+#site by species lists
+siteXspp<-t(read.csv(paste(gitpath,"InputData//siteXspp.csv",sep=""),row.names=1))
+```
+
+###Merge assemblage lists with geographic distribution of niche models
+
+```{r}
+#Create Spatial Points object of the rownmaes
+site.raster<-raster(niche[[1]])
+res(site.raster)<-cell_size
+
+#Create PA matrix for the raster
+raster.localities<-rasterize(y=site.raster,SpatialPoints(Sites.sp),fun=function(x,...) length(x))
+
+#Which cell is each site in?
+cellSites<-raster::extract(raster.localities,Sites.sp,cellnumbers=T)
+
+#Split cell
+head(cellSites<-data.frame(Sites.sp,cellSites)[,])
+splitCellSites<-split(cellSites,factor(cellSites$cells))
+
+#How many duplicate communities are there, ie. number of assemblages per cell
+
+siteXspp.raster<-sapply(splitCellSites,function(x){
+  if(nrow(x)== 1) out<-siteXspp[,colnames(siteXspp) %in% x$Community]
+  if(nrow(x)>1 ) {
+    (out<-apply(siteXspp[,colnames(siteXspp) %in% x$Community],1,sum) > 0)*1
+  }
+  return(out)
+})
+
+#Get the xy lat long of the cells with sites in it
+cellSitesXY<-xyFromCell(raster.localities,as.numeric(colnames(siteXspp.raster)),spatial=TRUE)
+rownames(cellSitesXY@coords)<-colnames(siteXspp.raster)
+
+##Important to get a grasp on data overlap between the different sources
+congruence<-melt(list(Phylo=rownames(ctrx),Assemblage=rownames(siteXspp.raster),Suitability=names(niche),Clades=clades$double.))
+
+write.csv(table(congruence),paste(droppath,"Thesis/Pred_Realized/Assemblages//DataOverlap.csv",sep=""))
+
+#write siteXspp table
+write.csv(siteXspp.raster,paste(droppath,"Thesis/Pred_Realized/Assemblages//SiteXsppraster.csv",sep="/"))
+
+cong<-as.data.frame.array(table(congruence))
+
+#how many are complete
+completeI<-cong[names(which(apply(cong,1,sum)==4)),]
+```
+
+##Bring in Niche models
+
+```{r,fig.height=6,width=7}
+#load models to file, makes it more transferable than keeping them on disk
+modr<-lapply(niche,raster,values=TRUE)
+
+#Get the number of records per site, atleast 5 presences. 
+records_site<-names(which(apply(siteXspp.raster,1,sum,na.rm=TRUE) > 5))
+modlist<-modr[names(modr) %in% records_site]
+
+print(paste(length(modlist),"Species in the analysis"))
 ```

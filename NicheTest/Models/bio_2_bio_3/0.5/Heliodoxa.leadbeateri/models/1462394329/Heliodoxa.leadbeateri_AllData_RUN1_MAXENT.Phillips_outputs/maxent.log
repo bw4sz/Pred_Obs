@@ -1,0 +1,46 @@
+Wed May 04 13:39:51 PDT 2016
+MaxEnt version 3.3.3k
+Reading file Back_swd.csv
+readGrid: max memory 518979584, total allocated 16252928, free 11583424, used 4669504, increment 4669504
+Reading samples from Sp_swd.csv
+Read samples: max memory 518979584, total allocated 16252928, free 12911952, used 3340976, increment -1328528
+Making features
+makeFeatures: max memory 518979584, total allocated 16252928, free 11576568, used 4676360, increment 1335384
+Command line used:  environmentallayers=Heliodoxa.leadbeateri/models/1462394329/m_49450761/Back_swd.csv samplesfile=Heliodoxa.leadbeateri/models/1462394329/m_49450761/Sp_swd.csv projectionlayers=Heliodoxa.leadbeateri/models/1462394329/m_49450761/Predictions/Pred_swd.csv outputdirectory=Heliodoxa.leadbeateri/models/1462394329/Heliodoxa.leadbeateri_AllData_RUN1_MAXENT.Phillips_outputs outputformat=logistic redoifexists visible=TRUE linear=TRUE quadratic=TRUE product=TRUE threshold=TRUE hinge=TRUE lq2lqptthreshold=80 l2lqthreshold=10 hingethreshold=15 beta_threshold=-1 beta_categorical=-1 beta_lqp=-1 beta_hinge=-1 betamultiplier=1 defaultprevalence=0.5 autorun nowarnings notooltips noaddsamplestobackground
+Command line to repeat: java density.MaxEnt nowarnings noprefixes outputdirectory=Heliodoxa.leadbeateri/models/1462394329/Heliodoxa.leadbeateri_AllData_RUN1_MAXENT.Phillips_outputs projectionlayers=Heliodoxa.leadbeateri/models/1462394329/m_49450761/Predictions/Pred_swd.csv samplesfile=Heliodoxa.leadbeateri/models/1462394329/m_49450761/Sp_swd.csv environmentallayers=Heliodoxa.leadbeateri/models/1462394329/m_49450761/Back_swd.csv nowarnings notooltips noaskoverwrite noaddsamplestobackground autorun
+Species: Heliodoxa.leadbeateri_AllData_RUN1
+Layers: bio_1 bio_12 bio_15 bio_2 bio_3
+Layertypes: Continuous Continuous Continuous Continuous Continuous
+outputdirectory: Heliodoxa.leadbeateri/models/1462394329/Heliodoxa.leadbeateri_AllData_RUN1_MAXENT.Phillips_outputs
+projectionlayers: Heliodoxa.leadbeateri/models/1462394329/m_49450761/Predictions/Pred_swd.csv
+samplesfile: Heliodoxa.leadbeateri/models/1462394329/m_49450761/Sp_swd.csv
+environmentallayers: Heliodoxa.leadbeateri/models/1462394329/m_49450761/Back_swd.csv
+warnings: false
+tooltips: false
+askoverwrite: false
+addsamplestobackground: false
+autorun: true
+
+getSamples: max memory 518979584, total allocated 16252928, free 11407952, used 4844976, increment 168616
+Heliodoxa.leadbeateri_AllData_RUN1: 
+Regularization values: linear/quadratic/product: 0.187, categorical: 0.250, threshold: 1.480, hinge: 0.500
+52 samples
+Density: max memory 518979584, total allocated 16252928, free 10917560, used 5335368, increment 490392
+linearPredictor: max memory 518979584, total allocated 16252928, free 10917560, used 5335368, increment 0
+FeaturedSpace: max memory 518979584, total allocated 16252928, free 10917560, used 5335368, increment 0
+Sequential: max memory 518979584, total allocated 16252928, free 10896040, used 5356888, increment 21520
+Initial loss: 5.308267697401205
+Time since start: 1.07
+Terminated because gain exceeded 10000.0
+180: time = 0.760000 loss = -140,481,169.148789
+Resulting gain: 1.4048117445705625E8
+Time since start: 3.484
+Leaving out Equate entropy of thresholded and original distributions from threshold table, as uninitialized
+Projecting...
+Writing file Heliodoxa.leadbeateri\models\1462394329\Heliodoxa.leadbeateri_AllData_RUN1_MAXENT.Phillips_outputs\Heliodoxa.leadbeateri_AllData_RUN1.csv
+Projecting...
+Reading file Pred_swd.csv
+readGrid: max memory 518979584, total allocated 16252928, free 7469376, used 8783552, increment 3426664
+Writing file Heliodoxa.leadbeateri\models\1462394329\Heliodoxa.leadbeateri_AllData_RUN1_MAXENT.Phillips_outputs\Heliodoxa.leadbeateri_AllData_RUN1_Pred_swd.csv
+Writing file Heliodoxa.leadbeateri\models\1462394329\Heliodoxa.leadbeateri_AllData_RUN1_MAXENT.Phillips_outputs\Heliodoxa.leadbeateri_AllData_RUN1_Pred_swd_clamping.csv
+Ending

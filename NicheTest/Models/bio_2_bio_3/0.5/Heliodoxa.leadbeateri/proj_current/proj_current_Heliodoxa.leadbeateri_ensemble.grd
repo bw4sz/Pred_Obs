@@ -1,0 +1,25 @@
+[general]
+creator=R package 'raster'
+created=2016-05-04 13:41:21
+[georeference]
+nrows=33
+ncols=22
+xmin=-79.9
+ymin=-5.3166666666667
+xmax=-68.9
+ymax=11.1833333333333
+projection=+proj=longlat +ellps=WGS84 +towgs84=0,0,0,0,0,0,0 +no_defs
+[data]
+datatype=FLT8S
+byteorder=little
+nbands=7
+bandorder=BIL
+minvalue=27:0.865017759120905:0:43:25:0:28
+maxvalue=938:99.0184976958767:886:1000:945:1000:937
+nodatavalue=-1.7e+308
+[legend]
+legendtype=
+values=
+color=
+[description]
+layername=Heliodoxa.leadbeateri_EMmeanByROC_mergedAlgo_mergedRun_mergedData:Heliodoxa.leadbeateri_EMcvByROC_mergedAlgo_mergedRun_mergedData:Heliodoxa.leadbeateri_EMciInfByROC_mergedAlgo_mergedRun_mergedData:Heliodoxa.leadbeateri_EMciSupByROC_mergedAlgo_mergedRun_mergedData:Heliodoxa.leadbeateri_EMmedianByROC_mergedAlgo_mergedRun_mergedData:Heliodoxa.leadbeateri_EMcaByROC_mergedAlgo_mergedRun_mergedData:Heliodoxa.leadbeateri_EMwmeanByROC_mergedAlgo_mergedRun_mergedData

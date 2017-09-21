@@ -1,0 +1,174 @@
+
+-=-=-=-=-=-=-=-=-=-= Heliodoxa_leadbeateri Data Formating -=-=-=-=-=-=-=-=-=-=
+
+ Response variable name was converted into Heliodoxa.leadbeateri
+> No pseudo absences selection !
+      ! No data has been set aside for modeling evaluation
+			! Some NAs have been automaticly removed from your data
+-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-= Done -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+
+-=-=-=-=-=-=-=-=-=-=-=-=-=-= 'BIOMOD.formated.data' -=-=-=-=-=-=-=-=-=-=-=-=-=-=
+
+sp.name =  Heliodoxa.leadbeateri
+
+	 66 presences,  0 true absences and  252 undifined points in dataset
+
+
+	 4 explanatory variables
+
+     bio_1           bio_12         bio_15          bio_2       
+ Min.   :109.6   Min.   : 827   Min.   :14.39   Min.   : 73.68  
+ 1st Qu.:165.7   1st Qu.:1334   1st Qu.:33.27   1st Qu.: 97.78  
+ Median :189.9   Median :1818   Median :41.46   Median :100.45  
+ Mean   :187.3   Mean   :1847   Mean   :43.49   Mean   :101.40  
+ 3rd Qu.:198.9   3rd Qu.:2070   3rd Qu.:51.39   3rd Qu.:104.68  
+ Max.   :273.4   Max.   :5244   Max.   :96.12   Max.   :122.69  
+
+-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+
+
+Loading required library...
+
+Checking Models arguments...
+
+Creating suitable Workdir...
+
+	> No weights : all observations will have the same weight
+
+
+-=-=-=-=-=-=-=-=-=-= Heliodoxa.leadbeateri Modeling Summary -=-=-=-=-=-=-=-=-=-=
+
+ 4  environmental variables ( bio_1 bio_12 bio_15 bio_2 )
+Number of evaluation repetitions : 2
+Models selected : GBM GLM MAXENT.Phillips 
+
+Total number of model runs : 6 
+
+-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+
+
+-=-=-=- Run :  Heliodoxa.leadbeateri_AllData 
+
+
+-=-=-=--=-=-=- Heliodoxa.leadbeateri_AllData_RUN1 
+
+Model=Generalised Boosting Regression 
+	 2500 maximum different trees and  3  Fold Cross-Validation
+	Evaluating Model stuff...
+	Evaluating Predictor Contributions... 
+
+Model=GLM ( quadratic with no interaction )
+	Stepwise procedure using AIC criteria
+	selected formula : Heliodoxa.leadbeateri ~ I(bio_1^2) + bio_2 + I(bio_2^2)
+<environment: 0x0000000021050000>
+
+	Evaluating Model stuff...
+	Evaluating Predictor Contributions... 
+
+Model=MAXENT.Phillips
+	Creating Maxent Temp Proj Data..
+ Running Maxent...
+ Getting predictions...
+	Removing Maxent Temp Data..
+	Evaluating Model stuff...
+	Evaluating Predictor Contributions... 
+
+
+-=-=-=--=-=-=- Heliodoxa.leadbeateri_AllData_Full 
+
+Model=Generalised Boosting Regression 
+	 2500 maximum different trees and  3  Fold Cross-Validation
+	Evaluating Model stuff...
+	Evaluating Predictor Contributions... 
+
+Model=GLM ( quadratic with no interaction )
+	Stepwise procedure using AIC criteria
+	selected formula : Heliodoxa.leadbeateri ~ I(bio_1^2) + I(bio_12^2) + bio_15 + I(bio_2^2) + 
+    I(bio_15^2)
+<environment: 0x000000002198b820>
+
+	Evaluating Model stuff...
+	Evaluating Predictor Contributions... 
+
+Model=MAXENT.Phillips
+	Creating Maxent Temp Proj Data..
+ Running Maxent...
+ Getting predictions...
+	Removing Maxent Temp Data..
+	Evaluating Model stuff...
+	Evaluating Predictor Contributions... 
+
+-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-= Done -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+
+-=-=-=-=-=-=-=-=-=-=-=-=-=-= Build Ensemble Models -=-=-=-=-=-=-=-=-=-=-=-=-=-=
+
+   ! all models available will be included in ensemble.modeling
+   > Evaluation & Weighting methods summary :
+      ROC over 0.75
+
+
+  > mergedAlgo_mergedRun_mergedData ensemble modeling
+   ! Models projections for whole zonation required...
+	> Projecting Heliodoxa.leadbeateri_AllData_RUN1_GBM ...
+	> Projecting Heliodoxa.leadbeateri_AllData_RUN1_MAXENT.Phillips ...
+	> Projecting Heliodoxa.leadbeateri_AllData_Full_GBM ...
+	> Projecting Heliodoxa.leadbeateri_AllData_Full_MAXENT.Phillips ...
+
+   > Mean of probabilities...
+			Evaluating Model stuff...
+   > Coef of variation of probabilities...
+			Evaluating Model stuff...
+   > Confidence Interval...
+			Evaluating Model stuff...
+			Evaluating Model stuff...
+   > Median of ptobabilities...
+			Evaluating Model stuff...
+   >  Comittee averaging...
+*** in setMethod('BinaryTransformation', signature(data='data.frame')
+			Evaluating Model stuff...
+   > Prababilities wegthing mean...
+		  original models scores =  0.864 0.824 0.864 0.752
+		  final models weights =  0.262 0.249 0.262 0.228
+			Evaluating Model stuff...
+-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-= Done -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+
+-=-=-=-=-=-=-=-=-=-=-=-=-=-= Do Models Projections -=-=-=-=-=-=-=-=-=-=-=-=-=-=
+
+	> Building clamping mask
+
+*** in setMethod('BinaryTransformation', signature(data='RasterLayer')
+*** in setMethod('BinaryTransformation', signature(data='RasterLayer')
+*** in setMethod('BinaryTransformation', signature(data='RasterLayer')
+*** in setMethod('BinaryTransformation', signature(data='RasterLayer')
+*** in setMethod('BinaryTransformation', signature(data='RasterLayer')
+*** in setMethod('BinaryTransformation', signature(data='RasterLayer')
+*** in setMethod('BinaryTransformation', signature(data='RasterLayer')
+*** in setMethod('BinaryTransformation', signature(data='RasterLayer')
+	> Projecting Heliodoxa.leadbeateri_AllData_RUN1_GBM ...
+	> Projecting Heliodoxa.leadbeateri_AllData_RUN1_GLM ...
+	> Projecting Heliodoxa.leadbeateri_AllData_RUN1_MAXENT.Phillips ...
+	> Projecting Heliodoxa.leadbeateri_AllData_Full_GBM ...
+	> Projecting Heliodoxa.leadbeateri_AllData_Full_GLM ...
+	> Projecting Heliodoxa.leadbeateri_AllData_Full_MAXENT.Phillips ...
+
+	> Building ROC binaries
+-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-= Done -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+
+-=-=-=-=-=-=-=-=-=-=-=-= Do Ensemble Models Projections -=-=-=-=-=-=-=-=-=-=-=-=
+
+
+	> Projecting Heliodoxa.leadbeateri_EMmeanByROC_mergedAlgo_mergedRun_mergedData ...
+
+	> Projecting Heliodoxa.leadbeateri_EMcvByROC_mergedAlgo_mergedRun_mergedData ...
+
+	> Projecting Heliodoxa.leadbeateri_EMciInfByROC_mergedAlgo_mergedRun_mergedData ...
+
+	> Projecting Heliodoxa.leadbeateri_EMciSupByROC_mergedAlgo_mergedRun_mergedData ...
+
+	> Projecting Heliodoxa.leadbeateri_EMmedianByROC_mergedAlgo_mergedRun_mergedData ...
+
+	> Projecting Heliodoxa.leadbeateri_EMcaByROC_mergedAlgo_mergedRun_mergedData ...
+
+	> Projecting Heliodoxa.leadbeateri_EMwmeanByROC_mergedAlgo_mergedRun_mergedData ...
+
+-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-= Done -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
